@@ -1,7 +1,7 @@
 (define (timerandom max)
- (let ((num 0))
-   (when (< num max)
-;;	  (random)
-	  (set! num (1+ num)))))
+  (let ((num 0))
+    (when (< num max)
+      (random 128000)
+      (set! num (add1 num)))))
 
-(timerandom 100000)
+(timerandom 10000000)
