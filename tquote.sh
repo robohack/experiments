@@ -1,20 +1,27 @@
-#! /bin/sh
+#! /bin/ksh
 
-TARGET_MACHINE=foo
-MACHINE_DESCR="The Foo!"
+BUILD_FLAGS="CFLAGS=\"-O2 -W\""
+BUILD_DEBUG="\"-Werror -g\""
 
-BUILD_FLAGS="CFLAGS=\"-O2 -g\""
-BUILD_LDSTATIC="ld -static"
-
-REDIRFILE=~/tmp/netbsd-${TARGET_MACHINE}-case.ps
-if ! ${DEBUG}; then
-	exec > ${REDIRFILE}
-	SHOWREDIR=""
+if false; then
+	DQ="'"	# used to wrap multi-token params
+	DEBUG_ECHO="echo"
 else
-	SHOWREDIR="> ${REDIRFILE}"
+	DQ=""
+	DEBUG_ECHO=""
 fi
 
-DQ=""
-
+# these two are OK with sh and ksh
+#
 ${DEBUG_ECHO} \
-cdlabelgen -l 0 -t cd-tmplt-av8931.ps -e netbsd-all-logos.eps -E netbsd-toaster-logo.eps -T 1.0,-0.1,0.0 -c NetBSD/${TARGET_MACHINE} -s ${DQ}'Planix, Inc.  netbsd-1-6'${DQ} -i ${DQ}"NetBSD/${TARGET_MACHINE}-1.6.2_STABLE for ${MACHINE_DESCR}%%Bootable Binary Installation CD%%Built with:%${BUILD_FLAGS}${BUILD_LDSTATIC:+%and \"${BUILD_LDSTATIC}\"}%%%%For more information see:%%http://www.NetBSD.org/                        http://www.planix.ca/"${DQ} -v 20 -d ${START_DATE} ${SHOWREDIR}
+sed -e ${DQ}'s/^/to test/'${DQ} \
+    -e ${DQ}"s/$/build with:  ${BUILD_FLAGS} but leave ${BUILD_DEBUG} out/"${DQ} < /dev/null
+${DEBUG_ECHO} \
+sed -e ${DQ}'s/^/to test/'${DQ} \
+    -e ${DQ}"s/$/build with:  ${BUILD_FLAGS} but leave ${BUILD_DEBUG:-${BUILD_DEBUG}} out/"${DQ} < /dev/null
+
+# this one fails with sh but works with ksh
+#
+${DEBUG_ECHO} \
+sed -e ${DQ}'s/^/to really test/'${DQ} \
+    -e ${DQ}"s/$/build with:  ${BUILD_FLAGS}${BUILD_DEBUG:+%and ${BUILD_DEBUG}}/"${DQ} < /dev/null
