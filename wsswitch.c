@@ -26,7 +26,7 @@ main(int argc, char **argv)
 		perror("open(/dev/ttyEcfg)");
 		exit(1);
 	}
-	if (ioctl(fd, VT_ACTIVATE, &screen) != 0) {
+	if (ioctl(fd, VT_ACTIVATE, screen) != 0) {
 		fprintf(stderr, "%s: ioctl(/dev/ttyEcfg, VT_ACTIVATE, %d): %s\n", argv[0], screen, strerror(errno));
 		exit(1);
 	}
