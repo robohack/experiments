@@ -21,23 +21,25 @@
 static char rcsid[] = "$Id$";
 #endif /*LINT*/
 
+#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 #include <util.h>
-#include <sys/types.h>
 
-/*Slave reading process*/
+/* Slave reading process */
 
-int slave(int slavefd)
+int
+slave(int slavefd)
 {
 	char buf[512], *ptr;
 	int bytesread;
 	pid_t slpid;
 
 	slpid = getpid();
-	while(1) {
+
+	while (1) {
 		bytesread = read(slavefd, buf, sizeof(buf));
 		printf("%d: Read %d bytes from pty\n",slpid,bytesread);
 		if (bytesread < 0) {
@@ -46,11 +48,13 @@ int slave(int slavefd)
 		}
 	}
 
-	exit(0); /*not reached*/
+	exit(0);
+	/* NOT REACHED */
 }
 
-/*Master writing process*/
-int master(int masterfd)
+/* Master writing process */
+int
+master(int masterfd)
 {
 	char buf[512], *ptr;
 	int outbytes,i;
@@ -58,13 +62,13 @@ int master(int masterfd)
 
 	curpid = getpid();
 
-	while(1) {
+	while (1) {
 		sprintf(buf, "q {Subject: June Monitor}\rd\r");
-		for (i = 0;i < 11;i ++) {
+		for (i = 0; i < 11; i ++) {
 			outbytes = write(masterfd, buf, strlen(buf));
 			ptr = buf;
 			strncat(buf, ptr, 24);
-			printf("%d: Wrote %d bytes to master pty\n",curpid,outbytes);
+			printf("%d: Wrote %d bytes to master pty\n", curpid, outbytes);
 			if (outbytes < 0) {
 				perror("write");
 			}
@@ -73,15 +77,17 @@ int master(int masterfd)
 		sleep(5);
 	}
 
-	exit(0); /*not reached*/
+	exit(0);
+	/* NOT REACHED */
 }
 		
 
+int
 main(int argc, char **argv) 
 {
 	pid_t child;
 	int masterfd, slavefd, status;
-	char ptyname[256];
+	char ptyname[PATH_MAX];
 
 	status = openpty(&masterfd, &slavefd, ptyname, NULL, NULL);
 	if (status < 0) {
@@ -95,13 +101,13 @@ main(int argc, char **argv)
 	}
 	if (child) {
 		printf("%s: Master process(%d) is writing to slave process (%d)\n",
-		argv[0],getpid(),child);
-		printf("%s: Using pty %s\n",argv[0],ptyname);
+		       argv[0], getpid(), child);
+		printf("%s: Using pty %s\n", argv[0], ptyname);
 		master(masterfd);
 	} else {
 		slave(slavefd);
 	}
 
-	/*not reached*/
 	exit(0);
+	/* NOT REACHED */
 }
