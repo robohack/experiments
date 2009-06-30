@@ -1,5 +1,6 @@
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 long long int
 idiv64(long long int x,
@@ -15,9 +16,15 @@ main(void)
 	long long y = -1;
 	long long r = 1234567890;
 
+	printf("x = %lld\n", x);
+	printf("y = %lld\n", y);
+
 	r = idiv64(x, y);
 
-	printf("%lld\n", r);
+	printf("x / y = %lld%s\n", r, r == LLONG_MIN ? " (LLONG_MIN)" : "");
+
+	r = x / 0;
+	printf("x / 0 = %lld\n", r);
 
 	exit(0);
 }
