@@ -15,6 +15,8 @@
 #include <string.h>
 #include <unistd.h>
 
+int main(int, char **);
+
 int
 main(int argc, char **argv)
 {
@@ -38,12 +40,13 @@ main(int argc, char **argv)
 	if (bind(s, (struct sockaddr *)&sun, sun.sun_len) != 0)
 		err(EXIT_FAILURE, "bind()");
 
+	/*
+	 * XXX note an unlink(argv[1]) will _immediately_ remove the socket
+	 * before the close() call below!
+	 */
+
 	(void)close(s);
 
-	return EXIT_SUCCESS;
+	exit(EXIT_SUCCESS);
+	/* NOTREACHED */
 }
-
-$ cc -o test test.c
-$ ./test /tmp/foo.sock
-$ ./test /tmp/foo.sock
-test: bind(): Address already in use
