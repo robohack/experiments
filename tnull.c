@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/*
+ * Warning: compiling with gcc -O2 will eliminate the NULL deref at the end
+ */
+
 main()
 {
 	int *p;
