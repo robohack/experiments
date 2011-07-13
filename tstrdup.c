@@ -5,7 +5,7 @@ superstrdup(const char *str)
 	char *answer = malloc(len + 1);
 
 	if (answer)
-		memcpy(answer, str, len+1);
+		memcpy(answer, str, len + 1); /* strcpy(answer, str); */
 
 	return answer;
 }
