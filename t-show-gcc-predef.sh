@@ -1,12 +1,15 @@
 #! /bin/sh
 
-if [ -s tempty.c ]; then
-	echo "tempty.c is not empty!" >&2
-	exit 1
-fi
+CC=${CC:-"cc"}
 
-if ! [ -f tempty.c ]; then
-	touch tempty.c
-fi
+${CC} -E -dM -x c /dev/null | sort
 
-gcc -E -dM tempty.c | sort +1
+# to show optimizer options (and include path, etc.):
+#
+OPTIM="-O4"
+OPTIM="-O3"
+OPTIM="-O2"
+OPTIM="-O1"
+OPTIM="-O0"
+#
+#${CC} -v ${OPTIM} -S -fverbose-asm -o - -x c /dev/null

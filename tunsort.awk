@@ -1,5 +1,4 @@
-#! /usr/bin/awk 
-
+#! /usr/bin/awk -f
 BEGIN {
 	srand();
 	d = 0;
@@ -14,10 +13,10 @@ END {
 		if (e == d) {
 			break;
 		}
-		RANDOM = int(1 + rand() * d);
-		if (RANDOM in lines) {
-			print lines[RANDOM];
-			delete lines[RANDOM];
+		rnum = int(1 + rand() * d);
+		if (rnum in lines) {
+			print lines[rnum];
+			delete lines[rnum];
 			++e;
 		}
 	}
