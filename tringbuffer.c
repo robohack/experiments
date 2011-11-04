@@ -1,4 +1,13 @@
 /*
+ * Virtual Stream form of FIFO:
+ *
+ * #define SIZE		2^n
+ * struct FIFO {
+ * 	value_t Elem[SIZE];
+ *	unsigned int ReadPos;
+ *	unsigned int WritePos;
+ * };
+ *
  * writing elements is Elem[WritePos % SIZE] = x; and updating the index is
  * WritePos++; (and analogous for ReadPos). In other words, you delay the
  * reduction modulo SIZE. For this to be efficient, you normally want to pick a
