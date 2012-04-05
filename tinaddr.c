@@ -31,7 +31,7 @@ main(argc, argv)
 	int mask_bits;		/* must be a signed int to hold -1 error value */
 	struct in_addr host_in;
 	char*q1, *q2, *q3, *q4;
-	char *p;
+	unsigned char *p;
 	
 	if (argc != 2) {
 		fprintf(stderr, "Usage: %s dot.ted.qu.ad | dot.ted.cid.r/bits\n", argv[0]);
@@ -74,8 +74,8 @@ main(argc, argv)
 	}
 
 	/*
-	 * net & host_addr are in network byte order, as is the s_addr field of
-	 * a struct in_addr
+	 * Unfortunately net & host_addr are in network byte order, but so is
+	 * the s_addr field of a struct in_addr (also unfortunately)
 	 */
 	host_in.s_addr = host_addr;
 	printf("%s: %s (netsz = %d, netid = 0x%08x, hostid = 0x%08x):\n",
@@ -89,7 +89,7 @@ main(argc, argv)
 
 	/*
 	 * string manipulation works -- but it's four non-trivial function
-	 * calls, and it screws up when a CIDR netspec is given....
+	 * calls, and it screws up badly when a CIDR netspec is given....
 	 */
 	q1 = strtok(argv[1], ".");
 	q2 = strtok((char *) NULL, ".");
@@ -102,12 +102,14 @@ main(argc, argv)
 	 * value using char pointer trick.  This is a rather ugly, though quite
 	 * efficient, hack, and is the one preferred by some old-style
 	 * programmers.  The programmer is assumed to know the byte order of
-	 * course, and unused high-order bits of each byte must still be
-	 * explicitly masked off.
+	 * course (though here we know that we're dealing with network-order),
+	 * and unused high-order bits of each byte must still be explicitly
+	 * masked off.
 	 */
-	p = (char *) ((void *) &host_addr);
+	p = (unsigned char *) ((void *) &host_addr);
 
-	printf("as-array:\t%u.%u.%u.%u.%s\n",
+	printf("as-array:\t%d/%u.%u.%u.%u.%s\n",
+	       mask_bits,
 	       (unsigned int) p[3] & 0xff,
 	       (unsigned int) p[2] & 0xff,
 	       (unsigned int) p[1] & 0xff,
@@ -122,7 +124,8 @@ main(argc, argv)
 	 * example for clarity's sake).
 	 */
 	mach_host_addr = ntohl(host_addr);
-	printf("by-shifting:\t%u.%u.%u.%u.%s\n",
+	printf("by-shifting:\t%d/%u.%u.%u.%u.%s\n",
+	       mask_bits,
 	       (unsigned int) ((mach_host_addr) & 0xff),
 	       (unsigned int) ((mach_host_addr >> 8) & 0xff),
 	       (unsigned int) ((mach_host_addr >> 16) & 0xff),
