@@ -1,8 +1,11 @@
 /* link this with tlinker2.c */
-void
-var(void)
+extern void var(void);
+
+int main(void);
+
+int
+main()
 {
-	printf("got here!\n");
-	
-	exit(1);
+	var();
+	return 0;
 }
