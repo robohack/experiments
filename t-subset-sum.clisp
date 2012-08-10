@@ -1,0 +1,36 @@
+(defun subset-sum (set sum &optional subset)
+  (when set
+    (destructuring-bind (head . tail) set
+      (or (and (= head sum) (cons head subset))
+          (subset-sum tail sum          subset)
+          (subset-sum tail (- sum head) (cons head subset))))))
+(setq city-pops '(18897109
+		  12828837
+		  9461105
+		  6371773
+		  5965343
+		  5946800
+		  5582170
+		  5564635
+		  5268860
+		  4552402
+		  4335391
+		  4296250
+		  4224851
+		  4192887
+		  3439809
+		  3279833
+		  3095313
+		  2812896
+		  2783243
+		  2710489
+		  2543482
+		  2356285
+		  2226009
+		  2149127
+		  2142508
+		  2134411))
+
+(subset-sum city-pops 100000000)
+
+; (2134411 2142508 2226009 2543482 2812896 3095313 3279833 4224851 4296250 4335391 4552402 5268860 5582170 5946800 6371773 9461105 12828837 18897109)
