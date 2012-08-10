@@ -4,6 +4,7 @@
       (or (and (= head sum) (cons head subset))
           (subset-sum tail sum          subset)
           (subset-sum tail (- sum head) (cons head subset))))))
+
 (setq city-pops '(18897109
 		  12828837
 		  9461105
@@ -33,4 +34,92 @@
 
 (subset-sum city-pops 100000000)
 
-; (2134411 2142508 2226009 2543482 2812896 3095313 3279833 4224851 4296250 4335391 4552402 5268860 5582170 5946800 6371773 9461105 12828837 18897109)
+
+ (2134411 2142508 2226009 2543482 2812896 3095313 3279833 4224851 4296250 4335391 4552402 5268860 5582170 5946800 6371773 9461105 12828837 18897109)
+
+; (apply '+ '(2134411 2142508 2226009 2543482 2812896 3095313 3279833 4224851 4296250 4335391 4552402 5268860 5582170 5946800 6371773 9461105 12828837 18897109))
+; 100000000
+
+(setq numbers #(18897109
+		 12828837
+		  9461105
+		  6371773
+		  5965343
+		  5946800
+		  5582170
+		  5564635
+		  5268860
+		  4552402
+		  4335391
+		  4296250
+		  4224851
+		  4192887
+		  3439809
+		  3279833
+		  3095313
+		  2812896
+		  2783243
+		  2710489
+		  2543482
+		  2356285
+		  2226009
+		  2149127
+		  2142508
+		  2134411))
+
+
+
+(defun found-solution()
+  "Called whenever the algorithm has found a solution"
+
+  (let ((total 0))
+    (format t "  ")
+    (dotimes (i (length numbers))
+      (when (aref flags i)
+	(incf total (aref numbers i))
+	(format t "~A " (aref numbers i)))
+      )
+    (format t " => ~A~%" total)
+    (incf solutions)))
+
+(defun find-solutions(k target-sum callback)
+  "Core backtracking algorithm"
+
+  (when (zerop target-sum)
+    (funcall callback)
+    (return-from find-solutions))
+
+  (unless (= k (length numbers))
+    (let ((nk (aref numbers k)))
+      (when (>= target-sum nk)
+	;; try subtracting numbers[k] from target-sum
+	(setf (aref flags k) t)
+	(find-solutions (+ 1 k) (- target-sum nk) callback)
+	(setf (aref flags k) nil)))
+
+    ;; recurse without subtracting first
+    (find-solutions (+ 1 k) target-sum callback)))
+
+(defun find-subset-sum(target-sum)
+  "Set up and run backtracking algorithm based on 'numbers' array"
+
+  (setf flags (make-array (list (length numbers))))
+  (setf solutions 0)
+  (find-solutions 0 target-sum #'found-solution)
+  (format t "Found ~A different solutions.~%" solutions))
+
+
+(defun subset-sum-test(size)
+  "Test subset sum algorithm using random numbers"
+
+  (let* ((total 0) target-sum)
+    ;; init numbers array with random values up to 1000
+    (setf numbers (make-array (list size)))
+    (dotimes (i size)
+      (setf (aref numbers i) (random 1000))
+      (incf total (aref numbers i)))
+
+    (setf target-sum (floor (/ total 2))) ;; random target sum
+    (format t "Now listing all subsets which sum up to ~A:~%" target-sum)
+
+    (find-subset-sum target-sum)))
