@@ -2,16 +2,8 @@
 
 #include <stdint.h>
 
-#ifdef USE_VOLATILE
-volatile
-#endif
-#ifdef USE_INT
-int
-#else
-long long	x;
-#endif
-
-void catch_signal(int);
+#define DO_DEFINE
+#include "tatomic.h"
 
 void
 catch_signal(int sig __unused)
