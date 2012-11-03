@@ -1,4 +1,27 @@
-(defun fibonacci-tail-recursive ( n &optional (a 0) (b 1))
+;; In "Structure and Interpretation of Computer Programs" (Abelson et
+;; al) this variant is called the "iterative" version, since it is
+;; using tail-end recursion and there will be just one call for every
+;; value of n ... 0.  As a result any compiler or interpreter that
+;; optimizes tail-end recursion will simply run this in a loop and
+;; avoid the use of the stack for recursive calls.
+;;
+(defun fibonacci-tail-recursive (n &optional (a 0) (b 1))
   (if (= n 0) 
       a 
     (fibonacci-tail-recursive (- n 1) b (+ a b))))
+
+(defun fibonacci-iterative (n)
+  (let ((result 1)(a 1)(b 1))
+    (loop for n from 3 to n 
+          do (setq result (+ a b)
+                   a b
+                   b result))
+    result))
+
+(defun fib-tail-rec-sq (n &optional (a 1) (b 0) (p 0) (q 1))
+  (if (= n 1) (+ (* b p) (* a q))
+    (fib-tail-rec-sq (ash n -1) 
+		     (if (evenp n) a (+ (* b q) (* a (+ p q))))
+		     (if (evenp n) b (+ (* b p) (* a q)))
+		     (+ (* p p) (* q q))
+		     (+ (* q q) (* 2 p q))))) ; p is Fib(2^n-1), q is Fib(2^n).
