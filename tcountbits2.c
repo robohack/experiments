@@ -4,7 +4,7 @@
 /* Return the Hamming Wieght of val, i.e. the number of 'on' bits. */
 int bitcount( unsigned int );
 
-/* List of available bitcount algorithms.  
+/* List of available bitcount algorithms.
  * onTheFly:    Calculate the bitcount on demand.
  *
  * lookupTalbe: Uses a small lookup table to determine the bitcount.  This
