@@ -16,6 +16,6 @@ for i in "$@" ; do
 		Pshell=${i}/sh
 		break
 	fi
-done 
+done
 
 echo $Pshell
