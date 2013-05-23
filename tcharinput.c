@@ -1,5 +1,8 @@
 #include <sys/cdefs.h>
 
+#ifdef __linux__
+# define _BSD_SOURCE			/* for ECHOKE */
+#endif
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,10 +11,17 @@
 
 int main(void);
 
+#ifndef TCSASOFT
+# define TCSASOFT	0		/* for some non-BSD */
+#endif
+#ifndef CIGNORE
+# define CIGNORE	0		/* for some BSDs */
+#endif
+
 int
 main()
 {
-	int ret;
+	ssize_t ret;
 	unsigned char ch;
 	struct termios tio;
 	struct termios otio;
@@ -22,7 +32,7 @@ main()
 	otio = tio;
 
 	/* turn off canonical processing and all echoing */
-	tio.c_lflag &= ~(ICANON | ECHOKE | ECHOE | ECHO | ECHONL);
+	tio.c_lflag &= ~(ICANON | ECHOKE | ECHOE | ECHO | ECHONL | CIGNORE);
 
 	/* wait for one character to be available */
 	tio.c_cc[VMIN] = 1;
