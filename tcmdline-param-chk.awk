@@ -23,7 +23,7 @@ BEGIN {
 	# processed, so default values for command-line parameters cannot be
 	# naively set without using this test:
 	#
-	if (X == 0 && X == "") { 
+	if (X == 0 && X == "") {
 		printf("X is undefined (X = %d, '%s')\n", X - 0, X "");
 	} else if (X == "") {
 		#
