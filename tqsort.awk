@@ -1,4 +1,4 @@
-#!/bin/awk -f
+#! /usr/bin/awk -f
 #
 # the following qsort implementation extracted from:
 #
@@ -7,7 +7,8 @@
 # @(#) qsort 1.2.1 2005-10-21
 # 1990 john h. dubois iii (john@armory.com)
 #
-# qsortArbIndByValue(): Sort an array according to the values of its elements.
+# qsortArbIndByValue():  Sort an array (with an arbitrary index) according to
+#                        the values of its elements.
 #
 # Input variables:
 #
@@ -118,16 +119,26 @@ function qsortSegment(Arr, k, start, end,
 }
 
 BEGIN {
-	foolist["second"] = 2;
-	foolist["zero"] = 0;
-	foolist["third"] = 3;
-	foolist["first"] = 1;
+	inplist["second"] = 22;
+	inplist["fourth"] = 44;
+	inplist["zero"] = 0;
+	inplist["third"] = 33;
+	inplist["first"] = 11;
+
+	# note how "for (idx in list)" order is unrelated to initialization
+	# order, or any seemingly obvious relationship between index values, or
+	# even the array values
+	i = 1;
+	for (idx in inplist) {
+		printf("inplist item # %d has index name: %s value = %d)\n", i, idx, inplist[idx]);
+		i++;
+	}
 
 	outlist[1] = 0;
- 	n = qsortArbIndByValue(foolist, outlist)
+ 	n = qsortArbIndByValue(inplist, outlist)
 
 	for (i = 1; i <= n; i++) {
-		printf("item at %s has value %d\n", outlist[i], foolist[outlist[i]]);
+		printf("outlist at %d has index name: %s (inplist[outlist[i]] = %d)\n", i, outlist[i], inplist[outlist[i]]);
 	}
 
 	delete foolist;
