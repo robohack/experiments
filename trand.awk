@@ -4,7 +4,10 @@ function random_ascii_string(slen)
 {
 	rc = 0;
 	for (i = 0; i < slen; i++) {
+		# include spaces...
 		rc = int(rand() * (127 - 32)) + 32;
+		# do not include single quote (for SQL) or backslash (for shell)
+		# (or for SQL single quotes could just be output twice....)
 		if (rc == 39 || rch == 92) {
 			i--;
 			continue;
@@ -26,7 +29,8 @@ BEGIN {
 	if (DEBUG > 0) {
 		printf("RSEED='%s', LEN='%s', NUM='%s', DEBUG='%s'\n", RSEED, LEN, NUM, DEBUG);
 	}
-	if (RSEED == 0 && RSEED == "") {
+	if (RSEED == 0 || RSEED == "") {
+		# note that srand() is (in C) just:  srand(time((time_t) NULL));
 		srand();
 		RSEED = srand();
 	}
