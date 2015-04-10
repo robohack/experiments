@@ -35,7 +35,11 @@
 
 #include <stdio.h>
 
-void CStandard(void)
+void
+CStandard(void);
+
+void
+CStandard()
 {
   #if defined (__cplusplus)
     printf("This is C++, version %d.\n", __cplusplus);
@@ -46,7 +50,9 @@ void CStandard(void)
   #elif defined(__STDC__)
     printf("This is standard C.\n");
 
-    #if (__STDC__ == 1)
+    #if (__STDC__ == 0)
+      printf("  The implementation defines __STDC__=0, so pre-dates ISO C.\n");
+    #elif (__STDC__ == 1)
       printf("  The implementation is ISO-conforming.\n");
     #else
       printf("  The implementation is not ISO-conforming.\n");
@@ -234,3 +240,16 @@ void CStandard(void)
   printf("\n");
 }
 
+#ifdef TEST
+#include <stdlib.h>
+
+int
+main(void);
+
+int
+main()
+{
+	CStandard();
+	exit(0);
+}
+#endif
