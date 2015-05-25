@@ -13,3 +13,7 @@ if [ $# = 0 ]; then
 fi
 
 echo $*
+
+# hmmmm.... this is unexpected:  all shells evaluate ${$#} as $$
+
+eval echo the last parameter is: \${$#}
