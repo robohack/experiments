@@ -1,19 +1,25 @@
  /* -*- Mode: flex; -*- */
 
+%{
+#include <stdio.h>
+%}
 
-MONTH       (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)
-DAYNO       [1-9][0-9]?
-HOUR        (0|1)[0-9]|2[0-4]
-MINPS       [0-5][0-9]
-WORD        [a-zA-Z0-9][-_a-zA-Z0-9]+
-NUMBER      [1-9][0-9]*
+ /* definitions... */
 
-TIMESTAMP_SYSLOG    {MONTH}\ +{DAYNO}\ +{HOUR}:{MINPS}:{MINPS}
-TIMESTAMP_TAI64     [0-9A-Fa-f]{24}
-SOLARIS_MSGID_TAG   "[ID "[0-9]+" "{WORD}"."{WORD}"]"
+MONTH		(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)
+DAYNO		[1-9][0-9]?
+HOUR		(0|1)[0-9]|2[0-4]
+MINPS		[0-5][0-9]
 
-SYSLOG_VERBOSE      "<"({WORD}|{NUMBER})"."({WORD}|{NUMBER})">"
+WORD		[a-zA-Z0-9][-_a-zA-Z0-9]*
 
+NUMBER		[1-9][0-9]*
+
+TS_SYSLOG	{MONTH}\ +{DAYNO}\ +{HOUR}:{MINPS}:{MINPS}
+TS_TAI64	[0-9A-Fa-f]{24}
+
+ /* SYSLOG_VERBOSE      "<"({WORD}|{NUMBER})"."({WORD}|{NUMBER})">" */
+SYSLOG_VERBOSE      "<"{WORD}"."{WORD}">"
 
  /* all words but "sshguard" provided that posix regex don't support negation nor intersection:
   * 1) all words of 2 to 7 characters or 8-* chars
@@ -32,6 +38,8 @@ HOSTADDR    localhost|([-a-zA-Z0-9]+\.)+[a-zA-Z]+|{IPV4}|{IPV6}|{IPV4MAPPED6}
 
 %%
 
+ /* rules... */
+
 
  /*
   * syslog banner, eg "Nov 22 09:58:58 freyja sshd[94637]: "
@@ -47,10 +55,31 @@ HOSTADDR    localhost|([-a-zA-Z0-9]+\.)+[a-zA-Z]+|{IPV4}|{IPV6}|{IPV4MAPPED6}
   */
 
  /* handle entries with PID and without PID from processes other than sshguard */
-{TIMESTAMP_SYSLOG}\ +{SYSLOG_VERBOSE}?({WORD}|{HOSTADDR})\ +{PROCESSNAME}"["{NUMBER}"]: "{SOLARIS_MSGID_TAG}? {
-		printf();
-        }
+{TS_SYSLOG}\ +{SYSLOG_VERBOSE}?({WORD}|{HOSTADDR})\ +{PROCESSNAME}"["{NUMBER}"]: "	{
+	printf("SYSLOG_BANNER_PID:  '%s'\n", yytext);
+    }
 
-{TIMESTAMP_SYSLOG}\ +{SYSLOG_VERBOSE}?({WORD}|{HOSTADDR})\ +({PROCESSNAME}":")?   {
-	return SYSLOG_BANNER;
+{TS_SYSLOG}\ +{SYSLOG_VERBOSE}?({WORD}|{HOSTADDR})\ +({PROCESSNAME}":")?	{
+	printf("SYSLOG_BANNER_PID:  '%s'\n", yytext);
+    }
+
+%%
+
+int main(int, char *[]);
+
+int
+main(int argc,
+     char *argv[])
+{
+	++argv, --argc;  /* skip over program name */
+
+	if (argc > 0) {
+		yyin = fopen(argv[0], "r");
+	} else {
+		yyin = stdin;
 	}
+
+	yylex();
+
+	exit(0);
+}
