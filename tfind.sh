@@ -2,8 +2,10 @@
 
 indent_print()
 {
-	for ((i=0; i < $1; i++)); do
-		echo -ne "\t"
+	local i=0
+	while [ $i -lt $1 ]; do
+		printf "\t"
+		i=$((i + 1))
 	done
 	echo "$2"
 }
@@ -11,8 +13,8 @@ indent_print()
 walk_tree()
 {
 	local oldifs bn lev pr pmat
-	if [[ $# -lt 3 ]]; then
-		if [[ $# -lt 2 ]]; then
+	if [ $# -lt 3 ]; then
+		if [ $# -lt 2 ]; then
 			pmat=".*"
 		else
 			pmat="$2"
@@ -27,17 +29,21 @@ walk_tree()
 "
 	for el in $1/*; do
 		bn=$(basename "$el")
-		if [[ -d "$el" ]]; then
+		if [ -d "$el" ]; then
 			indent_print $lev "$bn/"
-			pr=$( walk_tree "$el" "$2" $(( lev + 1)) )
+			pr=$( walk_tree "$el" "$2" $((lev + 1)) )
 			echo "$pr"
 		else
-			if [[ "$bn" =~ $2 ]]; then
+			case $bn in
+			$2)
 				indent_print $lev "$bn"
-			fi
+				;;
+			esac
 		fi
 	done
 	IFS=$oldifs
 }
 
-walk_tree "$1" "\.sh$"
+# example:  find all the *.sh files
+#
+walk_tree "$1" "*.sh"
