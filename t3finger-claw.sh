@@ -1,7 +1,10 @@
 #!/bin/sh
 
+# derived from http://blackskyresearch.net/try.sh.txt
+# Isaac (.ike) Levy
+
 yell() { echo "$0: $*" >&2; }
-die() { yell "$*"; exit 111; }
+die() { yell "$*"; exit 1; }
 try() { "$@" || die "cannot $*"; }
 
 # using it
