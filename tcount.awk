@@ -1,13 +1,18 @@
 #!/bin/sh
 
-awk -f '
+awk '
     BEGIN {
         eights = 0;
+        fives = 0;
         threes = 0;
     }
     /8888/ {
         eightln[eights] = $0;
         eights++;
+    }
+    /5555/ {
+        fiveln[fives] = $0;
+        fives++;
     }
     /3333/ {
         threeln[threes] = $0;
@@ -16,10 +21,16 @@ awk -f '
     # ... and so on
     END {
         printf("%d 8888\n", eights);
+        printf("%d 5555\n", fives);
         printf("%d 3333\n", threes);
         for (i = 0; i < eights; i++) {
             print eightln[i];
         }
+        print "=========="
+        for (i = 0; i < fives; i++) {
+            print fiveln[i];
+        }
+        print "=========="
         for (i = 0; i < threes; i++) {
             print threeln[i];
         }
