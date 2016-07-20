@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
- 
+
 typedef struct {
 	void* data;
 	int weight;
 } item;
- 
+
 uint64_t subsum(item *, unsigned int);
 int main(int, char *[]);
 
@@ -18,7 +18,7 @@ subsum(item *x,
 	unsigned int i;
 	int j, w, from, to, step, pos = 0, neg = 0;
 	uint64_t bit, *buf;
- 
+
 	for (i = 0; i < n; i++) {
 		if (x[i].weight >= 0) {
 			pos += x[i].weight;
@@ -26,38 +26,38 @@ subsum(item *x,
 			neg += x[i].weight;
 		}
 	}
- 
+
 	buf = calloc((unsigned int) (pos - neg) + 1, sizeof(uint64_t));
 	buf -= neg;
- 
+
 	for (i = 0; i < n; i++) {
 		w = x[i].weight;
 		bit = (uint64_t)1 << i;
- 
+
 		if (w < 0) {
 			from = neg, to = pos + 1, step = 1;
 		} else {
 			from = pos, to = neg - 1, step = -1;
 		}
- 
+
 		for (j = from; j != to; j += step) {
 			if (buf[j]) {
 				buf[j + w] = buf[j] | bit;
 			}
 		}
 		buf[w] = bit;
- 
+
 		if (buf[0]) {
 			break;
 		}
 	}
- 
+
 	bit = buf[0];
 	free(buf + neg);
- 
+
 	return bit;
 }
- 
+
 int
 main(int argc,
      char *argv[])
@@ -75,7 +75,7 @@ main(int argc,
 		{"plugging",	-266},	{"smokescreen",	 423},	{"speakeasy",	-745},
 		{"vein",	 813}
 	};
- 
+
 	unsigned int i;
 	uint64_t v, ret = subsum(em, sizeof(em)/sizeof(em[0]));
 
@@ -88,7 +88,7 @@ main(int argc,
 		printf("no sums match %d\n", atoi(argv[1]));
 		exit(1);
 	}
- 
+
 	printf("Found a subset with a sum of %d:", atoi(argv[1]));
 	for (i = 0; i < 64; i++) {
 		v = (uint64_t) 1 << i;
@@ -96,6 +96,6 @@ main(int argc,
 			printf("%2u | %5d %s\n", i, em[i].weight, (char*)em[i].data);
 		}
 	}
- 
+
 	exit(0);
 }
