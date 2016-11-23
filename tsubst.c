@@ -104,7 +104,7 @@ main(int argc,
 			}
 		}
 	}
-	if (!feof(stdin) || ferror(stdin)) {
+	if (!feof(stdin) || ferror(stdin)) { /* checking feof() here is pure unnecessary paranoia */
 		perror("fread(stdin)");
 		exit(1);
 	}
