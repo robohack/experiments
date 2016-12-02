@@ -42,7 +42,8 @@ main(argc, argv)
 
 	while ((nr = fread(buf, (size_t) 1, (size_t) 100, fp)) > 0) {
 		if (nr < 100) {
-			fprintf(stderr, "%s: read was %jd bytes short of %d)\n", fn, (intmax_t) 100 - nr, 100);
+			fprintf(stderr, "%s: read was %jd bytes short of %d%s)\n",
+			        fn, (intmax_t) 100 - nr, 100, feof(fp) ? ", at EOF" : "");
 		}
 	}
 
