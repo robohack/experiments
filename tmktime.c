@@ -4,12 +4,14 @@
  * Test program from Paul Eggert (eggert@twinsun.com)
  * and Tony Leneis (tony@plaza.ds.adp.com).
  */
-#if defined(BSD) ||							\
-	defined(__NetBSD__) ||						\
-	defined(__FreeBSD__) ||						\
-	defined(__OpenBSD__) ||						\
-	defined(__Darwin__) ||						\
-	defined(__DragonFly__)
+#if (defined(BSD) ||                                                    \
+     defined(__NetBSD__) ||                                             \
+     defined(__FreeBSD__) ||                                            \
+     defined(__OpenBSD__) ||                                            \
+     defined(__Darwin__) ||                                             \
+     defined(__DragonFly__) ||                                          \
+     defined(__APPLE__))
+# define HAVE_SYS_CDEFS_H		/* defined */
 # define HAVE_SYS_TIME_H	/* defined */
 # define HAVE_INTTYPES_H	/* defined */
 # define HAVE_UNISTD_H		/* defined */
@@ -37,13 +39,9 @@
 #endif
 
 #ifdef __STDC__
-/*
- * alternately for the __STDC_VERSION__ test:
- *
- * ((__STDC_VERSION__ - 0) >= 199901L)
- */
-# if defined(HAVE_INTTYPES_H) ||					\
-	(defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+# if defined(HAVE_INTTYPES_H) ||						\
+	(defined(__STDC_VERSION__) && ((__STDC_VERSION__ - 0) >= 199901L) ||	\
+	defined(_ISOC99_SOURCE)
 #  include <inttypes.h>
 # else
 #  error "missing <inttypes.h>"
