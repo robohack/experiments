@@ -21,7 +21,12 @@ main(int argc, char **argv)
 
 	int opt;
 
-	/* Set the progname from argv[0], but only if it is provided */
+	/*
+	 * Set the progname from argv[0], but only if it is provided
+	 *
+	 * N.B.:  C99 5.1.2.2.1 requires that argv[0][0] is a NUL byte even if
+	 * argc==0, but can we trust the system to be compliant?
+	 */
 	if (argc > 0 && argv[0] && *argv[0]) {
 		/* strip any leading path, by looking for the last /. */
 		progname = strrchr(argv[0], '/');
@@ -39,6 +44,7 @@ main(int argc, char **argv)
 	opterr = 0;			/* getopt() will not print errors, but
 					 * will return '?' with optopt set to
 					 * the unknown option */
+	/* see tgetopt.c for more ideas */
 	while ((opt = getopt(argc, argv, ":XXX")) != EOF) {
 		switch (opt) {
 		/* enter a case for each option letter, eg, 'x' */
@@ -58,7 +64,7 @@ main(int argc, char **argv)
 			usage(false);
 
 		default:
-			fprintf(stderr, "%s: programming error, unhandled flag: %c\n", getprogname(), opt);
+			fprintf(stderr, "%s: programming error, unhandled flag: %c\n", progname, opt);
 			abort();
 
 		}
