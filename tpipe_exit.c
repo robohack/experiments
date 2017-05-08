@@ -1,7 +1,7 @@
 #if defined(__SVR4) && defined(__sun)
 # define __P(p) p
 # include <siginfo.h>
-#else  /* assume modern 4.4BSD-based system */
+#else  /* assume modern 4.4BSD-based system, or most modern Linux */
 # include <sys/cdefs.h>
 # define HAVE_SYS_SIG
 #endif
