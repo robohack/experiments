@@ -10,7 +10,7 @@ class view(object):
 
 def balsub(w, c):
     '''A balanced algorithm for Subset-sum problem by David Pisinger
-    w = weights, c = capacity of the knapsack'''
+       w = weights, c = capacity of the knapsack'''
     n = len(w)
     assert n > 0
     sum_w = 0

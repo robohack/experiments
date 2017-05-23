@@ -1,6 +1,29 @@
-# -*- mode: python; python-indent: 8; indent-tabs-mode: t; smart-tabs-mode: nil -*- 
+# -*- mode: python; python-indent: 8; indent-tabs-mode: t; smart-tabs-mode: t -*- 
 
 # from:  https://stackoverflow.com/a/20062829/816536
+
+# The only way to make the operation efficient is to keep the interval
+# lists sorted and non-overlapping (which can be done in O(n log n)).
+#
+# With both lists sorted and non-overlapping, any set operation
+# (union, intersection, difference, symmetric difference) can be
+# performed with a simple merge.
+#
+# The merge operation is straightforward:  simultaneously loop over
+# the endpoints of both arguments, in order.
+#
+# (Note that the endpoints of each interval list are sorted because we
+# require that the intervals not overlap.)
+#
+# For each endpoint discovered, decide whether it is in the result or
+# not.  If the result currently has an odd number of endpoints and the
+# new endpoint is not in the result, add it to the result; similarly,
+# if the result currently has an even number of endpoints and the new
+# endpoint is in the result, add it to the result.  At the end of this
+# operation, the result is a list of endpoints, alternating between
+# interval start and interval end.
+# 
+# Here it is in python:
 
 # If using python 3, uncomment the following:
 #from functools import reduce
