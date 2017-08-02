@@ -1,5 +1,8 @@
 #! /bin/sh
 #
+# XXX this is stupid -- just use some control char to separate them, and then
+# set IFS to expand them again -- see trunningsh.sh
+#
 # save_args -- keep a list of quoted strings for later use via "$@"
 #
 # Note: creates a variable for each value, and uses these in another

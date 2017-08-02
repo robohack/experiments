@@ -3,14 +3,19 @@
 #
 # for systems without shquote(1), or printf(1)'s "%q"
 #
-# Note: see also tstringlist.sh for a method of saving quoted strings
-# in individual variables and creating a list of those variables;
-# and which works entirely without printf(1) and sed(1).
+# See trunningsh.sh for how to use $@ and IFS to avoid having to re-quote
+# things.
+#
+# See also tstringlist.sh for a method of saving quoted strings in individual
+# variables and creating a list of those variables; and which works entirely
+# without printf(1) and sed(1).
 #
 #
 # Usage: quotedlist=$(shell_quote args...)
 #
 # e.g.:  quotedlist=$(shell_quote *.pdf)	# filenamess with spaces
+#
+# or:    quotedlist=$(shell_quote "$@")
 #
 # After building up a quoted list, use it by evaling it inside
 # double quotes, like this:
