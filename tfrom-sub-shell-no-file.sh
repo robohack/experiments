@@ -1,7 +1,7 @@
-#! /bin/sh
+#!/bin/sh
 
-# using evan and an extra file descriptor to pass a variable values
-# from a sub-shell
+# using eval and an extra file descriptor to pass a variable values
+# from a sub-shell  (both break for ksh93)
 
 cmd=date
 
