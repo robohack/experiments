@@ -1,9 +1,8 @@
-#include <gps.h>
-
-#include <time.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 
 struct {
 	struct tm t;
@@ -73,17 +72,21 @@ struct {
 	{{   0,   0,  0,  1,   0,  116,  0,   0,     0, }, 1451606400 }, /* month wrap */
 };
 
-int main(int argc, char *argv[])
+int
+main(int argc,
+     char *argv[])
 {
-	int i;
+	unsigned int i;
 	char tbuf[128];
 	time_t ts;
 	bool failed = false;
 
+	(void) (argc && argv);
+
 	setenv("TZ", "GMT", 1);
 
 	for (i = 0; i < (sizeof(tests)/sizeof(tests[0])); i++) {
-#if 0	/* use this to calculate with glibc */
+#if 1	/* use this to calculate with your libc */
 		ts = mktime(&tests[i].t);
 #else
 		ts = mkgmtime(&tests[i].t);
@@ -92,8 +95,8 @@ int main(int argc, char *argv[])
 			failed = true;
 			strftime(tbuf, sizeof(tbuf), "%F %T", &tests[i].t);
 			printf("test %2d failed. " \
-			       "Time returned from: %s should be %lu (but was: %lu)\n",
-				i, tbuf, tests[i].result, ts);
+			       "Time returned from: %s should be %ju (but was: %ju)\n",
+			       i, tbuf, (uintmax_t) tests[i].result, (uintmax_t) ts);
 		}
 	}
 	return (int)failed;
