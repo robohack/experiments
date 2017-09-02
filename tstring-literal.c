@@ -7,7 +7,7 @@ char garray[] =
 #ifdef UNIQUE
 	"2 "
 #endif
-	"this is a literal string";
+	"this is a literal string"; /* that is just an initializer */
 
 int
 bar(int x,
@@ -32,7 +32,7 @@ bar(int x,
 #ifdef UNIQUE
 		"6 "
 #endif
-		"this is a literal string";
+		"this is a literal string"; /* that is just an initializer */
 
 	switch (x) {
 	case 0:
