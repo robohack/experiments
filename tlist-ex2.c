@@ -1,5 +1,6 @@
 /*
  * Example 2
+ *
  * An example of a list of structures:
  */
 #include <stdio.h>

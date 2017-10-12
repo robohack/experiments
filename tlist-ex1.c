@@ -1,3 +1,8 @@
+/*
+ * Example 1:
+ *
+ * Basic operations on a list of int's
+ */
 #include <stdio.h>
 #include "tlist.h"
 
