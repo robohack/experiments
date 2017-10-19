@@ -34,7 +34,7 @@ bad_interval()
 /*
  * Russel Nelson (on G+):
  *
- * What if bmptime is very very close to 2^32-1 milliseconds? In order to ever
+ * What if bmptime is very very close to 2^32-1 milliseconds?  In order to ever
  * meet that test and set it back down low again, you'd have to hit just that
  * small range of milliseconds.  That's 49 days, by the way.  So it would
  * definitely work for 49 days after being rebooted, but might not work for
@@ -59,6 +59,22 @@ good_interval()
 
 	return false;
 }
+
+/*
+ * Note:  two’s complement arithmetic ensures the delta result will be correct
+ * even if the counter overflows (and thus wraps around to zero again) unless it
+ * wraps around so much that it passes through the original “old value” you
+ * subtract from it.  So, you just need to calculate the delta often enough to
+ * do so at least twice in the time it takes the counter to overflow.  Set your
+ * tick resolution and counter width appropriately.
+ *
+ *	extern uint32_t LastTime;
+ *
+ *	uint32_t temp = GetTickCount();
+ *	uint32_t delta = temp – LastTime
+ *	LastTime = temp;
+ *
+ */
 
 
 /*

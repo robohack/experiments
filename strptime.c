@@ -1,6 +1,10 @@
+#include <sys/cdefs.h>
+#include <assert.h>
+#include <math.h>
 #include <stdio.h>
-#include <time.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /*
  *	strptime - something like the opposite of date...
@@ -8,7 +12,12 @@
  * Tue Aug 10 23:23:45 EDT 1999
  */
 
-static char *argv0 = "strptime";
+static const char *argv0 = "strptime";
+
+int main(int, char *[]);
+
+static void set_tm_wday(struct tm *);
+static void set_tm_yday(struct tm *);
 
 int
 main(argc, argv)
@@ -17,7 +26,7 @@ main(argc, argv)
 {
 	struct tm tmt;
 	time_t then;
-	char *tfmt = "%a %b %d %T EDT %Y";		/* ala date(1) */
+	const char *tfmt = "%a %b %d %T EDT %Y"; /* ala date(1) */
 	char *ttime;
 	char *tright;
 
@@ -40,6 +49,20 @@ main(argc, argv)
 	}
 	if (*tright) {
 		printf("%s: unprocessed remainder: '%s'.\n", argv0, tright);
+	}
+	/*
+	 * This is OS X or some older *BSD whose strptime() has not yet been
+	 * enhanced to fill out tm_wday and/or tm_yday when possible.
+	 *
+	 * borrowed from:
+	 *
+	 * https://github.com/stedolan/jq/commit/c538237f4e4c381d35f1c15497c95f659fd55850
+	 */
+	if (tmt.tm_wday == 8 && tmt.tm_mday != 0 && tmt.tm_mon >= 0 && tmt.tm_mon <= 11) {
+		set_tm_wday(&tmt);
+	}
+	if (tmt.tm_yday == 367 && tmt.tm_mday != 0 && tmt.tm_mon >= 0 && tmt.tm_mon <= 11) {
+		set_tm_yday(&tmt);
 	}
 	tmt.tm_isdst = -1;		/* make mktime() guess the right timezone */
 	if ((then = mktime(&tmt)) < 0) {
@@ -64,6 +87,91 @@ main(argc, argv)
 	/* NOTREACHED */
 }
 
+
+/*
+ * Compute and set tm_wday
+ */
+static void
+set_tm_wday(struct tm *tm)
+{
+	int century;
+	int year;
+	int mon;
+	int wday;
+
+	/*
+	 * https://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week#Gauss.27s_algorithm
+	 * https://cs.uwaterloo.ca/~alopez-o/math-faq/node73.html
+	 *
+	 * Tested with dates from 1900-01-01 through 2100-01-01.
+	 *
+	 * This algorithm produces the wrong day-of-the-week number for dates in
+	 * the range 1900-01-01..1900-02-28, and for 2100-01-01..2100-02-28.
+	 */
+	century = (1900 + tm->tm_year) / 100;
+	year = (1900 + tm->tm_year) % 100;
+	if (tm->tm_mon < 2) {
+		year--;
+	}
+	/*
+	 * The month value in the wday computation below is shifted so that
+	 * March is 1, April is 2, .., January is 11, and February is 12.
+	 */
+	mon = tm->tm_mon - 1;
+	if (mon < 1) {
+		mon += 12;
+	}
+	wday = (tm->tm_mday +
+	        (int) lrint(floor((2.6 * mon - 0.2))) +
+	        year +
+	        (int) lrint(floor(year / 4.0)) +
+	        (int) lrint(floor(century / 4.0)) -
+	        2 * century) % 7;
+	if (wday < 0) {
+		wday += 7;
+	}
+#if 0
+	/* See commentary above */
+	assert(wday == tm->tm_wday || tm->tm_wday == 8);
+#endif
+	tm->tm_wday = wday;
+}
+
+/*
+ * Compute and set tm_yday.
+ */
+static void
+set_tm_yday(struct tm *tm)
+{
+	static const int d[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+	int mon;
+	int year;
+	int leap_day;
+	int yday;
+
+	mon = tm->tm_mon;
+	year = 1900 + tm->tm_year;
+	leap_day = 0;
+	if (tm->tm_mon > 1 &&
+	    ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))) {
+		leap_day = 1;
+	}
+
+	/* Bound check index into d[] */
+	if (mon < 0) {
+		mon = -mon;
+	}
+	if (mon > 11) {
+		mon %= 12;
+	}
+	yday = d[mon] + leap_day + tm->tm_mday - 1;
+	assert(yday == tm->tm_yday || tm->tm_yday == 367);
+	tm->tm_yday = yday;
+
+	return;
+}
+
+#if 0
 
 /*	$NetBSD: strptime.c,v 1.18 1999/04/29 02:58:30 tv Exp $	*/
 
@@ -459,3 +567,4 @@ conv_num(buf, dest, llim, ulim)
 	*dest = result;
 	return (1);
 }
+#endif
