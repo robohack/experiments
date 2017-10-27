@@ -18,6 +18,7 @@
 #
 #	http://www.in-ulm.de/~mascheck/various/bourne_args/
 
+# xxx as seen below this does not work as one might expect/hope
 PLAIN_ARGV=${@}
 
 # carefully preserve original arguments individually with newline separation
