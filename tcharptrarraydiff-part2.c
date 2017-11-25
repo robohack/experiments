@@ -37,6 +37,6 @@ bar2(const char *nm, void *f)
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat (default-value 'compile-command) " OPTIM=-O0 PROG=tcharptrarraydiff OBJS='tcharptrarraydiff-part1.o tcharptrarraydiff-part2.o' && ./tcharptrarraydiff"))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " OPTIM=-O0 PROG=tcharptrarraydiff OBJS='tcharptrarraydiff-part1.o tcharptrarraydiff-part2.o' && ./tcharptrarraydiff"))
  * End:
  */
