@@ -1282,6 +1282,6 @@ ff_vecs_t wsg2000_vecs = {
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat (default-value 'compile-command) " CPPFLAGS='-DDO_MAIN' LDLIBS=-lm " fn " && echo 'run with one or more WSG-2000 .NAL files'"))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " CPPFLAGS='-DDO_MAIN' LDLIBS=-lm " fn " && echo 'run with one or more WSG-2000 .NAL files'"))
  * End:
  */
