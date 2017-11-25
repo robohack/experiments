@@ -117,6 +117,13 @@ typedef union sockaddr_union {
 
 void check_alignof(const char *, size_t);
 
+/*
+ * N.B.:  stride can be given as "sizeof(ptr)", but that's not necessarily going
+ * to be strictly what the target architecture requires for checking alignment
+ * of the object.
+ *
+ * Better to use alignof(ptr)
+ */
 void
 check_alignof(const char *ptr, size_t stride)
 {
@@ -126,6 +133,53 @@ check_alignof(const char *ptr, size_t stride)
 		       (uintmax_t) ((uintptr_t) ptr % (uintptr_t) stride));
 	}
 	return;
+}
+
+static const char *
+my_inet6_ntoa(void *addr,
+              size_t nbytes)
+{
+	static char buf[41]; /* ":xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx" */
+        char *out = buf;
+        char *longest_start = NULL;
+        char *start = NULL;
+        int longest_len = 1;
+        int len = 0;
+        char *dest;
+        unsigned int i;
+        uint16_t value;
+
+        /* xxx or just print 16 nibbles like .ip6.arpa names, but in the right order */
+
+#if 0
+        /* Format address, keeping track of longest run of zeros */
+        for (i = 0; i < 4; i++) {
+                value = ntohs(in->s6_addr16[i]);
+                if (value == 0) {
+	                if (len++ == 0) {
+                                start = out;
+	                }
+                        if (len > longest_len) {
+                                longest_start = start;
+                                longest_len = len;
+                        }
+                } else {
+                        len = 0;
+                }
+                out += sprintf(out, ":%x", value);
+        }
+
+        /* Abbreviate longest run of zeros, if applicable */
+        if (longest_start) {
+	        dest = strcpy((longest_start + 1),
+	                      (longest_start + (2 * longest_len)));
+	        if (dest[0] == '\0') {
+                        dest[1] = '\0';
+	        }
+	        dest[0] = ':';
+        }
+#endif
+        return ((longest_start == buf) ? buf : (buf + 1));
 }
 
 static const char *streiaret(int, int);
@@ -186,6 +240,9 @@ main(argc, argv)
 			printf("\tMore_Hostnames:\t");
 		}
 		while (hp->h_aliases[0]) {
+# ifdef DEBUG
+			check_alignof((char *) (*(hp->h_aliases)), alignof(char *));
+# endif
 			printf("%s ", *hp->h_aliases++);
 		}
 		if (hp->h_addr_list[0]) {
@@ -194,21 +251,38 @@ main(argc, argv)
 		}
 		while (hp->h_addr_list[0]) {
 #if 1
-			printf("%u.%u.%u.%u ",
-			       (unsigned int) hp->h_addr_list[0][0],
-			       (unsigned int) hp->h_addr_list[0][1],
-			       (unsigned int) hp->h_addr_list[0][2],
-			       (unsigned int) hp->h_addr_list[0][3]);
-			hp->h_addr_list++;
+			switch (hp->h_addrtype) {
+			case AF_INET:
+				printf("IPv4(len=%zd): %u.%u.%u.%u ",
+				       (size_t) hp->h_length,
+				       (unsigned int) ((uint8_t) hp->h_addr_list[0][0]),
+				       (unsigned int) ((uint8_t) hp->h_addr_list[0][1]),
+				       (unsigned int) ((uint8_t) hp->h_addr_list[0][2]),
+				       (unsigned int) ((uint8_t) hp->h_addr_list[0][3]));
+				break;
+			case AF_INET6:
+				printf("IPv6(len=%zd): %s ",
+				       (size_t) hp->h_length,
+				       my_inet6_ntoa(hp->h_addr_list, (size_t) hp->h_length));
+				break;
+			}
 #else
-			struct sockaddr_in sin;
+			struct sockaddrun_t sun;
 
-# ifdef DEBUG
-			check_alignof((char *) (*(hp->h_addr_list)), alignof(struct in_addr));
-# endif
-			memcpy(&sin.sin_addr, *hp->h_addr_list++, (size_t) hp->h_length);
-			printf("%s ", inet_ntoa(sin.sin_addr));
+			switch (hp->h_addrtype) {
+			case AF_INET:
+				check_alignof((char *) (*(hp->h_addr_list)), alignof(struct in_addr));
+				memcpy(&sun.saun_sinaddr, *hp->h_addr_list, (size_t) hp->h_length);
+				printf("%s ", inet_ntoa(&sun.saun_sinaddr));
+				break;
+			case AF_INET6:
+				check_alignof((char *) (*(hp->h_addr_list)), alignof(struct in6_addr));
+				memcpy(&sun.saun_sin6addr, *hp->h_addr_list, (size_t) hp->h_length);
+				printf("%s ", inet6_ntoa(&sun.saun_sin6addr)); /* xxx non-existant? */
+				break;
+			}
 #endif
+			hp->h_addr_list++;
 		}
 		printf("\n\n");
 	}
@@ -307,6 +381,6 @@ main(argc, argv)
  *
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat (default-value 'compile-command) " " fn " && ./" fn))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " " fn " && ./" fn))
  * End:
  */
