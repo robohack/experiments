@@ -618,6 +618,6 @@ signed_int_sub_undf_mot(foo, bar)
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat (default-value 'compile-command) " OPTIM='-O0 -ftrapv -fwrapv' " fn " && ./" fn))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " OPTIM='-O0 -ftrapv -fwrapv' " fn " && ./" fn))
  * End:
  */
