@@ -379,7 +379,7 @@ check_clock_res()
 	if (clock_getres(CLOCK_MONOTONIC, &res) == -1) {
 		err(EXIT_FAILURE, "clock_getres(CLOCK_MONOTONIC)");
 	}
-	warnx("using CLOCK_MONOTONIC timer with resolution: %ld s, %ld ns", res.tv_sec, res.tv_nsec);
+	warnx("using CLOCK_MONOTONIC timer with resolution: %ld s, %ld ns", (long) res.tv_sec, res.tv_nsec);
 }
 
 #else /* !CLOCK_MONOTONIC */
@@ -434,12 +434,12 @@ difftval(struct timeval tstart, struct timeval tend)
 	return (long int) ((tend.tv_sec * 1000000) + tend.tv_usec);
 }
 
-void print_rusage(char *, struct rusage);
+void print_rusage(const char *, struct rusage);
 
 #define PRINT_IF(var)	(var) ?  printf("%s%s = %ld\n", pref, STRINGIFY_SYMBOL(var), var) : 0
 
 void
-print_rusage(char *pref,
+print_rusage(const char *pref,
 	     struct rusage ru)
 {
 	PRINT_IF(ru.ru_utime.tv_sec);
@@ -506,7 +506,7 @@ main(int argc,
 		 */
 		warnx("maximum microtime() interval: %llu seconds (# of uSecs that fit in %d bits)",
 		      ((1LLU << ((sizeof(microtime()) * CHAR_BIT) - 1)) / 1000000U) / 60U,
-		      (sizeof(microtime()) * CHAR_BIT) - 1);
+		      (int) (sizeof(microtime()) * CHAR_BIT) - 1);
 	}
 	check_clock_res();
 
@@ -580,6 +580,6 @@ main(int argc,
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat (default-value 'compile-command) " " fn " && ./" fn))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " " fn " && ./" fn))
  * End:
  */

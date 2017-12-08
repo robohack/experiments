@@ -1,12 +1,14 @@
+# round(), from the GNU Awk manual
+#
 function round(x, ival, aval, fraction)
 {
-	ival = int(x);		# integer part, int() truncates
+	# integer part, int() just truncates
+	ival = int(x);
 	# see if there is a fractional part
+	# xxx N.B.:  this may not work if x is the result of a float calculation
 	if (ival == x) {
-		# no fraction
 		return ival;
 	}
-	# ensure no decimals
 	if (x < 0) {
 		aval = -x;
 		# absolute value

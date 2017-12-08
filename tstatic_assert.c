@@ -1,11 +1,35 @@
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#if !defined(__GNUC_PREREQ__)
+# if defined(__GNUC__)
+#  define __GNUC_PREREQ__(x, y)						\
+	((__GNUC__ == (x) && __GNUC_MINOR__ >= (y)) ||			\
+	 (__GNUC__ > (x)))
+# else
+#  define __GNUC_PREREQ__(x, y)	0
+# endif
+#endif
+
+/*
+ * __unused: Note that item or function might be unused.
+ */
+#if !defined(__unused)
+# if __GNUC_PREREQ__(2, 7)
+#  define __unused	__attribute__((__unused__))
+# else
+#  define __unused	/* delete */
+# endif
+#endif
+
 
 #ifndef static_assert			/* XXX must always be a macro in C11 */
 
 /*
  * A macro that can check static expressions which can be used wherever the
  * expression is a valid integer constant expression, but it is not a
- * preprocessor constant expression.
+ * preprocessor constant expression (i.e. cannot be used in preprocessor tests).
  *
  * Since not all compilers catch all constraint violations, due to either
  * sloppy error checking or language extensions, this variant violates two
@@ -22,53 +46,35 @@
  * message giving the line number where the static_assert() call has been
  * placed.
  *
- * Unfortunately all decent compilers will notice both constraint violations and
- * so most will print two errors for each failing static_assert() invocation;
- * and more modern compilers will further utter secondary messages leading back
- * to the original location of the macro expansion thus making all these tricks
- * to incorporate the line number into the error message unnecessary.
+ * Unfortunately all good and decent compilers will notice both constraint
+ * violations and so most will print two errors for each failing static_assert()
+ * invocation; and more modern compilers will further utter secondary messages
+ * leading back to the original location of the macro expansion thus making all
+ * these tricks to incorporate the line number into the error message
+ * unnecessary.
  */
 
-#define static_assert(expr)						\
-	typedef struct { \
-		int STATIC_ASSERT_FLD_NM_(__LINE__): ((expr) ? 1 : -1);	\
-	} STATIC_ASSERT_STRUCT_TYPE_(__LINE__)[(expr) ? 1 : -1];	\
-	STATIC_ASSERT_STRUCT_TYPE_(__LINE__) STATIC_ASSERT_VAR_NM_(__LINE__)
+# define static_assert(expr, msg)						\
+	typedef struct { 							\
+	int STATIC_ASSERT_FLD_NM_(__LINE__): (/*CONSTCOND*/(expr) ? 1 : -1);	\
+	} STATIC_ASSERT_STRUCT_TYPE_(__LINE__)[/*CONSTCOND*/(expr) ? 1 : -1]	\
+	__unused
 
 #endif /* !defined(static_assert) */
 
 #define STATIC_ASSERT_FLD_NM_(line)	STATIC_ASSERT_FLD_NM_2_(line)
-#define STATIC_ASSERT_VAR_NM_(line)	STATIC_ASSERT_VAR_NM_2_(line)
 #if (__STDC__ - 0) > 0
-# define STATIC_ASSERT_FLD_NM_2_(line)	compile_time_assertion_1t_failed_at_line_##line
-# define STATIC_ASSERT_VAR_NM_2_(line)	compile_time_assertion_1v_failed_at_line_##line
+# define STATIC_ASSERT_FLD_NM_2_(line)	compile_time_assertion_b_failed_at_line_##line
 #else
-# define STATIC_ASSERT_FLD_NM_2_(line)	compile_time_assertion_1t_failed_at_line_/**/line
-# define STATIC_ASSERT_VAR_NM_2_(line)	compile_time_assertion_1v_failed_at_line_/**/line
+# define STATIC_ASSERT_FLD_NM_2_(line)	compile_time_assertion_b_failed_at_line_/**/line
 #endif
 
 #define STATIC_ASSERT_STRUCT_TYPE_(line) STATIC_ASSERT_STRUCT_TYPE_2_(line)
 #if (__STDC__ - 0) > 0
-# define STATIC_ASSERT_STRUCT_TYPE_2_(line) compile_time_assertion_2_failed_at_line_##line
+# define STATIC_ASSERT_STRUCT_TYPE_2_(line) compile_time_assertion_a_failed_at_line_##line
 #else
-# define STATIC_ASSERT_STRUCT_TYPE_2_(line) compile_time_assertion_2_failed_at_line_/**/line
+# define STATIC_ASSERT_STRUCT_TYPE_2_(line) compile_time_assertion_a_failed_at_line_/**/line
 #endif
-
-/*
- * This is a gross hack to avoid warnings from more modern compilers that will
- * warn about unused typedefs when static_assert() is used within a block of
- * code.
- *
- * Unfortunately it mixes a declaration and a statement in the same macro thus
- * it cannot be used after declarations, nor can it be used in the midst of
- * other declarations.
- */
-#define static_assert_in_block(expr)					\
-	{typedef struct { \
-		int STATIC_ASSERT_FLD_NM_(__LINE__): ((expr) ? 1 : -1);	\
-	} STATIC_ASSERT_STRUCT_TYPE_(__LINE__)[(expr) ? 1 : -1];	\
-	extern STATIC_ASSERT_STRUCT_TYPE_(__LINE__) STATIC_ASSERT_VAR_NM_(__LINE__); \
-	(void) STATIC_ASSERT_VAR_NM_(__LINE__);}
 
 
 #ifdef the_old_linux_way
@@ -97,20 +103,17 @@
 #define BUILD_BUG_ON_NULL(e) ((void *) sizeof(struct { int :-!!(e); }))
 #endif	/* the_new_linux_way */
 
-static_assert(1 == 1);
+static_assert(1 == 1, "good, CPP agrees at least one integer equates with itself");
 
 #if 0
-static_assert(1 == 0);
+static_assert(1 == 0, "demonstrating static assertion failure");
 #endif
 
 /* make sure compiler isn't on drugs! */
-static_assert(sizeof(char) == 1);
-static_assert(sizeof(unsigned char) == 1);
-static_assert(sizeof(signed char) == 1);
-static_assert(sizeof(char) < sizeof(int)); /* make sure EOF is valid! */
-
-#include <stdio.h>
-#include <stdlib.h>
+static_assert(sizeof(char) == 1, "char must be one byte!");
+static_assert(sizeof(unsigned char) == 1, "unsigned char must be one byte!");
+static_assert(sizeof(signed char) == 1, "signed char must be one byte!");
+static_assert(sizeof(char) < sizeof(int), "int is not big enough to represent EOF!"); /* make sure EOF is valid! */
 
 int main(void);
 
@@ -118,20 +121,9 @@ int
 main()
 {
 	int foo = 0;
-#if 1
+	static_assert(sizeof(long) > 1, "long is too small");
+	static_assert(sizeof(char *) > 1, "char pointer is too small");
 	int c;
-#endif
-#if 0
-	/* xxx without C11 static_assert() this will give a warning about an unused variable */
-	static_assert(sizeof(long) > 1);
-	static_assert(sizeof(char *) > 1);
-#else
-	static_assert_in_block(sizeof(long) > 1);
-	static_assert_in_block(sizeof(char *) > 1);
-#endif
-#if 0
-	int c;
-#endif
 
 
 	if (foo) {
@@ -139,14 +131,16 @@ main()
 	}
 
 	/*
-	 * in theory pre-C99 compilers should complaint or error-out here
-	 * because this introduces a declaration in the midst of code,
-	 * i.e. after the first non-declaration statement in a block.
+	 * in theory pre-C99 compilers, and pedantic ISO C90 or newer compilers,
+	 * will complain or error-out here when using the pre-C11
+	 * static_assert() variant because this introduces a declaration in the
+	 * midst of code, i.e. after the first non-declaration statement in a
+	 * block.
 	 *
 	 * ISO C90, C89, and K&R all forbid mixing declarations and code.
 	 */
-#if 0
-	static_assert(1 == 0);
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ - 0) >= 201112L	/* xxx there are compiler specific tests for _Static_assert support */
+	static_assert(1 == 1, "demonstrating static assertion within code");
 #endif
 
 	while ((c = fgetc(stdin)) != EOF) {
