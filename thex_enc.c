@@ -14,8 +14,8 @@ nibbleFromChar(char c)
 }
 
 /* Convert a string of characters representing a hex buffer into a series of bytes of that real value */
-uint8_t
-*hexStringToBytes(char *inhex)
+uint8_t *
+hexStringToBytes(char *inhex)
 {
 	uint8_t *retval;
 	uint8_t *p;
@@ -38,17 +38,18 @@ static char byteMap[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a',
 static int byteMapLen = sizeof(byteMap);
 
 
-/* Utility function to convert nibbles (4 bit values) into a hex character representation */
+/* convert nibbles (4 bit values) into a hex character representation */
 static char
 nibbleToChar(uint8_t nibble)
 {
-	if(nibble < byteMapLen) return byteMap[nibble];
+	if(nibble < byteMapLen)
+		return byteMap[nibble];
 	return '*';
 }
 
 /* Convert a buffer of binary values into a hex string representation */
-char
-*bytesToHexString(uint8_t *bytes, size_t buflen)
+char *
+bytesToHexString(uint8_t *bytes, size_t buflen)
 {
 	char *retval;
 	int i;
