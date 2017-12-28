@@ -1,48 +1,30 @@
-//
-// void prntnum(unsigned long n, int base, char sign, char *outbuf)
-//
-// unsigned long num = number to be printed
-// int base        = number base for conversion;  decimal=10,hex=16
-// char sign       = signed or unsigned output
-// char *outbuf   = buffer to hold the output number
-//
+#include <assert.h>
 
 void
-prntnum(unsigned long n,
-        int base,
-        char sign,
-        char *outbuf)
+prntnum(unsigned long n,		/* number to be printed */
+        unsigned int base,		/* number base */
+        char sign,			/* optional sign character */
+        char *outbuf)			/* destination buffer */
 {
-
-
 	int i = 12;
-
 	int j = 0;
 
+	assert(base <= 16);
 
-	do{
+	do {
 		outbuf[i] = "0123456789ABCDEF"[num % base];
-
 		i--;
+		n = num / base;
+	} while (num > 0);
 
-		n = num/base;
-
-	}while( num > 0);
-
-
-	if(sign != ' '){
+	if (sign != ' ') {
 		outbuf[0] = sign;
-
 		++j;
-
 	}
 
-	while( ++i < 13){
+	while (++i < 13) {
 		outbuf[j++] = outbuf[i];
-
 	}
 
-	outbuf[j] = 0;
-
-
+	outbuf[j] = '\0';
 }
