@@ -17,37 +17,24 @@ hexencode(time_t tm, uint64_t id)
 	/* some ILP32 systems _may_ have 32-bit time_t */
 	ti = (uint64_t) tm;
 
-	/* fill bin[] with alternating bytes, ti reversed */
-#if 1
+	/* fill bin[] with alternating bytes */
 	for(z = 0, s = sizeof(uint64_t) - 1; z < sizeof(uint64_t); z++, s--) {
-		bin[z*2]     = ti >> (z * CHAR_BIT) & 0xff;
-		bin[z*2 + 1] = id >> (s * CHAR_BIT) & 0xff;
-		printf("bin[%u] = %02x, ti >> %u\n", z * 2,     ti >> (z * 8) & 0xff, z * 8);
-		printf("bin[%u] = %02x, id >> %u\n", z * 2 + 1, id >> (s * 8) & 0xff, s * 8);
+		bin[z*2]     = id >> (s * CHAR_BIT) & 0xff;
+		bin[z*2 + 1] = ti >> (s * CHAR_BIT) & 0xff;
+		printf("bin[%u] = %02x, ti >> %u\n", z * 2,     (unsigned int) (ti >> (s * 8) & 0xff), s * 8);
+		printf("bin[%u] = %02x, id >> %u\n", z * 2 + 1, (unsigned int) (id >> (s * 8) & 0xff), s * 8);
 	}
-#else
-	bin[0] = ti >> 0 & 0xff;		/* Tm 8 */
-	bin[1] = id >> 56 & 0xff;		/* Id 1 */
-	bin[2] = ti >> 8 & 0xff;		/* Tm 7 */
-	bin[3] = id >> 48 & 0xff;		/* Id 2 */
-	bin[4] = ti >> 16 & 0xff;		/* Tm 6 */
-	bin[5] = id >> 40 & 0xff;		/* Id 3 */
-	bin[6] = ti >> 24 & 0xff;		/* Tm 5 */
-	bin[7] = id >> 32 & 0xff;		/* Id 4 */
-	bin[8] = ti >> 32 & 0xff;		/* Tm 4 */
-	bin[9] = id >> 24 & 0xff;		/* Id 5 */
-	bin[10] = ti >> 40 & 0xff;		/* Tm 3 */
-	bin[11] = id >> 16 & 0xff;		/* Id 6 */
-	bin[12] = ti >> 48 & 0xff;		/* Tm 2 */
-	bin[13] = id >> 8 & 0xff;		/* Id 7 */
-	bin[14] = ti >> 56 & 0xff;		/* Tm 1 */
-	bin[15] = id >> 0 & 0xff;		/* Id 8 */
-#endif
 	/* encode bin[] as hexadecimal into buf[] */
 	for (z = 0; z < sizeof(bin); z++) {
 		buf[z*2]     = hexchars[(bin[z] & 0xF0) >> 4];
 		buf[z*2 + 1] = hexchars[ bin[z] & 0x0F ];
 	}
+	puts(buf);
+	for (z = 0; z < sizeof(buf) - 1 && buf[z] == '0'; z++) {
+		;
+	}
+	printf("trimming %u zeros...\n", z);
+	memmove(buf, buf + z, sizeof(buf) - z);
 	return buf;
 }
 
@@ -81,17 +68,23 @@ static uint8_t hex2byte(char n1, char n0)
  * shifts:      00 56 08 48 16 40 24 32 32 24 40 16 48 08 56 00
  */
 static uint64_t
-hexdecode(char *buf)
+hexdecode(const char *buf)
 {
 	int z;
 	unsigned int s;
 	uint64_t i;
 
-	for (i = 0, z = 31, s = 0; z >= 3; z -= 4, s += 8) {
-		i |= (uint64_t) hex2byte(buf[z - 1], buf[z]) << s;
-		printf("buf[%u], %x << %u, %jx\n", z, (unsigned int) hex2byte(buf[z - 1], buf[z]), s, (uintmax_t) i);
+#if 1
+	for(i = 0, z = strlen(buf) - 3, s = 0; z >= 1; z -= 4, s += 8) {
+		i |= ((uint64_t) hex2byte(buf[z - 1], buf[z])) << s;
+		printf("buf[%u,%u], %x << %u, %jx\n", z-1, z, (unsigned int) hex2byte(buf[z - 1], buf[z]), s, (uintmax_t) i);
 	}
-
+#else
+	for (i = 0, z = sizeof(i) * 4 - 3, s = 0; z > 0; z -= 4, s += 8) {
+		i |= (uint64_t) hex2byte(buf[z - 1], buf[z]) << s;
+		printf("buf[%u,%u], %x << %u, %jx\n", z-1, z, (unsigned int) hex2byte(buf[z - 1], buf[z]), s, (uintmax_t) i);
+	}
+#endif
 	return i;
 }
 
@@ -106,6 +99,19 @@ main(void)
 
 	t = time(NULL);
 	id = 0x00000013E5B169A4;
+
+	buf = hexencode(t, id);
+	puts(buf);
+
+	idd = hexdecode(buf);
+	printf("%jx\n\n", (uintmax_t) idd);
+
+	if (id != idd) {
+		exit(id != idd);
+	}
+
+	t = time(NULL);
+	id = 0x8FDA4213E5B169A4;
 
 	buf = hexencode(t, id);
 	puts(buf);
