@@ -84,8 +84,8 @@ echo tvar=${tvar}
 # normal compound command AND THEN CONTINUE RUNNING THE SCRIPT!!!
 #
 # at least with the opening paren up on the definition line, any non-AT&T-Ksh
-# (compatible) shell will stop (after executing the function body as individual
-# commands) with a syntax error at the closing paren.
+# (i.e. not fully compatible) shell will stop (after executing the function body
+# as individual commands) with a syntax error at the closing paren.
 #
 function tfun2 {
 	local tvar
