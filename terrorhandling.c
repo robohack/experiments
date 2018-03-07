@@ -6,10 +6,15 @@ enum {
 	ENUTS,
 };
 
+/*
+ * such clarity, much simplicity!
+ */
 int
 bar_goto_multi_error_boilerplate_is_much_shorter()
 {
-	void *res1 = NULL, *res2 = NULL, *res3 = NULL;
+	void *res1 = NULL;		/* xxx must be init to NULL */
+	void *res2 = NULL;
+	void *res3 = NULL;
 	int result = EFAILED;
 
 	if (pre_flight_check_fails()) {
@@ -44,7 +49,7 @@ bar_goto_multi_error_boilerplate_is_much_shorter()
  * hmmmm....  What about using a statement expressino instead to allow the free
  * function to return a result code?
  *
- * ({int _x; (p) ? (_x=f(p), p=NULL, _x) : 0})
+ * ({int _x; (p) ? (_x=f(p), p=NULL, _x) : SUCCESS})
  */
 #define FREE_CALL(f, p) do { if (p != NULL) { f(p); p = NULL; } } while(0)
 
@@ -55,6 +60,9 @@ bar_goto_multi_error_boilerplate_is_much_shorter()
 	return result;
 }
 
+/*
+ * no goto's, such complexity!
+ */
 int
 bar_no_gotos_or_macros_multi_error_boilerplate()
 {
@@ -152,10 +160,11 @@ bar_no_gotos_or_macros_multi_error_boilerplate()
  * This enforced responsibility can work its way up as far as necessary.
  *
  * Condition handlers are functions or objects which can be defined externally
- * to client code. This helps decouple the client code from the error handling
+ * to client code.  This helps decouple the client code from the error handling
  * code, and also improves cohesion.
+ *
+ * xxx but it is very hard to read and comprehend
  */
-
 bool
 condition_two_handler()
 {
@@ -190,7 +199,7 @@ some_fn(condition_two_handler)
 	error_code_t error = SUCCESS;
 
 	if (something_is_not_ok()) {
-		error = ENUTS;
+ 		error = ENUTS;
 	}
 
 	return error;
