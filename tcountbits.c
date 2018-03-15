@@ -677,6 +677,12 @@ suseconds_t microtime(void);
  * some sources claim CLOCK_MONOTONIC_RAW sometiems produces garbage results,
  * and is also significantly more expensive to call [1].
  *
+ * On the other hand note that CLOCK_MONOTONIC is only subject to incremental
+ * corrections, not sudden jumps, so CLOCK_MONOTONIC_RAW would be relevant
+ * mainly to cases where more accurate time is wanted over very short intervals,
+ * and CLOCK_MONOTONIC would be preferable for longer-term timers measured in
+ * minutes, hours or days.  Of couse we _are_ measuring short intervals here.
+ *
  * XXX the rest of this is informational -- we really only want CLOCK_MONOTONIC
  * here.
  *
@@ -722,6 +728,13 @@ suseconds_t microtime(void);
  * are saved and restored on each context switch either and there are reports
  * that at least some kernel versions will count the time spent in sleep(3),
  * for example.
+ *
+ * Apparently Android made it even worse, according to this comment on StkOvf:
+ *
+ *	For Android users, using CLOCK_MONOTONIC may be problematic since the
+ *	app may get suspended, along with the clock.  For that, Android added
+ *	the ANDROID_ALARM_ELAPSED_REALTIME timer that is accessible through
+ *	ioctl().  [[ Itay Bianco ]]
  *
  * Note: suseconds_t is for signed values of times in microseconds, and it was
  * first added to POSIX 1003.1 in System Interfaces and Headers, Issue 5
@@ -930,7 +943,9 @@ microtime()
 /*
  * XXX N.B.:  apparently on linux times(NULL) is fast and returns a clock_t
  * value of CLK_TKS since the epoch, but it is probably implemented using
- * gettimeofday() anyway... (note: times() is POSIX-1003.1-1998)
+ * gettimeofday() anyway... (note: times() is POSIX-1003.1-1990)
+ *
+ * On BSD times() is just implemented using getrusage() and gettimeofday().
  */
 
 suseconds_t
