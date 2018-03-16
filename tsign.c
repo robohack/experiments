@@ -25,6 +25,15 @@ main()
 	printf("sfoo = (hex) %x.\n", sfoo & 0xffff);
 	printf("sfoo = (octal) %o.\n", sfoo & 0xffff);
 
+	/*
+	 * What happens if the statement is of the form:
+	 *
+	 *	<signed int> = <unsigned int> <op> <signed int>
+	 *
+	 * and the signed int on the RHS is negative?  Does it matter if the int
+	 * on the LHS is signed or unsigned?
+	 */
+
 	exit(0);
 	/* NOTREACHED */
 }
