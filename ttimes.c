@@ -19,15 +19,18 @@ main(void)
 	double clkf;
 	time_t clk2;
 	time_t tloc;
+	long tck;
 
-	printf("CLK_TCK:              %lu\n", (unsigned long) CLK_TCK);
+	tck = CLK_TCK;
+
+	printf("CLK_TCK:              %lu\n", tck);
 	printf("sysconf(_SC_CLK_TCK): %lu\n", sc_clk);
 
 	clk = times(&tm);  // clock_t times(struct tms *buffer);
 
 	printf("Output from times():  %jd\n", (intmax_t) clk);
 
-	clkf = (double) clk / CLK_TCK;
+	clkf = (double) clk / (double) tck;
 
 	printf("times() / CLK_TCK:    %f\n", clkf);
 	if (sc_clk != CLK_TCK) {
