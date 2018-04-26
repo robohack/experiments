@@ -902,7 +902,8 @@ difftval(struct timeval tstart, struct timeval tend)
 		tend.tv_sec++;
 		tend.tv_usec -= 1000000;
 	}
-	diff = ((tend.tv_sec * 1000000) + tend.tv_usec);
+
+	diff = (useconds_t) ((tend.tv_sec * 1000000) + tend.tv_usec);
 
 	return diff;
 }
