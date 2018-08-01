@@ -22,12 +22,30 @@ checksum8mod255(const unsigned char *p,
 int
 main(void);
 
+/*
+ * "Hxx\r\n"
+ *
+ * "xx=s=tttt=hhhhh=wwww=ccc\r\n"
+ *
+ *  xx: probe number
+ *  s: gauge status (0=OK, 1=Probe error, 2=Probe doesn't exist)
+ *  tttt: temperature in 1/10°C (always 150)
+ *  hhhhh: volume in L
+ *  wwww: water volume in L (always 0)
+ *  ccc: checksum from 1 to 255
+ */
 int
 main()
 {
-	const char *test = " 1=0= 150= 1307=   0=";
+	const char *test  = " 1=0= 150= 1307=   0="; /* 235 XXX is 230!!! */
+	const char *test2 = " 2=0= 150= 5750=   0="; /* 237 [correct] */
+	uint8_t csum;
 
-	printf("checksum8mod255() = %u\n", checksum8mod255(test, strlen(test));
+	csum = checksum8mod255((const unsigned char *) test, strlen(test));
+	printf("checksum8mod255(test1) = %u [0x%02x]\n", csum, csum);
+
+	csum = checksum8mod255((const unsigned char *) test2, strlen(test2));
+	printf("checksum8mod255(test2) = %u [0x%02x]\n", csum, csum);
 
 	exit(EXIT_SUCCESS);
 }
