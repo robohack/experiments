@@ -28,3 +28,14 @@ __swap_internal(void *a,
 
 	return;
 }
+
+/*
+ * oldy-moldy XOR for integer values (usually not faster than a temp register)
+ */
+void swapXor(int &a,
+             int &b)
+{
+	a ^= b;
+	b ^= a;
+	a ^= b;
+}

@@ -7,89 +7,89 @@
 // code:
 int select(int x, int y, int ifXisSmaller, int ifYisSmaller)
 {
-  int diff  = x - y;
-  // sets bit31 to 0xFFFFFFFF if x<y, else 0x00000000
-  int bit31 = diff >> 31;
+	int diff  = x - y;
+	// sets bit31 to 0xFFFFFFFF if x<y, else 0x00000000
+	int bit31 = diff >> 31;
 
-  // return ifXisSmaller if x is smaller than y, else y
-  return (bit31 & (ifXisSmaller ^ ifYisSmaller)) ^ ifYisSmaller;
+	// return ifXisSmaller if x is smaller than y, else y
+	return (bit31 & (ifXisSmaller ^ ifYisSmaller)) ^ ifYisSmaller;
 }
 
 int minimum(int x, int y)
 {
-  // if x<y then return x, else y
-  return select(x,y,x,y);
+	// if x<y then return x, else y
+	return select(x,y,x,y);
 }
 
 int maximum(int x, int y)
 {
-  // if x<y then return y, else x
-  return select(x,y,y,x);
+	// if x<y then return y, else x
+	return select(x,y,y,x);
 }
 
 int minimumSimple(int x, int y)
 {
-  if (x < y)
-    return x;
-  else
-    return y;
+	if (x < y)
+		return x;
+	else
+		return y;
 }
 
 // assembler:
 #ifdef _MSC_VER
 __forceinline void maximumAsm() // stripped down to core algorithm to avoid overhead of parameter pushes/pops
 {
-  // compiler: Visual C++ 2008
-  // in: ecx - x
-  // in: edx - y
-  // out: eax - result
-  __asm
-  {
-    ; diff  = x - y
-    mov eax, ecx
-    sub eax, edx
-    ; bit31 = diff >> 31
-    sar eax, 31
-    ; return (bit31 & (y ^ x)) ^ x
-    xor ecx, edx
-    and eax, ecx
-    xor eax, ecx
-  }
+	// compiler: Visual C++ 2008
+	// in: ecx - x
+	// in: edx - y
+	// out: eax - result
+	__asm
+	{
+		; diff  = x - y
+		          mov eax, ecx
+		          sub eax, edx
+		; bit31 = diff >> 31
+		          sar eax, 31
+		          ; return (bit31 & (y ^ x)) ^ x
+			            xor ecx, edx
+			            and eax, ecx
+			            xor eax, ecx
+			            }
 }
 
 __forceinline void minimumAsm() // stripped down to core algorithm to avoid overhead of parameter pushes/pops
 {
-  // compiler: Visual C++ 2008
-  // in: ecx - x
-  // in: edx - y
-  // out: eax - result
-  __asm
-  {
-    ; diff  = x - y
-    mov eax, ecx
-    sub eax, edx
-    ; bit31 = diff >> 31
-    sar eax, 31
-    ; return (bit31 & (x ^ y)) ^ y
-    xor ecx, edx
-    and eax, ecx
-    xor eax, edx
-  }
+	// compiler: Visual C++ 2008
+	// in: ecx - x
+	// in: edx - y
+	// out: eax - result
+	__asm
+	{
+		; diff  = x - y
+		          mov eax, ecx
+		          sub eax, edx
+		; bit31 = diff >> 31
+		          sar eax, 31
+		          ; return (bit31 & (x ^ y)) ^ y
+			            xor ecx, edx
+			            and eax, ecx
+			            xor eax, edx
+			            }
 }
 
 __forceinline void minimumSimpleAsm() // stripped down to core algorithm to avoid overhead of parameter pushes/pops
 {
-  // compiler: Visual C++ 2008
-  // in: ecx - x
-  // in: eax - y
-  // out: eax - result
-  __asm
-  {
-    cmp ecx, eax
-    jge $done
-    mov eax, ecx
-  $done:
-  }
+	// compiler: Visual C++ 2008
+	// in: ecx - x
+	// in: eax - y
+	// out: eax - result
+	__asm
+	{
+		cmp ecx, eax
+			jge $done
+			mov eax, ecx
+			$done:
+	}
 }
 #endif
 
@@ -123,87 +123,87 @@ __forceinline void minimumSimpleAsm() // stripped down to core algorithm to avoi
 
 int main(int, char**)
 {
-  // Microsoft Visual C++ performance measurement
+	// Microsoft Visual C++ performance measurement
 #ifdef _MSC_VER
-  printf("performance test ...\n");
+	printf("performance test ...\n");
 
-  const size_t maxLoop = 100000;
-  const size_t unroll  = 10;
+	const size_t maxLoop = 100000;
+	const size_t unroll  = 10;
 
-  unsigned long long start = __rdtsc();
-  for (size_t i = maxLoop; i != 0; i--)
-  {
-    // unroll 10 times to keep loop overhead to a minimum
-    maximumAsm(); maximumAsm();
-    maximumAsm(); maximumAsm();
-    maximumAsm(); maximumAsm();
-    maximumAsm(); maximumAsm();
-    maximumAsm(); maximumAsm();
-  }
-  unsigned long long elapsed = __rdtsc() - start;
-  printf("max: %I64d ticks => about %.3f ticks per call\n", elapsed, elapsed/(maxLoop*float(unroll)));
+	unsigned long long start = __rdtsc();
+	for (size_t i = maxLoop; i != 0; i--)
+	{
+		// unroll 10 times to keep loop overhead to a minimum
+		maximumAsm(); maximumAsm();
+		maximumAsm(); maximumAsm();
+		maximumAsm(); maximumAsm();
+		maximumAsm(); maximumAsm();
+		maximumAsm(); maximumAsm();
+	}
+	unsigned long long elapsed = __rdtsc() - start;
+	printf("max: %I64d ticks => about %.3f ticks per call\n", elapsed, elapsed/(maxLoop*float(unroll)));
 
-  start = __rdtsc();
-  for (size_t i = maxLoop; i != 0; i--)
-  {
-    // unroll 10 times to keep loop overhead to a minimum
-    minimumAsm(); minimumAsm();
-    minimumAsm(); minimumAsm();
-    minimumAsm(); minimumAsm();
-    minimumAsm(); minimumAsm();
-    minimumAsm(); minimumAsm();
-  }
-  elapsed = __rdtsc() - start;
-  printf("min: %I64d ticks => about %.3f ticks per call\n", elapsed, elapsed/(maxLoop*float(unroll)));
+	start = __rdtsc();
+	for (size_t i = maxLoop; i != 0; i--)
+	{
+		// unroll 10 times to keep loop overhead to a minimum
+		minimumAsm(); minimumAsm();
+		minimumAsm(); minimumAsm();
+		minimumAsm(); minimumAsm();
+		minimumAsm(); minimumAsm();
+		minimumAsm(); minimumAsm();
+	}
+	elapsed = __rdtsc() - start;
+	printf("min: %I64d ticks => about %.3f ticks per call\n", elapsed, elapsed/(maxLoop*float(unroll)));
 
-  start = __rdtsc();
-  for (size_t i = maxLoop; i != 0; i--)
-  {
-    // unroll 10 times to keep loop overhead to a minimum
-    minimumSimpleAsm(); minimumSimpleAsm();
-    minimumSimpleAsm(); minimumSimpleAsm();
-    minimumSimpleAsm(); minimumSimpleAsm();
-    minimumSimpleAsm(); minimumSimpleAsm();
-    minimumSimpleAsm(); minimumSimpleAsm();
-  }
-  volatile int a = minimumSimple(start, elapsed);
-  elapsed = __rdtsc() - start;
-  printf("minSimple: %I64d ticks => about %.3f ticks per call\n", elapsed, elapsed/(maxLoop*float(unroll)));
+	start = __rdtsc();
+	for (size_t i = maxLoop; i != 0; i--)
+	{
+		// unroll 10 times to keep loop overhead to a minimum
+		minimumSimpleAsm(); minimumSimpleAsm();
+		minimumSimpleAsm(); minimumSimpleAsm();
+		minimumSimpleAsm(); minimumSimpleAsm();
+		minimumSimpleAsm(); minimumSimpleAsm();
+		minimumSimpleAsm(); minimumSimpleAsm();
+	}
+	volatile int a = minimumSimple(start, elapsed);
+	elapsed = __rdtsc() - start;
+	printf("minSimple: %I64d ticks => about %.3f ticks per call\n", elapsed, elapsed/(maxLoop*float(unroll)));
 #endif
 
-  // analyze all numbers from 0 to 1^32 - 1
-  printf("verifying ");
-  unsigned int totalX = 0xFFFFFFFF;
-           int x      = 0;
-           int y      = 0x7FFFFFFF;
-  unsigned int errors = 0;
+	// analyze all numbers from 0 to 1^32 - 1
+	printf("verifying ");
+	unsigned int totalX = 0xFFFFFFFF;
+	int x      = 0;
+	int y      = 0x7FFFFFFF;
+	unsigned int errors = 0;
 
-  // exhaustive search is impossible for (2^32)^2 combinations
-  do
-  {
-    int min = x < y ? x : y;
-    int max = x > y ? x : y;
+	// exhaustive search is impossible for (2^32)^2 combinations
+	do
+	{
+		int min = x < y ? x : y;
+		int max = x > y ? x : y;
 
-    if (minimum(x,y) != min)
-    {
-      printf("failed ! x=%u,y=%u has wrong minimum, expected %u but got %u.\n", x, y, min, minimum(x,y));
-      errors++;
-    }
-    if (maximum(x,y) != max)
-    {
-      printf("failed ! x=%u,y=%u has wrong maximum, expected %u but got %u.\n", x, y, max, maximum(x,y));
-      errors++;
-    }
+		if (minimum(x,y) != min)
+		{
+			printf("failed ! x=%u,y=%u has wrong minimum, expected %u but got %u.\n", x, y, min, minimum(x,y));
+			errors++;
+		}
+		if (maximum(x,y) != max)
+		{
+			printf("failed ! x=%u,y=%u has wrong maximum, expected %u but got %u.\n", x, y, max, maximum(x,y));
+			errors++;
+		}
 
-    // progress meter, the whole validation takes about a minute on my computer
-    if ((x & 0x07FFFFFF) == 0)
-      printf(".");
+		// progress meter, the whole validation takes about a minute on my computer
+		if ((x & 0x07FFFFFF) == 0)
+			printf(".");
 
-    x++; y--;
-  } while (x != 0);
+		x++; y--;
+	} while (x != 0);
 
-  printf(" %u errors.\n", errors);
-  return errors;
+	printf(" %u errors.\n", errors);
+	return errors;
 }
 
 // performance:*4
