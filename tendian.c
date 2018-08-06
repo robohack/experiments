@@ -55,32 +55,7 @@
 #ifdef HAVE_STDBOOL_H
 # include <stdbool.h>
 #else /* !HAVE_STDBOOL_H  */
-
-/*
- * C99 _Bool is very special as it may only ever have the values of 'true'(1)
- * or 'false'(0), but if you don't have it then you must use 'int', or better
- * yet 'unsigned int'.
- *
- * Note the standard says:
- *
- *    6.2.5
- *
- *    An object declared as type _Bool is large enough to store the values 0
- *    and 1.
- *
- *    The size cannot be smaller than one byte.  But it would be legal to be
- *    larger than one byte.
- *
- * If you try to use "unsigned char" for "bool", and you happen to assign
- * exactly 256 to a variable of that type (at least on a little endian
- * machine?), then it will evaluate as false!
- *
- * N.B.:  Using 'unsigned int' may also run afoul of standard conversions when
- * the unary negation operator is used in a parameter expression since the
- * result of '!' is of course just 'int'
- */
-typedef enum bool_e { false = 0, true = !false } bool;
-
+typedef enum bool_e { false = 0U, true = !false } bool;
 #endif /* !HAVE_STDBOOL_H  */
 
 #include <stdint.h>
