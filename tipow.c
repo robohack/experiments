@@ -4,6 +4,22 @@
 #include <stdlib.h>
 #include <util.h>
 
+#if (!defined(HAVE_STDBOOL_H) &&                                        \
+     ((defined(__STDC_VERSION__) &&                                     \
+       ((__STDC_VERSION__ - 0) >= 199901L)) ||                          \
+      defined(_ISOC99_SOURCE) ||                                        \
+      (defined(__NetBSD_Version__) &&                                   \
+       ((__NetBSD_Version__ - 0) >= 106000000)) ||                      \
+      (defined(__APPLE_CC__) && defined(__STDC__)) ||                   \
+      defined(__linux__)))
+# define HAVE_STDBOOL_H
+#endif
+
+#ifdef HAVE_STDBOOL_H
+# include <stdbool.h>
+#else /* !HAVE_STDBOOL_H  */
+typedef enum bool_e { false = 0U, true = !false } bool;
+#endif /* !HAVE_STDBOOL_H  */
 
 static inline intmax_t
 isq(intmax_t x)
@@ -28,6 +44,8 @@ ipow(int base,
 	case 1:
 		return base;
 	}
+	/*  */ {
+		
 #if 0
 	intmax_t result = 1;
 
@@ -70,6 +88,8 @@ ipow(int base,
 
 	return result;
 #endif
+		
+	}
 }
 
 /*
@@ -88,6 +108,36 @@ bipow(int base,
 	return ((result == 0) ? 0 : result - 1);
 }
 
+/*
+ *
+ * The binary representation of a power-of-two 2y is a 1 followed only by 0s.
+ *
+ * In such a case, x − 1 generates a binary number where the 1s turn into 0s and
+ * the former 0s turn into 1s.
+ *
+ * For example, 8 = 1000b and 8 − 1 = 7 = 0111b.
+ *
+ * If x and x − 1 are binary ANDed then the result is only 0 if x is a power of
+ * two (line 3).
+ *
+ * Restrictions:  The basic algorithm returns true for x = 0 and x = 1,
+ * i.e. they are considered to be a power of two
+ *
+ * from:  bits.stephan-brumme.com
+ */
+static bool ispow2(uintmax_t x);
+
+static bool
+ispow2(uintmax_t x)
+{
+	/* xxx maybe zero shouldn't be a power of 2? */
+	if (x == 0) {
+		return false;
+	}
+
+	return ((x & (x - 1)) == 0);
+}
+
 static void
 test(int base)
 {
@@ -97,16 +147,16 @@ test(int base)
 	for (i = 0; i < ((base == 0 || base == 1) ? 4 : 17); i++) {
 		intmax_t v = ipow(base, i);
 
-		humanize_number(buf, 9, (int64_t) v, "Num", HN_AUTOSCALE, HN_DIVISOR_1000);
-		printf("ipow(%d, %2d) = %-9s (%" PRIi64 ")\n", base, i, buf, v);
+		humanize_number(buf, (size_t) 9, (int64_t) v, "Num", HN_AUTOSCALE, HN_DIVISOR_1000);
+		printf("ipow(%d, %2d) = %-9s (%jd)%s\n", base, i, buf, v, ispow2((uintmax_t) v) ? " [ispow2]" : "");
 	}
 	putchar('\n');
 
 	for (i = 0; i < ((base == 0 || base == 1) ? 4 : 17); i++) {
 		intmax_t v = bipow(base, i);
 
-		humanize_number(buf, 9, (int64_t) v, "Num", HN_AUTOSCALE, HN_DIVISOR_1000);
-		printf("bipow(%d, %2d) = %-9s(%" PRIi64 ")\n", base, i, buf, v);
+		humanize_number(buf, (size_t) 9, (int64_t) v, "Num", HN_AUTOSCALE, HN_DIVISOR_1000);
+		printf("bipow(%d, %2d) = %-9s(%jd)%s\n", base, i, buf, v, ispow2((uintmax_t) v) ? " [ispow2]" : "");
 	}
 	putchar('\n');
 

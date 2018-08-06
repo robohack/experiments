@@ -61,24 +61,30 @@
  *
  * Note the standard says:
  *
- *    6.2.5
+ *     6.2.5
  *
- *    An object declared as type _Bool is large enough to store the values 0
- *    and 1.
+ *     An object declared as type _Bool is large enough to store the values 0
+ *     and 1.
  *
- *    The size cannot be smaller than one byte.  But it would be legal to be
- *    larger than one byte.
+ *     The size cannot be smaller than one byte.  But it would be legal to be
+ *     larger than one byte.
  *
  * If you try to use "unsigned char" for "bool", and you happen to assign
- * exactly 256 to a variable of that type, then it will evaluate as false!
- *
- * (see below for issues of promotion of char and _Bool without prototypes)
+ * exactly 256 to a variable of that type (at least on a little endian
+ * machine?), then it will evaluate as false!
  *
  * N.B.:  Using 'unsigned int' may also run afoul of standard conversions when
  * the unary negation operator is used in a parameter expression since the
  * result of '!' is of course just 'int'
+ *
+ * n.b.:  setting true to the !false value covers the case of one writing
+ * effectively "if (! false) blah..."
+ *
+ *     §3.3.3.3: "The result of the logical negation operator ! is 0 if the
+ *     value of its operand compares unequal to 0, 1 if the value of its operand
+ *     compares equal to 0."
  */
-typedef enum bool_e { false = 0, true = !false } bool;
+typedef enum bool_e { false = 0U, true = !false } bool;
 
 #endif /* !HAVE_STDBOOL_H  */
 
@@ -307,6 +313,7 @@ main()
 	printf("sizeof u'x' = %u.\n", (unsigned int) sizeof(u'x'));
 	printf("sizeof U'x' = %u.\n", (unsigned int) sizeof(U'x'));
 #endif
+	printf("sizeof bool = %u.\n", (unsigned int) sizeof(bool));
 #if (__STDC_VERSION__ - 0) >= 199901L
 	printf("sizeof _Bool = %u.\n", (unsigned int) sizeof(_Bool));
 #else
