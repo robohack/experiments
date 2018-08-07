@@ -445,6 +445,8 @@ int bitScanReverse(uint64_t bb);
  * off rounded up to one less than the next power of 2 by Mark Dickinson on
  * December 10, 2009, as published in Sean Eron Anderson's Bit Twiddling Hacks
  * for 32-bit integers.
+ *
+ * from http://chessprogramming.wikispaces.com/BitScan
  */
 const int index64[64] = {
     0, 47,  1, 56, 48, 27,  2, 60,
