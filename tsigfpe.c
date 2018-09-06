@@ -84,11 +84,13 @@ try_division(int x,
 		/* FPE_FLTDIV should never happen with integers. */
 		switch (code) {
 		case FPE_INTDIV: /* integer division by zero */
+			printf("%d / %d: caught integer division by zero! (code = %d)\n", x, y, code);
+			break;
 		case FPE_FLTDIV: /* float division by zero */
-			printf("%d / %d: caught division by zero!\n", x, y);
+			printf("%d / %d: caught float division by zero! (code = %d)\n", x, y, code);
 			break;
 		default:
-			printf("%d / %d: caught mysterious error!\n", x, y);
+			printf("%d / %d: caught mysterious error! (code = %d)\n", x, y, code);
 			break;
 		}
 	}
