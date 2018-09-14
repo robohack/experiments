@@ -14,7 +14,7 @@ main(int argv __unused, char *argc[] __unused)
 main()
 #endif
 {
-	printf("0 % 100 = %d\n", 0 % 100);
+	printf("0 %% 100 = %d\n", 0 % 100);
 
 	exit(0);
 }
