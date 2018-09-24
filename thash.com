@@ -1,3 +1,6 @@
+// see also:  http://www.isthe.com/chongo/src/fnv/fnv-5.0.3.tar.gz
+
+
 /*
  * Fowler/Noll/Vo hash
  *
