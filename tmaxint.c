@@ -332,6 +332,7 @@ main()
 		puts("WARNING:  MAX_INT(unsigned long long) != ULLONG_MAX !!!");
 	}
 #if defined(__SIZEOF_INT128__)
+	/* xxx hmmm.... */
 #endif
 
 	/* testing */
