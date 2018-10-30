@@ -6,6 +6,12 @@
  * 3.4 and newer have __attribute__((__warn_unused_result__)) which may cause
  * unwanted diagnostics in that case.
  *
+ * Clang (currently) always honours the void cast.
+ *
+ * One instance of the "_wur" debate:
+ *
+ *	https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66425
+ *
  * Use __typeof__ and __extension__ to work around the problem, if the
  * workaround is known to be needed.
  */
@@ -46,6 +52,7 @@ ignoreit()		/* no parameter list allows any type parameter, but... */
 
 int nv = 0;
 int sv = 1;
+int gignored __attribute__((unused));
 
 int
 bar(int p)
@@ -60,29 +67,33 @@ int main(void);
 int
 main()
 {
-	int boo;
-	int none;
+	int isused;
+	int notused;
+	int lignored __attribute__((unused));
 
-	(void) nv;
+	bar(3); /* EXPECTED: warning: ignoring return value of 'bar', declared with attribute warn_unused_result */
 
-	foo(3);
-	foo(bar(2));
-	boo = bar(4);
+	foo(4);
+	foo(bar(5));
+	isused = bar(6);
 
-	printf("%d\n", boo);
+	printf("%d\n", isused);
 
-	none = bar(5);			/* use the result... */
-//	(void) none;			/* and ignore the set-but-not-used */
+	notused = bar(7);		/* use the result... */
+//	(void) notused;			/* and ignore the set-but-not-used */
 
-	(void) bar(9); /* warning: ignoring return value of 'bar', declared with attribute warn_unused_result */
+	gignored = bar(8);
+	lignored = bar(9);
 
-	ignoreit(bar(10)); /* clang: warning: too many arguments in call to 'ignoreit' */
+	(void) bar(10); /* GCC-stupidity: warning: ignoring return value of 'bar', declared with attribute warn_unused_result */
 
-	IGNORE(bar(8));
+	ignoreit(bar(11)); /* clang: warning: too many arguments in call to 'ignoreit' */
+
+	IGNORE(bar(12));
 
 	ignore_value(bar(13));
 
-	sv = bar(12);
+	sv = bar(14);
 
 	exit(0);
 }
