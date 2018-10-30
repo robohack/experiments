@@ -124,6 +124,7 @@ typedef enum bool_e { false = 0U, true = !false } bool;
 # define DBL_OUT_DEC_DIG ((int) lrint(ceil(DBL_MANT_DIG * log10((double) FLT_RADIX))))
 #endif
 
+/* xxx should be proteced with #ifdef LDBL_MANT_DIG */
 #ifdef LDBL_DECIMAL_DIG
 # define LDBL_OUT_DEC_DIG (LDBL_DECIMAL_DIG - 1)
 #else
@@ -785,6 +786,7 @@ report(char *machine)
 	}
 
 	printf("%s: sizeof intmax = %u.\n", machine, (unsigned int) sizeof(intmax_t));
+	printf("%s: sizeof long double = %u.\n", machine, (unsigned int) sizeof(long double));
 	printf("%s: sizeof double = %u.\n", machine, (unsigned int) sizeof(double));
 	printf("%s: sizeof float = %u.\n", machine, (unsigned int) sizeof(float));
 	putchar('\n');
@@ -998,6 +1000,7 @@ report(char *machine)
 	dtmpta = 1.5 - 0.10;
 	dtmptb = 165;
 	dtmp = dtmpta * dtmptb;
+	printf("1.4 * 165 = %a (%%a)\n", dtmp); /* to demonstrate the problem */
 	printf("1.4 * 165 = %.015f (%%.015f)\n", dtmp);
 	printf("1.4 * 165 = %.015f round( * 100) / 100\n", round(dtmp * 100) / 100);
 	printf("1.4 * 165 = %.015f ceil( * 100) / 100\n", ceil(dtmp * 100) / 100);
@@ -1054,6 +1057,94 @@ report(char *machine)
 	       DBL_OUT_DEC_DIG + 1 - lrint(ceil(log10(ceil(fabs(dtmp))))) - 1,
 	       DBL_OUT_DEC_DIG + 1,
 	       ceil(log10(ceil(fabs(dtmp)))) - 1);
+
+	/*
+	 * Normally one might use the built-in human-friendly formatting with
+	 * "%g" where the precision ('.N') specifies the number of significant
+	 * digits to print and so we can just print exactly the maximum number
+	 * of significant digits supported by the source binary format.
+	 * Scientific notation will automatically be used whenever the resulting
+	 * representation can not be expressed as a normal decimal number with
+	 * DBL_DIG signitifant digits, plus the decimal place).
+	 *
+	 * 	printf("%.*g", DBL_DIG, d)
+	 *
+	 * Alternately one might present floating point values using full on
+	 * scientific notation with "%e".  Again we can also directly print the
+	 * maximum number of significant decimal digits supported by the source
+	 * binary format, but we have to take into account the one digit before
+	 * the decimal place sinc eht eprecision ('.N') specifies the number of
+	 * decimal places:
+	 *
+	 *	printf("%1.*e", DBL_DIG - 1, d)
+	 *
+	 *
+	 * I.e. normally DBL_DIG is the right one to use with %.*g (and
+	 * DBL_DIG-1 is correct for %e because of the already present "1." as a
+	 * significant digit).
+	 *
+	 * However due to the nature of binary floating point vs. decimal this
+	 * isn't the most precise decimal presentation of a floating point
+	 * value.  I've invented *_OUT_DEC_DIG to represent the maximum number
+	 * of decimal digits that can be presented without inaccuracies due to
+	 * lack of necessary rounding.  Nominally this is one more significant
+	 * digit than can survive a round-trip conversion.
+	 *
+	 * Further explanation:
+	 *
+	 *	DECIMAL_DIG is the number of decimal digits you need when
+	 *	converting from the largest floating point type to a decimal
+	 *	string and back to ensure that you get back the same binary
+	 *	value.
+	 *
+	 *	This is the "long double -> decimal -> long double" round-trip.
+	 *
+	 * (so for "double" this would be DBL_DECIMAL_DIG)
+	 *
+	 * XXX except of course that doesn't round correctly to produce accurate
+	 * results in decimal!  See examples elsewhere herein, such as "1.4 *
+	 * 165", thus the use of DBL_DIG+1 with "%.*g".
+	 *
+	 *	[[L]DBL|FLT]_DIG is the number of decimal digits that will be
+	 *	reliably preserved when converting from decimal to [long] double
+	 *	(or float) and back (to decimal).
+	 *
+	 *	This is the "decimal -> binary floating -> decimal" round-trip.
+	 *
+	 * [[above paraphrased quotes from:  <https://stackoverflow.com/a/39707541/816536>]]
+	 *
+	 * XXX Note that because of the rounding necessary to get correctly
+	 * rounded results (1.4 * 165), the decimal values printed for DBL_MAX
+	 * and DBL_MIN (etc.) cannot be converted back to binary -- the rounded
+	 * value is outside the representable limit!  For pure serialization and
+	 * re-reading of binary floating point values one would have to print
+	 * *DECIMAL_DIG significant digits, only doing rounding to *_DIG (or
+	 * *_OUT_DEC_DIG) significant for presentation.
+	 *
+	 * XXX ToDo XXX work out a valid rounding for *_MIN and *_MAX values
+	 * such that they can still be printed with DBL_DIG _and_ survive
+	 * re-reading (though of course to their new rounded value, i.e. it
+	 * would be OK to loose their minmax quality)
+	 *
+	 * XXX ToDo XXX also/alternately work out what the *_DEC_{MIN,MAX}
+	 * values are (i.e. the minmax which don't suffer rounding "error" when
+	 * doing the decimal-binary-decimal round-trip.
+	 */
+	putchar('\n');
+	printf("1.4 * 165 = %1.*e (%%1.%lde aka DBL_DIG - 1)\n",
+	       DBL_DIG - 1, dtmp, DBL_DIG - 1);
+	printf("1.4 * 165 = %1.*e (%%1.%lde aka DBL_DIG or DBL_OUT_DEC_DIG - 1)\n",
+	       DBL_DIG, dtmp, DBL_DIG);
+	printf("1.4 * 165 = %1.*e (%%1.%lde aka DBL_DIG + 1)\n",
+	       DBL_DIG + 1, dtmp, DBL_DIG + 1);
+
+	putchar('\n');
+	printf("1.4 * 165 = %.*g (%%.%ldg aka DBL_DIG)\n",
+	       DBL_DIG, dtmp, DBL_DIG);
+	printf("1.4 * 165 = %.*g (%%.%ldg aka DBL_DIG + 1 or DBL_OUT_DEC_DIG)\n",
+	       DBL_DIG + 1, dtmp, DBL_DIG + 1);
+	printf("1.4 * 165 = %.*g (%%.%ldg aka DBL_DECIMAL_DIG)\n",
+	       DBL_OUT_DEC_DIG + 1, dtmp, DBL_OUT_DEC_DIG + 1);
 
 	putchar('\n');
 
@@ -1171,7 +1262,7 @@ give_me_one(double a)
 typedef union ieee754_binary32_float_u {
 	uint32_t i;
 	float f;
-	struct float_internals {
+	struct ieee_float_internals {
 		/* Bitfields for exploration. */
 #ifdef _BIT_FIELDS_LTOH
 		uint32_t mantissa : (FLT_MANT_DIG - 1);
@@ -1278,11 +1369,22 @@ re_encode_float(uint32_t ieee754_bin32)
 
 /*
  * definitions of internal representation for IEEE 754 binary 64-bit floating point
+ *
+ * note on NetBSD there's <machine/ieee.h> (which includes <sys/ieee754.h> and
+ * it has:
+ *
+ *	#define	DBL_EXPBITS	11
+ *	#define	DBL_FRACHBITS	20
+ *	#define	DBL_FRACLBITS	32
+ *	#define	DBL_FRACBITS	(DBL_FRACHBITS + DBL_FRACLBITS)
+ *
+ * XXX this uses uint64_t as a bitfield and this may not be portable, though
+ * NetBSD also uses uint64_t in its definition of BINARY128 internals.
  */
 typedef union ieee754_binary64_double_u {
 	int64_t i;
 	double d;
-	struct double_internals {
+	struct ieee_double_internals {
 		/* Bitfields for exploration. */
 #ifdef _BIT_FIELDS_LTOH
 		uint64_t mantissa : (DBL_MANT_DIG - 1);
@@ -1365,45 +1467,6 @@ print_decimal(double d)
 	 * the possible significant digits of precision for a floating point
 	 * number, then we must calculate the correct number of decimal places
 	 * to show with "%.*f" as follows.
-	 *
-	 * This is in lieu of always using either full on scientific notation
-	 * with "%e" (where the presentation is always in decimal format so we
-	 * can directly print the maximum number of significant digits
-	 * supported by the representation, taking into acount the one digit
-	 * represented by by the leading digit)
-	 *
-	 *	printf("%1.*e", DBL_DECIMAL_DIG - 2, d)	// aka DBL_DIG
-	 *
-	 * or using the built-in human-friendly formatting with "%g" (where a
-	 * '.*' parameter is used as the number of significant digits to print
-	 * and so we can just print exactly the maximum number supported by the
-	 * representation, and scientific notation is automatically used
-	 * whenever the resulting representation would not be expressed as a
-	 * normal decimal number with DBL_DECIMAL_DIG, plus the decimal place)
-	 *
-	 * 	printf("%.*g", DBL_DECIMAL_DIG - 1, d)	// aka DBL_OUT_DEC_DIG
-	 *
-	 * N.B.:  If we want the printed result to again survive a round-trip
-	 * conversion to binary and back then we can only print DBL_DIG
-	 * significant digits (instead of the larger DBL_OUT_DEC_DIG significant
-	 * digits).  I.e. normally DBL_DIG is the right one to use with %.*g
-	 * (and DBL_DIG-1 for %e because of the "1.")
-	 *
-	 *	[LDBL_]DECIMAL_DIG is the number of decimal digits you need when
-	 *	converting from the [long double]largest floating point type to
-	 *	a decimal string and back to ensure that you get back the same
-	 *	value.
-	 *
-	 *	This is the "long double -> decimal -> long double" round-trip.
-	 *
-	 * (XXX except that doesn't round correctly to produce accurate results)
-	 *
-	 *	LDBL_DIG is the number of decimal digits that will be reliably
-	 *	preserved when converting from decimal to long double and back.
-	 *
-	 *	This is the "decimal -> long double -> decimal" round-trip.
-	 *
-	 * [[above from:  <https://stackoverflow.com/a/39707541/816536>]]
 	 *
 	 * Note:  "flintmax" here refers to the largest consecutive integer that
 	 * can be safely stored in a floating point variable without losing
@@ -1584,6 +1647,33 @@ fpround2nm(unsigned int r)
 	}
 }
 #endif
+
+/*
+ * see: https://stackoverflow.com/a/17035583
+ * and: http://stereopsis.com/sree/fpu2006.html
+ *
+ * This should be comparable to llrint(3), though that will likely use the
+ * FISTPL instruction on intel and compatible processors.
+ *
+ * XXX untested, so far
+ */
+int64_t cast_d2int64(double);
+
+int64_t
+cast_d2int64(double input)		/* xxx must be IEEE 754 BINARY64 */
+{
+	union DCast {
+		double d;
+		int64_t l;
+	};
+	volatile union DCast magic;
+
+	magic.d = input + 6755399441055744.0; /* 2^51 + 2^52 or 2^52*1.5 */
+	magic.l <<= 13;
+	magic.l >>= 13;
+
+	return magic.l;
+}
 
 #if (! defined(HAVE_IEEEFP_H) &&                                        \
      (defined(__STDC_VERSION__) &&                                      \
@@ -2213,7 +2303,7 @@ precision()
 		
 	}
 
-	/*  */ {
+	/* ifdef __SIZEOF_INT128__ */ {
 		
 	__uint128_t tlui;
 
@@ -2387,6 +2477,8 @@ precision()
 	printf("FLT_OUT_DEC_DIG      = %2d\n", FLT_OUT_DEC_DIG);
 	printf("DBL_OUT_DEC_DIG      = %2d\n", DBL_OUT_DEC_DIG);
 	printf("LDBL_OUT_DEC_DIG     = %2d\n", LDBL_OUT_DEC_DIG);
+
+	putchar('\n');
 	putchar('\n');
 
 	printf("FLT_MIN      = %a\n", (double) FLT_MIN);
@@ -2397,6 +2489,9 @@ precision()
 	printf("FLT_MAX      = %1.*e [calculated for IEEE 754]\n", (int) lrint(ceil(FLT_MANT_DIG * log10((double) FLT_RADIX))), FLT_MAX);
 	printf("FLT_MAX      = %1.*e\n", FLT_OUT_DEC_DIG, FLT_MAX);
 	printf("FLT_MAX      ='%s'\n", ___STRING(FLT_MAX));
+
+	putchar('\n');
+
 	printf("FLT_EPSILON  = %1.*e [calculated for IEEE 754]\n", (int) lrint(ceil(FLT_MANT_DIG * log10((double) FLT_RADIX))), FLT_EPSILON);
 	printf("FLT_EPSILON  ='%s'\n", ___STRING(FLT_EPSILON));
 	/* xxx should check these.... */
@@ -2408,15 +2503,46 @@ precision()
 	printf("FLT_MAX_10_EXP  = %d [calculated]\n", (int) lrint(floor(log10(fabs(FLT_MAX)))));
 
 	putchar('\n');
+	putchar('\n');
 
 	printf("DBL_MIN      = %a\n", DBL_MIN);
 	printf("DBL_MIN      = %1.*e [calculated for IEEE 754]\n", (int) lrint(ceil(DBL_MANT_DIG * log10((double) FLT_RADIX))), DBL_MIN);
 	printf("DBL_MIN      = %1.*e\n", DBL_OUT_DEC_DIG, DBL_MIN);
+	printf("DBL_MIN      = %1.*e\n", DBL_OUT_DEC_DIG + 1 /* DBL_DECIMAL_DIG */, DBL_MIN);
+#ifdef PRINT_ROUND_TRIP_SAFE
+	printf("DBL_MIN      = %1.*e [%%1.%de]\n", DBL_DIG - 1, DBL_MIN, DBL_DIG - 1);
+#else
+	printf("DBL_MIN      = %1.*e [%%1.%de]\n", DBL_DIG, DBL_MIN, DBL_DIG);
+#endif
+	printf("DBL_MIN      = %.*g\n", DBL_DIG + 2, DBL_MIN);
+#ifdef PRINT_ROUND_TRIP_SAFE
+	printf("DBL_MIN      = %.*g [%%%dg]\n", DBL_DIG, DBL_MIN, DBL_DIG);
+#else
+	printf("DBL_MIN      = %.*g [%%%dg]\n", DBL_OUT_DEC_DIG, DBL_MIN, DBL_OUT_DEC_DIG);
+#endif
 	printf("DBL_MIN      ='%s'\n", ___STRING(DBL_MIN));
+
+	putchar('\n');
+
 	printf("DBL_MAX      = %a\n", DBL_MAX);
 	printf("DBL_MAX      = %1.*e [calculated for IEEE 754]\n", (int) lrint(ceil(DBL_MANT_DIG * log10((double) FLT_RADIX))), DBL_MAX);
 	printf("DBL_MAX      = %1.*e\n", DBL_OUT_DEC_DIG, DBL_MAX);
+	printf("DBL_MAX      = %1.*e\n", DBL_OUT_DEC_DIG + 1 /* DBL_DECIMAL_DIG */, DBL_MAX);
+#ifdef PRINT_ROUND_TRIP_SAFE
+	printf("DBL_MAX      = %1.*e [%%1.%de]\n", DBL_DIG-1, DBL_MAX, DBL_DIG-1);
+#else
+	printf("DBL_MAX      = %1.*e [%%1.%de]\n", DBL_DIG, DBL_MAX, DBL_DIG);
+#endif
+	printf("DBL_MAX      = %.*g\n", DBL_DIG + 2, DBL_MAX);
+#ifdef PRINT_ROUND_TRIP_SAFE
+	printf("DBL_MAX      = %.*g [%%%dg]\n", DBL_DIG, DBL_MAX, DBL_DIG);
+#else
+	printf("DBL_MAX      = %.*g [%%%dg]\n", DBL_OUT_DEC_DIG, DBL_MAX, DBL_OUT_DEC_DIG);
+#endif
 	printf("DBL_MAX      ='%s'\n", ___STRING(DBL_MAX));
+
+	putchar('\n');
+
 	printf("DBL_EPSILON  = %1.*e [calculated for IEEE 754]\n", (int) lrint(ceil(DBL_MANT_DIG * log10((double) FLT_RADIX))), DBL_EPSILON);
 	printf("DBL_EPSILON  ='%s'\n", ___STRING(DBL_EPSILON));
 	/* xxx should check these.... */
@@ -2428,15 +2554,22 @@ precision()
 	printf("DBL_MAX_10_EXP  = %d [calculated]\n", (int) lrint(floor(log10(fabs(DBL_MAX)))));
 
 	putchar('\n');
+	putchar('\n');
 
 	printf("LDBL_MIN      = %La\n", LDBL_MIN);
 	printf("LDBL_MIN      = %1.*Le [calculated for IEEE 754]\n", (int) lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX))), LDBL_MIN);
 	printf("LDBL_MIN      = %1.*Le\n", LDBL_OUT_DEC_DIG, LDBL_MIN);
 	printf("LDBL_MIN      ='%s'\n", ___STRING(LDBL_MIN));
+
+	putchar('\n');
+
 	printf("LDBL_MAX      = %La\n", LDBL_MAX);
 	printf("LDBL_MAX      = %1.*Le [calculated for IEEE 754]\n", (int) lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX))), LDBL_MAX);
 	printf("LDBL_MAX      = %1.*Le\n", LDBL_OUT_DEC_DIG, LDBL_MAX);
 	printf("LDBL_MAX      ='%s'\n", ___STRING(LDBL_MAX));
+
+	putchar('\n');
+
 	printf("LDBL_EPSILON  = %1.*Le [calculated for IEEE 754]\n", (int) lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX))), LDBL_EPSILON);
 	printf("LDBL_EPSILON  ='%s'\n", ___STRING(LDBL_EPSILON));
 	/* xxx should check these.... */
