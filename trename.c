@@ -1,5 +1,17 @@
 #include <sys/cdefs.h>
 
+/* Linux doesn't have such complete portability support */
+#ifndef __dead
+# ifdef __GNUC_PREREQ__
+#  if __GNUC_PREREQ__(2, 5)
+#   define __dead	__attribute__((__noreturn__))
+#  endif
+# endif
+#endif
+#ifndef __dead
+# define __dead	/* nothing (a comment for lint, but CPP ignores comments) */
+#endif
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,11 +19,11 @@
 #include <sysexits.h>
 #include <unistd.h>
 
-void	usage(int) __dead;
+static void	usage(int) __dead;
 
 /* The name of the program */
-char	*argv0 =	"trename";
-bool	verbose = false;
+const char	*argv0 = "trename";
+bool		verbose = false;
 
 int
 main(int argc, char **argv)
@@ -69,7 +81,7 @@ main(int argc, char **argv)
 	exit(EXIT_SUCCESS);
 }
 
-void
+static void
 usage(int help)
 {
 	fprintf(stderr, "Usage: %s [-v] old new\n", argv0);
