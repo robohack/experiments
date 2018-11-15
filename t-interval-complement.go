@@ -2,8 +2,8 @@
 
 // see also the associated "*_test.go" file
 
-// build with "go build *.go"
-// test with "go test -v -bench . *.go"
+// build with "go build t-interval-complement.go"
+// test with "go test -v -bench . t-interval-complement.go t-interval-complement_test.go"
 
 package minfys
 
