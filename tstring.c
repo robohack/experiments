@@ -1,3 +1,5 @@
+#include <ctype.h>
+
 extern void nut(const char *, const char *, const char *);
 extern void bar(char *, char *, char *);
 
@@ -8,6 +10,23 @@ char *g_barptr = "\
 abcdef";
 char g_fooarr2[] = "abcdef";
 char g_fooarr1[] = { 'a', 'b', 'c', 'd', 'e', 'f', '\0' };
+
+void str2alnum(char *p);			/* destructive canonicalisation */
+
+void
+str2alnum(char *p)
+{
+	char *y;
+
+	for (y = p; *p; p++) {
+		if (isalnum(*p)) {
+			*y++ = *p;
+		}
+	}
+	*y = '\0';
+
+	return;
+}
 
 int
 main()
@@ -24,6 +43,9 @@ main()
 	bar(s_fooptr, s_fooarr1, s_fooarr2);
 
 	fooptr = "\a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z\0\1\2\3\4\5\6\7\8\9\,\.\;\'\[\]\`\:\"\<\>\?\{\}\!\@\#\$\%\^\&\*\(\)\_\+";
+
+	str2alnum(fooptr);
+	bar(fooptr, fooarr1, fooarr2);
 
 	return 0;
 }

@@ -12,7 +12,7 @@ main(argc, argv)
 	int	argc;
 	char	*argv[];
 {
-	char *argv0 = "tgetpwuid";
+	const char *argv0 = "tgetpwuid";
 	uid_t uid;
 	struct passwd	*pwd;
 
