@@ -1,5 +1,6 @@
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,7 +15,11 @@
  *
  * Flags with string values can contain anything but a ':' character.  Strings
  * are returned in newly allocated memory that can be passed to free(3) to be
- * released.
+ * released.  The initial (current) pointer will be passed to free(3) if the
+ * flag is encountered (so it must be valid or NULL).
+ *
+ * Flags with char values will use only the character following the flag
+ * character and ignore any further characters.
  *
  * Flags with boolean values should be stand-alone single letters.
  * Any characters after the flag character will be ignored.
@@ -23,11 +28,13 @@
  * with a flag character of '0', so one "default" integer flag can be indicated
  * with a '0' as the flag character.
  *
+ * The last value seen wins (as in getopt(3)).
+ *
  *	int othernum = 0;
  *	int firstnum = 0;
- *	char cflag;
- *	char *strptr;
- *	bool zflag;
+ *	char cflag = '\0';
+ *	char *strptr = NULL;
+ *	bool zflag = false;
  *	struct cflags_cfg cflags[] = {
  *		{ 'N', CFLAGS_INT, &othernum },
  *		{ '0', CFLAGS_INT, &firstnum },		// first ":[1-9]" flag
@@ -36,7 +43,7 @@
  *		{ 'z', CFLAGS_BOOL, &zflag },
  *		{ 0 },
  *	};
- *	(void) cflags_parse(cflags, ":4:N9:cX:sfoobar:z:y");
+ *	(void) cflags_parse(cflags, ":4:N9:cX:sfoobar:z:y:sXYZZY:c");
  */
 typedef enum {
 	CFLAGS_BOOL,
@@ -60,19 +67,22 @@ cflags_parse(struct cflags_cfg cflags[],
 	const char *p;
 	bool res = true;
 
-	for (p = strchr(str, ':'); p != NULL; (p = strchr(p + 1, ':'))) {
+	for (p = strchr(str, ':'); p != NULL; (p = strchr(p, ':'))) {
 		unsigned int fi;
 
 		res = false;
+		p++;                    /* skip the ":" */
 		for (fi = 0; cflags[fi].fl != '\0'; fi++) {
-			if (cflags[fi].fl == p[1] && p[1] != '0') { /* ignore flag '0' */
+			if (cflags[fi].fl == p[0] && p[0] != '0') { /* ignore flag '0' */
+				p++;    /* skip the flag character */
 				switch (cflags[fi].ft) {
 				case CFLAGS_INT:
-					*((int *) cflags[fi].fv) = atoi(p + 2); /* skip ":F" */
+					*((int *) cflags[fi].fv) = atoi(p);
 					res = true;
 					break;
 				case CFLAGS_STR:
-					*((char **) cflags[fi].fv) = strndup(p + 2, strcspn(p + 2, ":"));
+					free(*((char **) cflags[fi].fv));
+					*((char **) cflags[fi].fv) = strndup(p, strcspn(p, ":"));
 					res = true;
 					break;
 				case CFLAGS_BOOL:
@@ -80,17 +90,19 @@ cflags_parse(struct cflags_cfg cflags[],
 					res = true;
 					break;
 				case CFLAGS_CHAR:
-					*((char *) cflags[fi].fv) = p[2];
-					res = true;
+					if (p[0] != ':') {
+						*((char *) cflags[fi].fv) = p[0];
+						res = true;
+					}
 					break;
 				}
 			}
-		}
+		};
 		/* handle ":[0-9]*" */
-		if (! res && strchr("0123456789", p[1]) != NULL) {
+		if (! res && p[0] && strchr("0123456789", p[0]) != NULL) {
 			for (fi = 0; cflags[fi].fl != '\0'; fi++) {
 				if (cflags[fi].ft == CFLAGS_INT && cflags[fi].fl == '0') {
-					*((int *) cflags[fi].fv) = atoi(p + 1);
+					*((int *) cflags[fi].fv) = atoi(p);
 					res = true;
 					break;
 				}
@@ -127,12 +139,16 @@ main(int argc,
 
 		res = cflags_parse(cflags, argv[i++]);
 
-		printf("res = %d, othernum = %d, firstnum = %d, cflag = %c, strptr = %s, zflag = %d\n",
-		       res, othernum, firstnum, cflag, strptr, zflag);
+		printf("res = %s, othernum = %d, firstnum = %d, cflag = %c, strptr = %s, zflag = %d\n",
+		       res ? "true" : "false", othernum, firstnum, cflag, strptr, zflag);
 		if (strptr) {
 			free(strptr);
 			strptr = NULL;
 		}
+		othernum = 0;
+		firstnum = 0;
+		cflag = '\0';
+		zflag = false;
 	}
 
 	exit(0);
