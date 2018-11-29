@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 #include <stdbool.h>
+#include <stddef.h>                     /* ptrdiff_t */
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -258,7 +259,7 @@ print_hostent(const struct hostent *hp)
 
 	res += check_alignof(hp, alignof(struct hostent *), "hp");
 
-	printf("Host: %s\n", hp->h_name);
+	printf("Host: %s (hp->h_name)\n", hp->h_name);
 	res += check_alignof(hp->h_aliases, alignof(char **), "hp->h_aliases");
 	if (hp->h_aliases[0]) {
 		printf("Other-Names:\n");
