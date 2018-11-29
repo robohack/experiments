@@ -172,7 +172,7 @@ main(
 
 	if (!(hp = gethostbyaddr((void *) &(from_sa.sin_addr),
 	                         (socklen_t) sizeof(from_sa.sin_addr), from_sa.sin_family))) {
-
+		herror(argv[1]);
 		switch (h_errno) {
 		case HOST_NOT_FOUND:
 			printf("|%s| HOST_NOT_FOUND\n", buffer);

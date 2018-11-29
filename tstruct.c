@@ -166,10 +166,10 @@ main()
 	 *   required for calling each of the sub-functions is just that
 	 *   required for the pointer.
 	 *
-	 * - does the latter method have any advantage?  Perhaps, in any case
-	 *   where the lifetime of the resulting object may exceed the lifetime
-	 *   of the call as it may be less likely to accidentally use it in the
-	 *   callee without copying it.
+	 * - does the pass-by-value method have any advantage?  Perhaps, in
+	 *   cases where the lifetime of the resulting object may exceed the
+	 *   lifetime of the call, since then it may be less likely to
+	 *   accidentally use it in the callee without copying it.
 	 *
 	 * - such parameter structs can be used to provide extensible backward-
 	 *   compatible APIs, but they must be designed such that they can

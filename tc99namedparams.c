@@ -69,8 +69,8 @@ repeat(struct repeat_params p)
 	    p.str == NULL) {
 		return NULL;
 	}
-	r = malloc((p.n - 1) * strlen(p.sep) +
-	                 p.n * strlen(p.str) + 1);
+	r = malloc(((p.n - 1) * strlen(p.sep)) +
+	                 (p.n * strlen(p.str)) + 1);
 	if (r == NULL) {
 		return NULL;
 	}
@@ -82,6 +82,46 @@ repeat(struct repeat_params p)
 
 	return r;
 }
+
+/*
+ * One way to avoid having to use struct references in the function
+ * implementation is to define it privately in the traditional way and then call
+ * it from a public function using the struct parameter.
+ */
+static inline char *
+repeat2_impl(void	*appctx,
+             char	*str,
+             uint	 n,
+             char	*sep)
+{
+	char	*r;
+
+	(void) appctx;
+
+	if (n < 1 || str == NULL) {
+		return NULL;
+	}
+	r = malloc(((n - 1) * strlen(sep)) +
+	                 (n * strlen(str)) + 1);
+	if (r == NULL) {
+		return NULL;
+	}
+	strcpy(r, str);
+	while (n-- > 1) {	 // accidentally quadratic
+		strcat(r, sep);
+		strcat(r, str);
+	}
+
+	return r;
+}
+
+/* wrapper expands parameters and calls the traditional positional definition */
+static char *
+repeat2(struct repeat_params p)
+{
+	return repeat2_impl(p.appctx, p.str, p.n, p.sep);
+}
+
 
 /*
  * Define a wrapper macro that sets the default values using designated
@@ -123,6 +163,14 @@ repeat(struct repeat_params p)
 	       .appctx = NULL,	/* must be last */		\
 	       __VA_ARGS__					\
 	       })
+
+#define repeat2(...)						\
+	repeat2((struct repeat_params) {			\
+	        .n = 1,						\
+	        .sep = " ",					\
+	        .appctx = NULL,	/* must be last */		\
+	        __VA_ARGS__					\
+	        })
 
 int
 main(void)
@@ -168,6 +216,28 @@ main(void)
 	// one supplied in the macro or the default zero initilization) then no
 	// args need be supplied
 	str = repeat();
+	puts(str ? str : "(null)");
+	free(str);
+
+	str = repeat2();
+	puts(str ? str : "(null)");
+	free(str);
+	str = repeat2("hum", .appctx = main);
+	puts(str ? str : "(null)");
+	free(str);
+	str = repeat2(.appctx = main, .str = "hum", .n = 2);
+	puts(str ? str : "(null)");
+	free(str);
+	str = repeat2(", ");	// N.B.:  probably not what was intended!
+	puts(str ? str : "(null)");
+	free(str);
+	str = repeat2("hum", 4, ", ");
+	puts(str ? str : "(null)");
+	free(str);
+	str = repeat2(.str = "hum", .n = 3);
+	puts(str ? str : "(null)");
+	free(str);
+	str = repeat2(.n = 3, .str = "hum");
 	puts(str ? str : "(null)");
 	free(str);
 

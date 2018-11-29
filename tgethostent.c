@@ -10,7 +10,6 @@
 #include <netdb.h>
 
 extern int h_errno;
-char errbuf[200];
 
 int main(int, char*[]);
 
@@ -37,6 +36,7 @@ main(argc, argv)
 	host[sizeof(host) - 1] = '\0';
 
 	if (! (hep = gethostbyname(host))) {
+		herror(host);
 		switch (h_errno) {
 		case HOST_NOT_FOUND:
 			printf("|%s| HOST_NOT_FOUND\n", host);
