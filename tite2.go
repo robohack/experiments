@@ -45,9 +45,11 @@ var ITETests = []struct {
 	{
 		ifTrue:  1.e+1i,
 		ifFalse: 1.e+0i},
-	{
-		ifTrue:  '⊨',  // char appears in file as 0xe2 0x8a 0xa8
-		ifFalse: '⊭'}, // char appears in file as 0xe2 0x8a 0xad
+// a rune literal triggers a compiler bug:  https://github.com/golang/go/issues/29350
+// (should be fixed in 12.x:  https://go-review.googlesource.com/c/go/+/155380/)
+//	{
+//		ifTrue:  '⊨',  // char appears in file as 0xe2 0x8a 0xa8
+//		ifFalse: '⊭'}, // char appears in file as 0xe2 0x8a 0xad
 
         // The above two lines cause this error _SOMETIMES_.  I have one
         // *_test.go file where they do not cause any error.
