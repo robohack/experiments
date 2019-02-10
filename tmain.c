@@ -20,7 +20,7 @@
 
 void goodbye(void);
 
-char *argv0 = "progname";
+const char *argv0 = "progname";
 
 void
 goodbye(void)
