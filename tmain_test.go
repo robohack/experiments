@@ -155,40 +155,55 @@ func TestMainLog(t *testing.T) {
 // properly exercise and validate the "interface" feature of ITE()
 //
 type comparableStruct struct {
-	boo bool
-	foo int
-	bar float32
-	none complex64
-	name string
+	boo    bool
+	foo    int
+	bar    float32
+	none   complex64
+	name   string
+	symbol rune
 }
+
 var ITETests = []struct {
 	ifTrue  interface{}
 	ifFalse interface{}
 }{
 	{
 		ifTrue:  true,
-		ifFalse: false},
+		ifFalse: false,
+	},
 	{
 		ifTrue:  "true",
-		ifFalse: "false"},
+		ifFalse: "false",
+	},
 	{
 		ifTrue:  1,
-		ifFalse: 0},
+		ifFalse: 0,
+	},
 	{
 		ifTrue:  0.1,
-		ifFalse: 0.0},
+		ifFalse: 0.0,
+	},
 	{
 		ifTrue:  1.e+1,
-		ifFalse: 1.e+0},
+		ifFalse: 1.e+0,
+	},
 	{
 		ifTrue:  1.e+1i,
-		ifFalse: 1.e+0i},
+		ifFalse: 1.e+0i,
+	},
 	{
+		// XXX these should be rune literals ('⊨') as in the
+		// comparableStruct example below, but there is a compiler bug
+		// before 1.12 which prevents them from being used in an
+		// interface initializer like this
 		ifTrue:  "⊨",
-		ifFalse: "⊭"},
+		ifFalse: "⊭",
+	},
 	{
-		ifTrue:  comparableStruct{true, 1, 1.0, 1.0i, "true"},
-		ifFalse: comparableStruct{false, 0, 0.0, 0.0i, "false"}}}
+		ifTrue:  comparableStruct{true, 1, 1.0, 1.0i, "true", '⊨'},
+		ifFalse: comparableStruct{false, 0, 0.0, 0.0i, "false", '⊭'},
+	},
+}
 
 func TestITE(t *testing.T) {
 	for _, res := range ITETests {
@@ -204,7 +219,6 @@ func TestITE(t *testing.T) {
 		}
 	}
 }
-
 
 //
 // Local Variables:

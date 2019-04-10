@@ -24,7 +24,15 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+//# Set VERSION to the known build version, and BUILD to the current tag name or
+//# branch name
+//#
+//VERSION = v1.1
+//GITVER := $(shell git describe --tags --exact-match 2>/dev/null || git symbolic-ref -q --short HEAD)
+//GO_BUILD_FLAGS += -ldflags '-X main.VERSION=${VERSION} -X main.BUILD=${GITVER}'
+//
 const VERSION = "v1.1"
+const BUILD = "master"
 
 type AppSettings struct {
 	// useful flags
@@ -78,6 +86,7 @@ func usage() {
 
 func version() {
 	fmt.Fprintf(os.Stdout, "Version: %s\n", VERSION)
+	fmt.Fprintf(os.Stdout, "Build: %s\n", BUILD)
 	os.Exit(0)
 }
 
