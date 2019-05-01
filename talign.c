@@ -42,7 +42,7 @@ typedef union memalign_u {
  */
 
 #if 0
-	ptr = (ptr + ALIGN_BYTES) & ~(ALIGN_BYTES);
+	ptr = (ptr + __BIGGEST_ALIGNMENT__) & ~(__BIGGEST_ALIGNMENT__);
 #endif
 
 /*
@@ -71,11 +71,15 @@ enum str_type_e {
 /* data type for a dynamic string region */
 struct str {
 	enum str_type_e t;
-	char *p;			/* text region */
+	const char *p;			/* text region (declared const to avoid warnings) */
 	/* the rest are valid and used only if type == STR_DYNAMIC */
 	size_t i;			/* index at end of used text region */
 	size_t a;			/* current allocation size */
 };
+
+#ifndef __UNCONST
+# define __UNCONST(a)	((void *)(uintptr_t)(const void *)(a))
+#endif
 
 #ifdef USE_STR_LITERAL
 /* literal str setter */
@@ -201,6 +205,7 @@ str_type(const struct str *unk_str)
 	return type;
 }
 
+/* a getter to optionally wrap around ALS() */
 #ifdef USE_STR_LITERAL
 # define AS(str) ((str_type(str) == STR_LITERAL) ? ALS(str) : str->p)
 # else
@@ -231,7 +236,7 @@ str_init(const char *cs)
 
 		return NULL;
 	}
-	strcpy(d_str->p, cs);
+	strcpy(__UNCONST(d_str->p), cs);
 	d_str->i = strlen(d_str->p);
 
 	return d_str;
@@ -245,7 +250,7 @@ str_free(struct str *s)
 {
 	if (s) {
 		if (s->p) {
-			free(s->p);
+			free(__UNCONST(s->p));
 		}
 		free(s);
 	}
@@ -261,7 +266,7 @@ void
 print_str_info(const struct str *s,
 	       long max)
 {
-	const struct str *un_str = SC("un-"); /* XXX warning: initializing 'char *' with an expression of type 'const char [4]' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers] */
+	const struct str *un_str = SC("un-");
 
 	printf("\n%saligned struct str at %p, (off by %ju)\n",
 	       (((uintptr_t) s % (uintptr_t) max) == 0) ? "" : AS(un_str),
