@@ -30,6 +30,7 @@ char *foo_7(const char *, char * const []);
 char *foo_8(const char *, const char * const []);
 char *foo_9(const char *, char * const *);
 char *foo_10(const char *, const char * const *);
+const char *foo_11(const char *);
 
 char *
 foo(char *bar)
@@ -116,6 +117,14 @@ foo_10(const char *bar, const char * const *none)
 	printf("%s\n", bar);
 
 	return none[0];			/* discards qualifiers from pointer target type */
+}
+
+const char *
+foo_11(const char *bar)
+{
+	bar = malloc((size_t) 100);	/* XXX XXX XXX NO ERROR OR WARNING!!! XXX XXX XXX */
+
+	return bar;			/* XXX still no error, though here it is understandable */
 }
 
 int main(int, char *[]);
@@ -226,6 +235,8 @@ main(int argc __unused,
 	foo_8(blah, argv);		/* incompatible pointer type */
 	foo_9(blah, argv);
 	foo_10(blah, argv);		/* incompatible pointer type */
+
+	cbork = foo_11(blah);
 
 	exit(0);
 	/* NOTREACHED */
