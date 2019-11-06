@@ -103,9 +103,9 @@ typedef enum more_flags_e {
  * int variable into the appropriate enum type, then it should do the lookup.
  */
 typedef enum __WHENCE_T {
-    __my_SEEK_CUR,
-    __my_SEEK_END,
-    __my_SEEK_SET
+	__my_SEEK_CUR,
+	__my_SEEK_END,
+	__my_SEEK_SET
 } __whence_t;
 
 #define MY_SEEK_CUR __my_SEEK_CUR
@@ -123,21 +123,21 @@ typedef enum error_e {
 } error_t;
 
 typedef enum {
-  kRefrigerator = 600,
-  kToaster = 700,
-  kBlender = 800
+	kRefrigerator = 600,
+	kToaster = 700,
+	kBlender = 800
 } appliance_type_t;
 
 typedef enum {
-  k120vac = 0,
-  k240vac = 1,
-  k12vdc = 2
+	k120vac = 0,
+	k240vac = 1,
+	k12vdc = 2
 } voltage_t;
 
 typedef struct {
-    appliance_type_t type:16;
-    voltage_t voltage:8;
-    uint16_t crc;
+	appliance_type_t type:16;
+	voltage_t voltage:8;
+	uint16_t crc;
 } __attribute__((__packed__)) appliance_t;
 
 /*

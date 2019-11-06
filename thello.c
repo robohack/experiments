@@ -1,28 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if 0
-int main(int, char *[]);
-#else
 int main(void);
-#endif
 
 int
-#if 0
-main(int argv __unused, char *argc[] __unused)
-#else
 main()
-#endif
 {
 	printf("Hello, %s!\n", "world");
 	/*
-	 * note:  One of the shortest known English sentences using all of the
-	 * letters of the alphabet (i.e. it's a closer-to-perfect panagram, as
-	 * opposed to the slightly longer but more commonly known "The quick
-	 * brown fox jumps over a lazy fox").  The foxy sentence was apparently
-	 * developed by Western Union as a test for telex operators, though
-	 * other sources suggest it can be dated back as far as 1888.  This
-	 * shorter one was apparently created by some anonymous scholar.
+	 * note:  The first is one of the shortest known English sentences using
+	 * all of the letters of the alphabet (i.e. it's a closer-to-perfect
+	 * panagram, as opposed to the slightly longer but more commonly known
+	 * "The quick brown fox jumps over a lazy fox").  The foxy sentence was
+	 * apparently developed by Western Union as a test for telex operators,
+	 * though other sources suggest it can be dated back as far as 1888.
+	 * This shorter one was apparently created by some anonymous scholar.
 	 */
 	fputs("Jackdaws love my big sphinx of quartz\n", stderr);
 	fputs("Pack my box with five dozen liquor jugs\n", stderr);
