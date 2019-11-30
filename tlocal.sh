@@ -21,7 +21,7 @@ is_zsh()
 is_zsh && echo "Zsh: ${ZSH_VERSION}" || echo "not zsh"
 
 # AT&T Ksh is (still, as of ksh93u+) the only shell I know of which has
-# functions, and which has a 'typest' command, but which does not have a 'local'
+# functions, and which has a 'typset' command, but which does not have a 'local'
 # command to declare function-scope variables, nor a "built-in" alias for it
 # either.  Sigh.
 #
