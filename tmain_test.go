@@ -192,12 +192,13 @@ var ITETests = []struct {
 		ifFalse: 1.e+0i,
 	},
 	{
-		// XXX these should be rune literals ('⊨') as in the
-		// comparableStruct example below, but there is a compiler bug
-		// before 1.12 which prevents them from being used in an
-		// interface initializer like this
-		ifTrue:  "⊨",
-		ifFalse: "⊭",
+		// note: these are rune literals, as in the comparableStruct
+		// example below, but prior to go-1.12 (and go-1.11.13) there
+		// was a compiler bug that prevented them from being used in an
+		// interface initializer like this, and a work-around is to make
+		// them a string ("⊨")
+		ifTrue:  '⊨',
+		ifFalse: '⊭',
 	},
 	{
 		ifTrue:  comparableStruct{true, 1, 1.0, 1.0i, "true", '⊨'},
