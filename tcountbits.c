@@ -740,6 +740,22 @@ suseconds_t microtime(void);
  *	the ANDROID_ALARM_ELAPSED_REALTIME timer that is accessible through
  *	ioctl().  [[ Itay Bianco ]]
  *
+ * Darwin/MacOS makes things even worse by repeating the Linux mistakes and then
+ * also introduces the better performing but less accurate
+ * CLOCK_MONOTONIC_RAW_APPROX:
+ *
+ *	like CLOCK_MONOTONIC_RAW, but reads a value cached by the system at
+ *	context switch.  This can be read faster, but at a loss of accuracy as
+ *	it may return values that are milliseconds old.
+ *
+ * Note that FreeBSD has similar CLOCK_*_FAST, e.g. CLOCK_MONOTONIC_FAST, to
+ * improve performance but with the limitation of reducing accuracy to "one
+ * timer tick".
+ *
+ * Apparently Linux also fails to adjust CLOCK_MONOTONIC by not necessarily
+ * incrementing it while the system is asleep (suspended).  They apparently
+ * invented CLOCK_BOOTTIME to work around this sillyness.
+ *
  * Note: suseconds_t is for signed values of times in microseconds, and it was
  * first added to POSIX 1003.1 in System Interfaces and Headers, Issue 5
  * published in 1997.  It must be no greater in size than a long int.  Note too
