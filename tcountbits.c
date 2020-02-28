@@ -702,6 +702,9 @@ suseconds_t microtime(void);
  *
  * (and similar for CLOCK_THREAD_CPUTIME_ID)
  *
+ * FreeBSD has these, and also has something similar called CLOCK_PROF, which
+ * presumably accounts for all non-idle (non-wait-io) CPU time.
+ *
  * The Linux manual warns:
  *
  *	The CLOCK_PROCESS_CPUTIME_ID and CLOCK_THREAD_CPUTIME_ID clocks are
