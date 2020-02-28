@@ -444,9 +444,9 @@ long double fabsl(long double n);	/* not as well tested */
 #define	___STRING(x)	__STRING(x)
 #define	__STRING(x)	#x
 
-#define round2int(x) ((x) < INT_MIN-0.5 || (x) > INT_MAX+0.5 ? abort() : ((x)>=0?(int)((x)+0.5):(int)((x)-0.5)))
-#define round2long(x) ((x) < LONG_MIN-0.5 || (x) > LONG_MAX+0.5 ? abort() : ((x)>=0?(long)((x)+0.5):(long)((x)-0.5)))
-#define round2max(x) ((x) < INTMAX_MIN-0.5 || (x) > INTMAX_MAX+0.5 ? abort() : ((x)>=0?(intmax_t)((x)+0.5):(intmax_t)((x)-0.5)))
+#define round2int(x) (((x) < (double)INT_MIN-0.5 || (x) > (double)INT_MAX+0.5) ? abort(),0 : ((x)>=0?(int)((x)+0.5):(int)((x)-0.5)))
+#define round2long(x) (((x) < (double)LONG_MIN-0.5 || (x) > (double)LONG_MAX+0.5) ? abort(),0 : ((x)>=0?(long)((x)+0.5):(long)((x)-0.5)))
+#define round2max(x) (((x) < (double)INTMAX_MIN-0.5 || (x) > (double)INTMAX_MAX+0.5) ? abort(),0 : ((x)>=0?(intmax_t)((x)+0.5):(intmax_t)((x)-0.5)))
 
 /* labels for the tests, used as an array index */
 typedef enum {
