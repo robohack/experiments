@@ -684,7 +684,8 @@ suseconds_t microtime(void);
  * minutes, hours or days.  Of couse we _are_ measuring short intervals here.
  *
  * XXX the rest of this is informational -- we really only want CLOCK_MONOTONIC
- * here.
+ * here, though CLOCK_PROCESS_CPUTIME_ID would be more accurate on multitasking
+ * systems.
  *
  * POSIX.1b-1999 now says there's a CPT option taken from ISO C:
  *
