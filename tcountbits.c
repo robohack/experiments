@@ -272,7 +272,7 @@ count_bits(unsigned long val)
  * According to Donald Knuth ("The Art of Computer Programming", Vol IV, p 11),
  * the code first appeared in the first textbook on programming, "The
  * Preparation of Programs for an Electronic Digital Computer" by Maurice
- * Vincent Wilkes, David J. Wheeler and Stanley Gill (Addison-Wesley Press, 2nd
+ * Vincent Wilkes, David J. Wheeler, and Stanley Gill (Addison-Wesley Press, 2nd
  * Edition, 1957).
  *
  * Pages 191–193 of the book presented Nifty Parallel Count by D B Gillies and
