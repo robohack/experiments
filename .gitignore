@@ -3,3 +3,5 @@
 # but source files have a dot in them!
 !/*.*
 /*~
+/*.o
+/*.core
