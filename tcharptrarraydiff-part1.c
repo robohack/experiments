@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include "tcharptrarraydiff.h"
 
-char *nut = "This is the first string";
-char nuts[] = "This is is an array of chars";
+const char *nut = "This is the first string";
+const char nuts[] = "This is is an array of chars";
 
 int a = 3;
 
@@ -19,9 +19,9 @@ main()
 	} foo_as_ptr = { 0 };
 	unsigned int i;
 	unsigned char digits[] = "123456789";
-	int a;				/* shadow's global 'a' of same type */
+	int a;				/* xxx shadow's global 'a' of same type */
 
-	printf("a = %d\n", a);		/* prints garbage.... */
+	printf("a = %d\n", a);		/* prints garbage.... */ /* xxx warning: 'a' is used uninitialized in this function */
 	/*
 	 * foo is actually defined in part2 as an array of characters and is
 	 * initialized with a string starting with "12345678"
@@ -59,6 +59,7 @@ main()
 	printf("ok = %p\n", ok);
 	printf("str = %p\n", str);
 	printf("strarr = %p\n", strarr);
+	printf("szarr = %p\n", szarr);
 
 	putchar('\n');
 
@@ -80,6 +81,9 @@ main()
 	bar2("str", str);
 	bar2("strarr", strarr);
 	bar2("&strarr", &strarr);
+
+	bar2("&szarr", &szarr);
+	bar2("&szarr", &szarr);
 
 	printf("You will see here that char strarr[] contains the bytes of the address of\n"
 	       "  part2's char *strarr pointer (in the natural machine order):\n");
@@ -104,6 +108,6 @@ bar1(char *f)
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " OPTIM=-O0 PROG=tcharptrarraydiff OBJS='tcharptrarraydiff-part1.o tcharptrarraydiff-part2.o' && ./tcharptrarraydiff"))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm tcharptrarraydiff tcharptrarraydiff-part*.o; " (default-value 'compile-command) " OPTIM=-O0 PROG=tcharptrarraydiff SRCS='tcharptrarraydiff-part1.c tcharptrarraydiff-part2.c' && ./tcharptrarraydiff"))
  * End:
  */
