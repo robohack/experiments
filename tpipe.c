@@ -263,6 +263,7 @@ main(int argc,
 	ssize_t n;
 	int errorPipe[2];
 	int fdflags;
+	int pager[2];
 
 	setprogname(argv[0]);
 
@@ -415,6 +416,7 @@ main(int argc,
 		exit(EXIT_FAILURE);
 	}
 
+
 	if ((child = fork()) == -1) {
 		perror("fork");
 	} else if (child != 0) {
@@ -431,7 +433,7 @@ main(int argc,
 		wait_child(child, "child2");
 	} else {
 		struct timeval rightnow;
-		char *error_message = "exec failed";
+		const char *error_message = "exec failed";
 
 		printf("child2 after fork2...\n");
 
@@ -455,6 +457,40 @@ main(int argc,
 		_exit(EXIT_FAILURE);
 	}
 	printf("parent after second child...\n");
+
+	pipe(pager);
+
+	/*
+	 * the following code creates a form of race condition where the parent
+	 * will exit before the child is done, and sometimes even before the
+	 * child does its first read from stdin....
+	 */
+	switch (fork()) {
+	case -1:
+		perror("fork");
+		break;
+	case 0:
+
+		printf("child3 after fork3...\n");
+
+		close(pager[1]);	/* "write end" is unused */
+		dup2(pager[0], 0);	/* replace stdin with "read end" */
+		close(pager[0]);	/* original "read end" no longer needed */
+		execlp("more", "more", NULL);
+		break;
+
+	default:
+		printf("parent after fork3...\n");
+
+		close(pager[0]);	/* "read end" is unused */
+		dup2(pager[1], 1);	/* replace stdout with "write end" */
+		close(pager[1]);	/* original "write end" is no longer needed */
+		execlp("ls", "ls", "-1", "/usr/include", NULL);
+		/* NOTREACHED */
+		break;
+	}
+	/* xxx never prints, of course... */
+	printf("parent after third child...\n");
 
 	exit(EXIT_SUCCESS);
 }
