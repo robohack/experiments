@@ -8,6 +8,10 @@ main(int argc,
 {
 	double x;
 
+	x = 1083.33+614.29+783.33+783.33+833.33+533.33+633.33+683.33;
+	printf("x = %e (should be '5.947600e+03')\n", x);
+	printf("x - 5.947600e+03 = %e (should be 0.0 but of course cannot ever be!)\n", x - 5.947600e+03);
+
 	if (argc != 2) {
 		fprintf(stderr, "Usage: %s <x>\n", argv[0]);
 		exit(1);
