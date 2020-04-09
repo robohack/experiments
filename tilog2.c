@@ -433,6 +433,19 @@ lsb(uintmax_t v)
 	return msb(just_lsb(v));
 }
 
+int ctz(uintmax_t);
+
+/*
+ * Count Trailing Zeros:
+ *
+ * (Equivalent to GCC's __builtin_ctz().)
+ */
+int
+ctz(uintmax_t x)
+{
+	return lsb(x) - 1;
+}
+
 int bitScanReverse(uint64_t bb);
 
 /*
