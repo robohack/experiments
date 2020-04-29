@@ -47,6 +47,6 @@ override LDFLAGS += -L.
 #
 # Local Variables:
 # eval: (make-local-variable 'compile-command)
-# compile-command: (let ((fn (file-name-nondirectory (buffer-file-name)))) (concat "touch a.c b.c t_test.c libtest.h unit_test.c; gmake -f " fn " CFLAGS=-O0 t_test; rm a.[co] b.[co] t_test.c libtest.h libtest.a unit_test.o t_test"))
+# compile-command: (let ((fn (file-name-nondirectory (buffer-file-name)))) (concat "touch a.c b.c t_test.c libtest.h unit_test.c; gmake -f " fn " CFLAGS=-O0 t_test; rm a.[co] b.[co] t_test.c libtest.h unit_test.[co] libtest.a t_test"))
 # End:
 #
