@@ -59,19 +59,17 @@
 # define _B	0x80
 #endif
 
-/* XXX requires GCC-like typeof() (xxx should write as __typeof__()), and
- * probably also GCC-specific feature of putting a block ("{}") inside an
- * expression (so-called "statement expressions") so as to be able to declare
- * variables local to the expression
- *
- * xxx name the internal var the same as the macro to avoid shadowing...
+/*
+ * XXX these require a GCC-like "statement expressions" feature, i.e. allowing a
+ * a block ("{}") inside an expression so as to be able to declare variables
+ * local to the expression
  */
 #define MY__IS_CTYPER(C, MSK)						\
 	({								\
-		const typeof(C) _c = (C);				\
-		const unsigned int _u = (unsigned int) (_c);		\
-		(sizeof(C) > 1 && _u == (unsigned int) -1) ? 0 :	\
-			((int) ((my_ctype + 1)[(unsigned char) (_c)] & MSK)); \
+		const unsigned int _ctype_ui_ = (unsigned int) (C);	\
+		const unsigned char _ctype_uc_ = (unsigned char) _ctype_ui_; \
+		(sizeof(C) > 1 && _ctype_ui_ == (unsigned int) -1) ? 0 : \
+			((int) ((my_ctype + 1)[_ctype_uc_] & MSK));	\
 	})
 
 #define	MY_ISDIGIT(c)	MY__IS_CTYPER(c, _N)
@@ -86,21 +84,23 @@
 #define	MY_ISGRAPH(c)	MY__IS_CTYPER(c, (_P|_U|_L|_N))
 #define	MY_ISCNTRL(c)	MY__IS_CTYPER(c, _C)
 
-#define	MY_TOLOWER(c)							\
+#define	MY_TOLOWER(C)							\
 	({								\
-		const typeof(c) _c = (c);				\
-		const unsigned int _u = (unsigned int) (_c);		\
-		(sizeof(c) > 1 && _u == (unsigned int) -1) ? -1 :	\
-			((int) ((my_tolower_tab + 1)[(unsigned char) (_c)])); \
-	 })
+		const unsigned int _ctype_ui_ = (unsigned int) (C);	\
+		const unsigned char _ctype_uc_ = (unsigned char) _ctype_ui_; \
+		(sizeof(C) > 1 && _ctype_ui_ == (unsigned int) -1) ? -1 :\
+			((int) ((my_tolower_tab + 1)[_ctype_uc_]));	\
+	})
 
-#define	MY_TOUPPER(c)							\
+#if 0	/* xxx untested -- though it is just like MY_TOLOWER() */
+#define	MY_TOUPPER(C)							\
 	({								\
-		const typeof(c) _c = (c);				\
-		const unsigned int _u = (unsigned int) (_c);		\
-		(sizeof(c) > 1 && _u == (unsigned int) -1) ? -1 :	\
-			((int) ((my_toupper_tab + 1)[(unsigned char) (_c)])); \
-	 })
+		const unsigned int _ctype_ui_ = (unsigned int) (C);	\
+		const unsigned char _ctype_uc_ = (unsigned char) _ctype_ui_; \
+		(sizeof(C) > 1 && _ctype_ui_ == (unsigned int) -1) ? -1 :\
+			((int) ((my_toupper_tab + 1)[_ctype_uc_])); 	\
+	})
+#endif
 
 /*
  * some crazy ASCII-only range-checking implementation (that mostly works)
@@ -109,10 +109,9 @@
  *
  * XXX XXX XXX except not until I fixed the use of shadowed local identifiers!!!
  *
- * XXX requires GCC-like typeof() (xxx should write as __typeof__()), and
- * probably also GCC-specific feature of putting a block ("{}") inside an
- * expression (so-called "statement expressions") so as to be able to declare
- * variables local to the expression
+ * XXX requires GCC-like __typeof__(), as well as the GCC-like feature of
+ * putting a block ("{}") inside an expression (so-called "statement
+ * expressions") so as to be able to declare variables local to the expression
  *
  * The big advantage is the lack of tables.
  *
@@ -121,7 +120,7 @@
  */
 #define _IN_RANGE(X, A, B)						\
     ({									\
-      const typeof(X) _r = (X);						\
+      const __typeof__(X) _r = (X);					\
       _r >= (A) && _r <= (B);						\
     })
 
@@ -131,54 +130,54 @@
 #define na_islower(X) (_IN_RANGE((X), 'a', 'z'))
 #define na_isalpha(X)							\
     ({									\
-      const typeof(X) _x = (X);						\
+      const __typeof__(X) _x = (X);					\
       na_islower(_x) || na_isupper(_x);					\
     })
 #define na_iscntrl(X)							\
     ({									\
-      const typeof(X) _x = (X);						\
+      const __typeof__(X) _x = (X);					\
       _IN_RANGE(_x, 0, 0x1F) || _x == 0x7F;				\
     })
 #define na_isalnum(X)							\
     ({									\
-      const typeof(X) _y = (X);						\
+      const __typeof__(X) _y = (X);					\
       na_isalpha(_y) || na_isdigit(_y);					\
     })
 #define na_isgraph(X)							\
     ({									\
-      const typeof(X) _z = (X);						\
+      const __typeof__(X) _z = (X);					\
       na_isalnum(_z) || na_ispunct(_z);					\
     })
 /* xxx why the 'x' below ??? this is probably wrong and incomplet */
 #define na_isprint(X)							\
     ({									\
-      const typeof(X) _s = (X);						\
+      const __typeof__(X) _s = (X);					\
       na_isgraph(_s) || _s == 'x';					\
     })
 #define na_ispunct(X)							\
     ({									\
-      const typeof(X) _t = (X);						\
+      const __typeof__(X) _t = (X);					\
       !na_isalnum(_t) && _t != ' ';					\
     })
 #define na_isspace(X)							\
     ({                                                                  \
-      const typeof(X) _x = (X);						\
+      const __typeof__(X) _x = (X);					\
       _x == ' ' || _x == '\t' || _x == '\v' || _x == '\n' || _x == '\r' \
                 || _x == '\f';						\
     })
 #define na_isxdigit(X)							\
     ({									\
-      const typeof(X) _x = (X);						\
-      na_isdigit(_x) || _IN_RANGE(_x, 'a', 'f') || _IN_RANGE(_x, 'A', 'F');	\
+      const __typeof__(X) _x = (X);					\
+      na_isdigit(_x) || _IN_RANGE(_x, 'a', 'f') || _IN_RANGE(_x, 'A', 'F'); \
     })
 #define na_tolower(X)							\
     ({									\
-      const typeof(X) _x = (X);						\
+      const __typeof__(X) _x = (X);					\
       na_isupper(_x) ? _x|' ' : _x;					\
     })
 #define na_toupper(X)							\
     ({									\
-      const typeof(X) _x = (X);						\
+      const __typeof__(X) _x = (X);					\
       na_islower(_x) ? _x&~' ' : _x;					\
     })
 
@@ -382,7 +381,7 @@ my_tolower(int ui)
 	return ((int) ((my_tolower_tab + 1)[(unsigned char) ch]));
 }
 
-#define CORRECTP(expr)	((expr) ? " [correct]" : "[wrong]")
+#define CORRECTP(expr)	((expr) ? " [correct]" : "[ERROR:WRONG]")
 
 /*
  * N.B.:  XXX WARNING!!! XXX
@@ -391,7 +390,7 @@ my_tolower(int ui)
  * namespace!
  */
 static void
-skipwhitespace(char **sp)
+skipwhitespace(const char **sp)
 {
     char _xc, _comment = 0;
 
@@ -427,50 +426,47 @@ skipwhitespace(char **sp)
 }
 
 /*
- * N.B.:  This version is broken because it uses the same local variable '_c' as
- * the MY_ISSPACE() macro, and scoping does not work in GCC!
- *
- * We do get a warning with -Wshadow, but the "shadowing" fails -- it directly
- * uses the same storage!
- *
- * Clang does give a hint as to the problem though:
- *
-tctype.c:445:26: warning: variable '_c' is uninitialized when used within its own initialization [-Wuninitialized]
-        } else if (! MY_ISSPACE(_c)) {
-                     ~~~~~~~~~~~^~~
-tctype.c:79:37: note: expanded from macro 'MY_ISSPACE'
-#define MY_ISSPACE(c)   MY__IS_CTYPER(c, _S)
-                        ~~~~~~~~~~~~~~^~~~~~
-tctype.c:71:25: note: expanded from macro 'MY__IS_CTYPER'
-                const typeof(C) _c = (C);                               \
-                                ~~    ^
- *
+ * N.B.:  This version may reveal compiler issues with shadowing in statement
+ * expressions because it uses the same local variable ('_ctype_uc_') as the
+ * MY_ISSPACE() macro.
  */
 static void
-skipwhitespace_broken(char **sp)
+skipwhitespace_broken(const char **sp)
 {
-    char _c, _comment = 0;		/* xxx _c is overwritten by MY_ISSPACE()'s _c */
+    char _ctype_uc_, _comment = 0;		/* xxx _uc_ is overwritten by MY_ISSPACE()'s _uc_ */
 
-    while ((_c = *(*sp))) {
-	if (_c == '(') {
+    while ((_ctype_uc_ = *(*sp))) {
+	if (_ctype_uc_ == '(') {
 	    _comment = 1;
 	    (*sp)++;
-	    while ((_comment && (_c = *(*sp)))) {
+	    while ((_comment && (_ctype_uc_ = *(*sp)))) {
 		(*sp)++;
-		if (_c == '\\' && *(*sp)) (*sp)++;
-		else if (_c == '(') _comment++;
-		else if (_c == ')') _comment--;
+		if (_ctype_uc_ == '\\' && *(*sp)) (*sp)++;
+		else if (_ctype_uc_ == '(') _comment++;
+		else if (_ctype_uc_ == ')') _comment--;
 	    }
 	    (*sp)--;
-	} else if (! MY_ISSPACE(_c)) {
+	} else if (! MY_ISSPACE(_ctype_uc_)) {
 		/*
-		 * From the line aboce:
-tctype.c:442: warning: declaration of '_c' shadows a previous local
-tctype.c:429: warning: shadowed declaration is here
-tctype.c:451: warning: declaration of '_c' shadows a previous local
-tctype.c:429: warning: shadowed declaration is here
-		*/
-		switch (_c) {
+		 * GCC from the line above:
+tctype.c:449: warning: declaration of '_ctype_uc_' shadows a previous local
+tctype.c:436: warning: shadowed declaration is here
+		 *
+		 * Clang (10.x) says:
+tctype.c:449:15: warning: declaration shadows a local variable [-Wshadow]
+        } else if (! MY_ISSPACE(_ctype_uc_)) {
+                     ^
+tctype.c:77:23: note: expanded from macro 'MY_ISSPACE'
+#define MY_ISSPACE(c)   MY__IS_CTYPER(c, _S)
+                        ^
+tctype.c:70:23: note: expanded from macro 'MY__IS_CTYPER'
+                const unsigned char _ctype_uc_ = (unsigned char) _ctype_ui_; \
+                                    ^
+tctype.c:436:10: note: previous declaration is here
+    char _ctype_uc_, _comment = 0;              (* xxx _uc_ is overwritten by MY_ISSPACE()'s _uc_ *)
+         ^
+		 */
+		switch (_ctype_uc_) {
 		case ' ':
 		case '\f':
 		case '\n':
@@ -478,7 +474,7 @@ tctype.c:429: warning: shadowed declaration is here
 		case '\t':
 		case '\v':
 			printf("WRONG: is still whitespace: '%c'[0x%x] (returned 0x%x)\n",
-			       _c, _c, isspace(_c));
+			       _ctype_uc_, _ctype_uc_, isspace(_ctype_uc_));
 			break;
 		default:
 			break;
@@ -490,7 +486,7 @@ tctype.c:429: warning: shadowed declaration is here
 }
 
 static void
-test_skipwhitespace(char *foo)
+test_skipwhitespace(const char *foo)
 {
 	printf("\nbefore: '%s'\n", foo);
 
@@ -516,7 +512,7 @@ test_skipwhitespace(char *foo)
 }
 
 static void
-test_skipwhitespace_broken(char *foo)
+test_skipwhitespace_broken(const char *foo)
 {
 	printf("\nbefore: '%s'\n", foo);
 
@@ -542,6 +538,43 @@ test_skipwhitespace_broken(char *foo)
 }
 
 
+void t_in_cond(const void *, size_t);
+
+/* test a conditional expression inside a macro call */
+void
+t_in_cond(const void *buf,
+	  size_t len)
+{
+	const unsigned char *p = buf;
+	size_t x;
+
+	printf("printable from p[%s] = '", p);
+
+	for (x = 0; x < len / 4; x += 4) { /* xxx warning: comparison between signed and unsigned integer expressions [-Wsign-compare] */
+		size_t y;
+
+		for (y = 0; x + y < len; y++) { /* warning: comparison between signed and unsigned integer expressions [-Wsign-compare] */
+			fprintf(stdout, "%c",
+				MY_ISPRINT(p[x + y]) ? p[x + y] : '.');
+		}
+	}
+	puts("'");
+}
+
+
+static int
+my_strcasecmp(const char *s1, const char *s2)
+{
+	const unsigned char *us1 = (const unsigned char *)s1,
+			*us2 = (const unsigned char *)s2;
+
+	while (MY_TOLOWER(*us1) == MY_TOLOWER(*us2++))
+		if (*us1++ == '\0')
+			return (0);
+	return (MY_TOLOWER(*us1) - MY_TOLOWER(*--us2));
+}
+
+
 int main(void);
 
 int
@@ -550,6 +583,7 @@ main()
 	int i = EOF;
 	long int l = EOF;
 	char c = EOF;
+	signed char one = '1';
 	unsigned int ui = (unsigned int) EOF;
 	unsigned long int ul = (unsigned long) EOF;
 	unsigned char uc = (unsigned char) EOF;
@@ -714,6 +748,16 @@ main()
 	printf("isdigit('a') = 0x%x %s\n", isdigit('a'), CORRECTP(!isdigit('a')));
 	printf("MY_ISDIGIT('a') = 0x%x %s\n", MY_ISDIGIT('a'), CORRECTP(!MY_ISDIGIT('a')));
 	printf("na_isdigit('a') = 0x%x %s\n", na_isdigit('a'), CORRECTP(!na_isdigit('a')));
+	putchar('\n');
+
+	printf("isdigit('\\0') = 0x%x %s\n", isdigit('\0'), CORRECTP(!isdigit('\0')));
+	printf("MY_ISDIGIT('\\0') = 0x%x %s\n", MY_ISDIGIT('\0'), CORRECTP(!MY_ISDIGIT('\0')));
+	printf("na_isdigit('\\0') = 0x%x %s\n", na_isdigit('\0'), CORRECTP(!na_isdigit('\0')));
+	putchar('\n');
+
+	printf("isdigit('1') = 0x%x %s\n", isdigit(one), CORRECTP(isdigit(one)));
+	printf("MY_ISDIGIT('1') = 0x%x %s\n", MY_ISDIGIT(one), CORRECTP(MY_ISDIGIT(one)));
+	printf("na_isdigit('1') = 0x%x %s\n", na_isdigit(one), CORRECTP(na_isdigit(one)));
 	putchar('\n');
 
 	printf("isalnum(0) = 0x%x %s\n", isalnum(0), CORRECTP(!isalnum(0)));
@@ -1081,11 +1125,17 @@ main()
 		unsigned int j;
 
 		for (j = 0; j < sizeof(a) - 1; j++) {
-			if (MY_ISUPPER((unsigned char)p[j])) {
-				p[j] = (char) MY_TOLOWER((unsigned char)p[j]);
+			if (MY_ISUPPER(p[j])) {
+				p[j] = (char) MY_TOLOWER(p[j]);
 			}
 		}
 		printf("tolower a[] = %s\n", a);
+	}
+	putchar('\n');
+
+	/*  */ {
+		const unsigned char a[] = "aAbBcCdDeEfF";
+		t_in_cond(a, sizeof(a));
 	}
 	putchar('\n');
 
@@ -1240,7 +1290,7 @@ main()
 	test_skipwhitespace(" \tspace+tab leading");
 	test_skipwhitespace("");
 
-	puts("\nWARNING:  Expect the rest (with leading whitespace) to be broken!");
+	puts("\nNOTICE:  these may not skip whitespace with some compilers:");
 
 	test_skipwhitespace_broken("blah");
 	test_skipwhitespace_broken(" one leading");
@@ -1300,6 +1350,10 @@ main()
 
 #endif
 
+	printf("\nstrcasecmp('files', 'FILES') = %d %s\n",
+	       my_strcasecmp("files", "FILES"),
+	       CORRECTP(my_strcasecmp("files", "FILES") == 0));
+
 	exit(0);
 	/* NOTREACHED */
 }
@@ -1307,6 +1361,6 @@ main()
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " CPPFLAGS='-Wsign-compare' " fn " && ./" fn))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " CPPFLAGS='-std=c89 -Wno-sign-compare' " fn " && ./" fn))
  * End:
  */
