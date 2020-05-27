@@ -293,9 +293,16 @@ LDFLAGS += ${CWARNFLAGS:M-fsanitize=*}
 
 .if defined(__GNUC__) || defined(__clang__)
 # WARNING: C99 (and C11) allow compilers to perform optimizations based on the
-# "strict aliasing" rules which _will_ change the behaviour of previously
-# correct C90 and earlier code!
+# "strict" aliasing, overflow, and enums rules which _will_ change the behaviour
+# of previously correct C90 and earlier code!
 CFLAGS += -fno-strict-aliasing
+CFLAGS += -fno-strict-overflow
+CFLAGS += -fno-strict-enums
+.endif
+
+.if defined(__GNUC__) && !defined(__clang__)
+# always read the whole underlying value!
+CFLAGS += -fno-strict-volatile-bitfields
 .endif
 
 # N.B.:  -g3 is required if debugging is wanted while optimizing with -O2.
