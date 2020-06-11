@@ -168,14 +168,25 @@ typedef enum bool_e { false = 0U, true = !false } bool;
 #  define HAVE_FLOORL
 #  define HAVE_LOG10L
 #  define HAVE_ROUNDL
-#  if __NetBSD_Prereq__(8, 0, 0)
-/* this is in the header on 7.x, but not in libm until 8.x */
-#   define HAVE_LRINTL
+#  if __NetBSD_Prereq__(8, 99, 0) && !__NetBSD_Prereq__(9, 0, 0)
+/* XXX this was present temporarily in 8.99.x, but then "accidentally" removed again */
+//#   define HAVE_LRINTL
 #  endif
 # else
 /* n.b.  it works on 5.2, apparently courtesy GCC builtin functions */
 long double powl(long double x, long double y);
 long double fabsl(long double n);	/* not as well tested */
+# endif
+#endif
+
+#if defined(__FreeBSD__)
+# if __FreeBSD_version >= 600000
+# define HAVE_FLOORL			/* ??? */
+# define HAVE_LOG10L			/* ??? */
+#  define HAVE_ROUNDL
+# endif
+# if __FreeBSD_version >= 800000
+#  define HAVE_LRINTL
 # endif
 #endif
 
@@ -190,7 +201,6 @@ long double fabsl(long double n);	/* not as well tested */
 # define HAVE_LOG10L
 # define HAVE_ROUNDL
 #endif
-
 
 /* newer GCC & Clang will already have these defined... */
 #if !(defined(__LITTLE_ENDIAN__) || defined(__BIG_ENDIAN__))
