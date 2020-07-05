@@ -296,12 +296,27 @@ LDFLAGS += ${CWARNFLAGS:M-fsanitize=*}
 # "strict" aliasing, overflow, and enums rules which _will_ change the behaviour
 # of previously correct C90 and earlier code!
 CFLAGS += -fno-strict-aliasing
+
+. if (defined(__GNUC__) && \
+	${__GNUC__} >= 4 && ${__GNUC_MINOR__} >= 2)
+# WARNING:  Prevent the optimizer from assuming that the program
+# follows the strict signed overflow semantics permitted for the
+# language.
 CFLAGS += -fno-strict-overflow
+. endif
+.endif
+
+# XXX in GCC -fstrict-enums apparently only applies to C++
+.if defined(__GNUC__) && defined(__clang__)
+# WARNING:  Prevent the compiler from optimizing "using the assumption
+# that a value of enumerated type can only be one of the values of the
+# enumeration"
 CFLAGS += -fno-strict-enums
 .endif
 
-.if defined(__GNUC__) && !defined(__clang__)
-# always read the whole underlying value!
+.if (defined(__GNUC__) && !defined(__clang__) && \
+	${__GNUC__} >= 4 && ${__GNUC_MINOR__} >= 2)
+# WARNING:  Force the compiler to always read the whole underlying value!
 CFLAGS += -fno-strict-volatile-bitfields
 .endif
 
