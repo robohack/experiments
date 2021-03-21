@@ -5,6 +5,9 @@
 // build with "go build t-interval-complement.go"
 // test with "go test -v -bench . t-interval-complement.go t-interval-complement_test.go"
 
+// ToDo:  Implement more interval helper functions?  (find overlapping?)
+// https://en.wikipedia.org/wiki/Interval_tree
+
 package minfys
 
 import (
@@ -70,18 +73,30 @@ func (ivs Intervals) MergeUsingSort(iv Interval) Intervals {
 }
 
 func (a Intervals) Difference(b Interval) Intervals {
-	// If A and B are sets, then the relative complement of A in B
-	// is the set of elements in B but not in A.
-	// The relative complement of A in B is denoted B ∖  A:
+	//
+	// If A and B are sets, then the relative complement of A in B is the
+	// set of elements in B but not in A.
+	//
+	// The relative complement of A in B is denoted B ∖ A:
+	//
 	//     B \ A = {x ∈ A | x ∉ B}
 	//     B \ A = B ∩ A'
 	//
-	// For example. d = a\b,
+	// For example: d = a \ b
+	//
 	//     a: [{10, 15}, {30, 35}, {20, 25}]
-	//     b: {5,32}
-	//     d: [{5,9}, {16,19}, {26,29}]
-	// The elements of set a are non-overlapping, non-adjacent,
-	// and unsorted intervals.
+	//     b: {5, 32}
+	//     d: [{5, 9}, {16, 19}, {26, 29}]
+	//
+	// The elements of set a are non-overlapping, non-adjacent, and unsorted
+	// intervals.  Meanwhile here b is just a single interval.
+	//
+	// Note in this interval notation "{}" means we include the end points
+	// as part of the interval.  With a "reader" (i.e. by going behond Go
+	// source code syntax) we could use "()" to exclude the end points, or
+	// combinations such as "(}" or "{)" to exclude just one end point).
+	//
+	// Square brackets are used to denote a set.
 
 	if len(a) <= 0 {
 		return Intervals{b}
