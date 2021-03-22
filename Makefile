@@ -427,7 +427,7 @@ LDFLAGS += ${_CCLINKFLAGS}
 PATTERNS ?=	Makefile CStandard.c g*.c t*.awk t*.[ch] t*.c++ t*.sh t*.clisp t*.mk t*.go go.mod go.sum
 
 #DEST_RSH_HOSTS ?=	historically.local
-DEST_OpenSSH_HOSTS ?=	very.local freebsd.local central.weird.com # mail.reptiles.org
+DEST_OpenSSH_HOSTS ?=	very.local central.weird.com # freebsd.local mail.reptiles.org
 #DEST_KLERVI_HOSTS ?=	faraday.klervi.com lithium.local
 
 # seems to be a default target in <bsd.subdir.mk> on OSX (& FreeBSD?)
