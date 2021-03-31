@@ -60,6 +60,28 @@
 #endif
 
 /*
+ * XXX the following implementation of ctype.h macros is somewhat contrary to
+ * the minimum of what POSIX requires, which is:
+ *
+ *	    The c argument is an int, the value of which the application shall
+ *	    ensure is representable as an unsigned char or equal to the value of
+ *	    the macro EOF.  If the argument has any other value, the behavior is
+ *	    undefined.
+ *
+ * The safest way for an application to meet this is to do its own cast to
+ * (unsigned char).  However this implementation hides that safely in inline
+ * code, thus letting applications go on believing they can directly pass a
+ * signed char.
+ *
+ * So effectively this implementation's "undefined behaviour" is to be as
+ * conservative as possible and allow the caller to use these macros in the
+ * traditional naive way without fear and without noisy warnings from picky
+ * compilers when char is signed.
+ *
+ * See also https://mail-index.netbsd.org/tech-userlevel/2021/01/14/msg012823.html
+ */
+
+/*
  * XXX these require a GCC-like "statement expressions" feature, i.e. allowing a
  * a block ("{}") inside an expression so as to be able to declare variables
  * local to the expression
@@ -582,7 +604,7 @@ main()
 {
 	int i = EOF;
 	long int l = EOF;
-	char c = EOF;
+	char c = EOF;			/* xxx usually "signed char", e.g. on NetBSD (most/all ports?) */
 	signed char one = '1';
 	unsigned int ui = (unsigned int) EOF;
 	unsigned long int ul = (unsigned long) EOF;
@@ -657,12 +679,17 @@ main()
 	printf("(int) (unsigned char) EOF = 0x%x\n", (int) (unsigned char) EOF);
 	printf("(unsigned int) (unsigned char) EOF = 0x%x\n", (unsigned int) (unsigned char) EOF);
 	printf("(unsigned int) ((unsigned int) EOF & _CTYPE_MASK) = 0x%x\n", (unsigned int) ((unsigned int) EOF & _CTYPE_MASK));
+	printf("(int) (unsigned char) '\\xFF' = 0x%x\n", (int) (unsigned char) '\xFF');
+	printf("(unsigned int) (unsigned char) '\\xFF' = 0x%x\n", (unsigned int) (unsigned char) '\xFF');
+	printf("(unsigned int) ((unsigned int) '\\xFF' & _CTYPE_MASK) = 0x%x\n", (unsigned int) ((unsigned int) '\xFF' & _CTYPE_MASK));
+	printf("(unsigned int) ('\\xFF' & _CTYPE_MASK) = 0x%x\n", (unsigned int) ('\xFF' & _CTYPE_MASK));
 	i = 0xFF;
 	printf("(unsigned int) i = 0xFF = 0x%x\n", (unsigned int) i);
 	i = EOF;
 	printf("(unsigned int) i = EOF = 0x%x\n", (unsigned int) ui);
 	sc = (signed char) 0xFF;
 	printf("(unsigned int) sc = 0xFF = 0x%x\n", (unsigned int) sc);
+	printf("(unsigned int) '\\xFF' = 0x%x\n", (unsigned int) '\xFF');
 	putchar('\n');
 
 	printf("my+1[EOF & _CTYPE_MASK] = 0x%x\n",
@@ -713,6 +740,21 @@ main()
 	       (unsigned int)(my_ctype + 1)[(sc)]);
 	putchar('\n');
 
+	/* character constant */
+	printf("my+1['\\xFF'] = 0x%x\n",
+	       (unsigned int)(my_ctype + 1)['\xFF']);
+	printf("my['\\xFF'] = 0x%x\n",
+	       (unsigned int)(my_ctype)['\xFF']);
+	putchar('\n');
+
+	/* small integer */
+	printf("my+1[0xFF] = 0x%x\n",
+	       (unsigned int)(my_ctype + 1)[0xFF]);
+	printf("my[0xFF] = 0x%x\n",
+	       (unsigned int)(my_ctype)[0xFF]);
+	putchar('\n');
+
+	/* unsigned integer */
 	printf("my+1[0xFFU] = 0x%x\n",
 	       (unsigned int)(my_ctype + 1)[0xFFU]);
 	printf("my[0xFFU] = 0x%x\n",
