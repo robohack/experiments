@@ -625,6 +625,12 @@ main()
 	       char_bits == CHAR_BIT ? "==" : "!=", (int) CHAR_BIT);
 
 	printf("CHAR_BIT = %d\n", CHAR_BIT);
+#ifdef NBBY
+	printf("NBBY = %d\n", NBBY);
+	if (NBBY != CHAR_BIT) {
+		printf("WARNING!!!!  NBBY != CHAR_BIT\n");
+	}
+#endif
 	printf("char mask = 0x%x\n", ~(UINT_MAX << CHAR_BIT));
 	printf("sizeof(EOF) = %lu\n", (unsigned long) sizeof(EOF));
 
