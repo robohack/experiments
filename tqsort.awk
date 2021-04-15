@@ -1,4 +1,4 @@
-#! /usr/bin/awk -f
+#!/usr/bin/awk -f
 #
 # the following qsort implementation extracted from:
 #

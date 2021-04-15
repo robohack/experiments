@@ -1,4 +1,4 @@
-#! /bin/awk -f
+#!/usr/bin/awk -f
 
 #
 # variance = SUM[for i = 0..count of ((value[i] - mean)^2)] / (count - 1)

@@ -1,4 +1,4 @@
-#! /bin/awk -f
+#!/usr/bin/awk -f
 
 BEGIN {
 	hfmt = "%-4s %-30s %10s %10s %8s\n";
