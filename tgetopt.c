@@ -166,10 +166,12 @@ int main(int, char *[]);
 void
 usage(int verbose)
 {
-	fprintf(stderr, "Usage:  %s [-abc] [-p ival]\n", argv0);
-	fprintf(stderr, "        %s [-l]\n", argv0);
+	FILE *fp = verbose ? stdout : stderr;
+
+	fprintf(fp, "Usage:  %s [-abc] [-p ival]\n", getprogname());
+	fprintf(fp, "        %s [-l]\n", getprogname());
 	if (verbose)
-		fprintf(stderr, "\
+		fprintf(fp, "\
 	-[abc]	normal option flags\n\
 	-l	a lone flag\n\
 	-p ival	an integer option\n\
@@ -260,7 +262,7 @@ main(argc, argv)
 			usage(true);
 
 		case '?':
-			fprintf(stderr, "%s: unknown option -%c\n", argv0, optopt);
+			fprintf(stderr, "%s: unknown option flag: -%c\n", argv0, optopt);
 			usage(false);
 
 		case ':':
@@ -294,6 +296,6 @@ main(argc, argv)
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " " fn " && ./" fn))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " " fn " && ./" fn " -?"))
  * End:
  */
