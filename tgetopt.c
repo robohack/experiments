@@ -1,5 +1,7 @@
 #include <sys/cdefs.h>
 
+#include <sys/param.h>
+
 #include <err.h>
 #include <errno.h>
 #include <limits.h>
@@ -131,17 +133,27 @@ e_opt_strtoll()
 	return lltmp;
 }
 
-char *argv0 = "progname";
+const char *argv0 = "progname";
 
-#if !defined(__NetBSD__) && !defined(__minix) &&				\
-	!(defined(__OpenBSD__) || (defined(__OpenBSD) && (OpenBSD < 201311))) &&\
-	!defined(__FreeBSD__) && !defined(__DragonFly__) &&			\
-	!defined(__APPLE__)
+/*
+ * note:  NetBSD has only had __NetBSD_Prereq__() in the trunk since 3.0, though
+ * it was also pulled up by patching into netbsd-2-0 sometime during the RC
+ * process (between netbsd-2-0-RC2 and netbsd-2-0-RC3).  Note also that netbsd-2
+ * is spun off netbsd-2-0 at netbsd-2-0-RELEASE as it wasn't made beforehand.
+ * In the early days the revision history branching is a bit twisty folks!
+ */
+#if (defined(__NetBSD_Prereq__) && __NetBSD_Prereq__(1, 6, 0)) ||	\
+	(defined(__NetBSD_Version__) && __NetBSD_Version__ > 1060000000) || \
+	defined(__minix) ||	/* xxx when? */				\
+	(defined(__OpenBSD) && (OpenBSD > 201311)) ||			\
+	defined(__FreeBSD__) ||						\
+	defined(__DragonFly__) ||					\
+	defined(__APPLE__)
 # define HAVE_GETPROGNAME		/* defined */
 #endif
 
 #ifndef HAVE_GETPROGNAME
-static char *
+static const char *
 getprogname(void)
 {
 	return argv0;
@@ -176,15 +188,20 @@ main(argc, argv)
 	int myflg;
 	int ival = 0;			/* default ival */
 
-#ifdef HAVE_GETPROGNAME
+	argv0 = (argv0 = strrchr(argv[0], '/')) ? argv0 + 1 : argv[0];
+
+#ifdef HAVE_GETPROGNAME			/* assume setprogname() too... */
 	/*
 	 * xxx getprogname() should be preceded by setprogname(argv[0]) but
 	 * this is pointless and stupid in any hosted environment (even C99
 	 * 5.1.2.2.1 guarantees that argv[0][0] is a NUL byte even if argc==0)
+	 *
+	 * In NetBSD 1.6 (and since), when these first appeared, setprogname()
+	 * has had no effect as it is called by the C startup before main() is
+	 * called, and it cannot be overridden by setprogname(), since that
+	 * function does nothing at all.
 	 */
 	setprogname(argv0);
-#else
-	argv0 = (argv0 = strrchr(argv[0], '/')) ? argv0 + 1 : argv[0];
 #endif
 
 
