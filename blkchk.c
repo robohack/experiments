@@ -35,6 +35,8 @@
  *	jot 0 | dd count=8192 > bfile
  *	./blkchk create bfile 8192 100 > bfile.check
  *	./blkchk check bfile bfile.check
+ *	jot 0 0 - -1 | dd count=8192 > badfile
+ *	./blkchk check [-v] badfile bfile.check
  */
 
 #include <sys/param.h>
