@@ -212,7 +212,6 @@ do_check(int argc, char *argv[])
 	char *devname;
 	char *fname;
 	char line[((20 + 1) * 2) + MAX_BS*3 + 1]; /* 20+1 == log10(2^64)+1 */
-	char buf[MAX_BS];
 	int fd, rc = EXIT_FAILURE;
 	unsigned long ln = 0;
 	FILE *fp;
@@ -240,6 +239,7 @@ do_check(int argc, char *argv[])
 	while (fgets(line, sizeof line, fp) != NULL) {
 		char *p;
 		off_t offset = (off_t) parsenum(line, ln);
+		char buf[MAX_BS];
 		size_t n = mkbuf(fname, buf, line, ln);
 
 		if ((p = strrchr(line, '\n')) != NULL)
