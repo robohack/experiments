@@ -1,6 +1,10 @@
+#include <sys/param.h>
+
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 #include <vis.h>
 
@@ -156,8 +160,7 @@ sentence_rev(const char *start)
 	return ns;
 }
 
-
-void usage(void) __dead;
+void usage(bool) __dead;
 int main(int, char **);
 
 extern char *optarg;	/* points to a ':' option's parameter */
@@ -166,20 +169,41 @@ extern int optopt;	/* the currently parsed option character */
 extern int opterr;	/* controls getopt()'s error handling */
 extern int optreset;	/* tells getopt() to start over */
 
-#if !defined(__NetBSD__) && !defined(__minix) &&				\
-	!(defined(__OpenBSD__) || (defined(__OpenBSD) && (OpenBSD < 201311))) &&\
-	!defined(__FreeBSD__) && !defined(__DragonFly__) &&			\
-	!defined(__APPLE__)
+const char *argv0 = "progname";
+
+/*
+ * note:  NetBSD has only had __NetBSD_Prereq__() in the trunk since 3.0, though
+ * it was also pulled up by patching into netbsd-2-0 sometime during the RC
+ * process (between netbsd-2-0-RC2 and netbsd-2-0-RC3).  Note also that netbsd-2
+ * is spun off netbsd-2-0 at netbsd-2-0-RELEASE as it wasn't made beforehand.
+ * In the early days the revision history branching is a bit twisty folks!
+ */
+#if (defined(__NetBSD_Prereq__) && __NetBSD_Prereq__(1, 6, 0)) ||	\
+	(defined(__NetBSD_Version__) && __NetBSD_Version__ > 1060000000) || \
+	defined(__minix) ||	/* xxx when? */				\
+	(defined(__OpenBSD) && (OpenBSD > 201311)) ||			\
+	defined(__FreeBSD__) ||						\
+	defined(__DragonFly__) ||					\
+	defined(__APPLE__)
 # define HAVE_GETPROGNAME		/* defined */
 #endif
 
-char *argv0 = "progname";
+#ifndef HAVE_GETPROGNAME
+static const char *
+getprogname(void)
+{
+	return argv0;
+}
+#endif
 
 void
-usage()
+usage(bool err)
 {
-	fprintf(stderr, "Usage:  %s [-s] string|sentence ...\n", argv0);
-	exit(2);
+	FILE *fp = err ? stderr : stdout;
+
+	fprintf(fp, "Usage:  %s [-s] string|sentence ...\n", getprogname());
+
+	exit(err ? EX_USAGE : EXIT_SUCCESS);
 }
 
 int
@@ -189,10 +213,20 @@ main(int argc,
 	int opt;
 	int do_sentence = 0;
 
-#ifdef HAVE_GETPROGNAME
-	argv0 = getprogname();
-#else
 	argv0 = (argv0 = strrchr(argv[0], '/')) ? argv0 + 1 : argv[0];
+
+#ifdef HAVE_GETPROGNAME			/* assume setprogname() too... */
+	/*
+	 * xxx getprogname() should be preceded by setprogname(argv[0]) but
+	 * this is pointless and stupid in any hosted environment (even C99
+	 * 5.1.2.2.1 guarantees that argv[0][0] is a NUL byte even if argc==0)
+	 *
+	 * In NetBSD 1.6 (and since), when these first appeared, setprogname()
+	 * has had no effect as it is called by the C startup before main() is
+	 * called, and it cannot be overridden by setprogname(), since that
+	 * function does nothing at all.
+	 */
+	setprogname(argv0);
 #endif
 
 	optind = 1;			/* start at the beginning */
@@ -204,14 +238,14 @@ main(int argc,
 			break;
 
 		case 'h':
-			usage();
+			usage(false);
 
 		case '?':
-			fprintf(stderr, "%s: unknown option -%c\n", argv0, optopt);
-			usage();
+			fprintf(stderr, "%s: unknown option flag -%c\n", getprogname(), optopt);
+			usage(true);
 
 		default:
-			fprintf(stderr, "%s: programming error, unhandled flag: %c\n", argv0, opt);
+			fprintf(stderr, "%s: programming error, unhandled flag: %c\n", getprogname(), opt);
 			abort();
 
 		}
@@ -241,7 +275,7 @@ main(int argc,
 		free(rs);
 	}
 
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 /*
