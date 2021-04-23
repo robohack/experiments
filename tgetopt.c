@@ -1,5 +1,3 @@
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #include <err.h>
@@ -160,24 +158,24 @@ getprogname(void)
 }
 #endif
 
-void usage(int) __dead;
+void usage(bool) __dead;
 int main(int, char *[]);
 
 void
-usage(int verbose)
+usage(bool err)
 {
-	FILE *fp = verbose ? stdout : stderr;
+	FILE *fp = err ? stdout : stderr;
 
 	fprintf(fp, "Usage:  %s [-abc] [-p ival]\n", getprogname());
 	fprintf(fp, "        %s [-l]\n", getprogname());
-	if (verbose)
+	if (! err)
 		fprintf(fp, "\
 	-[abc]	normal option flags\n\
 	-l	a lone flag\n\
 	-p ival	an integer option\n\
 ");
 
-	exit(EX_USAGE);
+	exit(err ? EX_USAGE : EXIT_SUCCESS);
 }
 
 int
@@ -256,7 +254,7 @@ main(argc, argv)
 				usage(false);
 			}
 			printf("%s: special standalone flag %c at myflg=%d: '%s'\n", getprogname(), optopt, myflg, argv[myflg]);
-			exit(0);
+			exit(EXIT_SUCCESS);
 
 		case 'h':
 			usage(true);
@@ -290,7 +288,7 @@ main(argc, argv)
 		printf("%s: parameter: '%s'\n", argv0, argv[i]);
 	}
 
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 /*
