@@ -52,7 +52,11 @@ struct repeat_params {
  * Next, define the function, using the struct as its sole parameter.
  *
  * [[you could make it a pointer, but that just adds more typing and makes
- * references to the struct's fields look even more like struct references]]
+ * references to the struct's fields look even more like struct references,
+ * though not making it a pointer means it "has automatic storage duration
+ * associated with the enclosing block", i.e. within the function itself; and so
+ * it goes away once the function exits.  Provided nothing saves pointers to the
+ * struct or any of its components, this is fine.]]
  *
  * N.B.:  If the macro below were to be supplied in a common header (used by
  * both the implementation and callers) along with the struct declaration, then
