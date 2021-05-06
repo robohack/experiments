@@ -114,7 +114,6 @@
 			((int) ((my_tolower_tab + 1)[_ctype_uc_]));	\
 	})
 
-#if 0	/* xxx untested -- though it is just like MY_TOLOWER() */
 #define	MY_TOUPPER(C)							\
 	({								\
 		const unsigned int _ctype_ui_ = (unsigned int) (C);	\
@@ -122,7 +121,6 @@
 		(sizeof(C) > 1 && _ctype_ui_ == (unsigned int) -1) ? -1 :\
 			((int) ((my_toupper_tab + 1)[_ctype_uc_])); 	\
 	})
-#endif
 
 /*
  * some crazy ASCII-only range-checking implementation (that mostly works)
@@ -316,6 +314,44 @@ const short my_tolower_ascii[1 + 256] = {
 	0xe8,	0xe9,	0xea,	0xeb,	0xec,	0xed,	0xee,	0xef,
 	0xf0,	0xf1,	0xf2,	0xf3,	0xf4,	0xf5,	0xf6,	0xf7,
 	0xf8,	0xf9,	0xfa,	0xfb,	0xfc,	0xfd,	0xfe,	0xff
+	/* n.b. no out-of-range values here */
+};
+
+const short my_toupper_ascii[1 + 256] = {
+	EOF,
+	0x00,	0x01,	0x02,	0x03,	0x04,	0x05,	0x06,	0x07,
+	0x08,	0x09,	0x0a,	0x0b,	0x0c,	0x0d,	0x0e,	0x0f,
+	0x10,	0x11,	0x12,	0x13,	0x14,	0x15,	0x16,	0x17,
+	0x18,	0x19,	0x1a,	0x1b,	0x1c,	0x1d,	0x1e,	0x1f,
+	0x20,	0x21,	0x22,	0x23,	0x24,	0x25,	0x26,	0x27,
+	0x28,	0x29,	0x2a,	0x2b,	0x2c,	0x2d,	0x2e,	0x2f,
+	0x30,	0x31,	0x32,	0x33,	0x34,	0x35,	0x36,	0x37,
+	0x38,	0x39,	0x3a,	0x3b,	0x3c,	0x3d,	0x3e,	0x3f,
+	0x40,	0x41,	0x42,	0x43,	0x44,	0x45,	0x46,	0x47,
+	0x48,	0x49,	0x4a,	0x4b,	0x4c,	0x4d,	0x4e,	0x4f,
+	0x50,	0x51,	0x52,	0x53,	0x54,	0x55,	0x56,	0x57,
+	0x58,	0x59,	0x5a,	0x5b,	0x5c,	0x5d,	0x5e,	0x5f,
+	0x60,	'A',	'B',	'C',	'D',	'E',	'F',	'G',
+	'H',	'I',	'J',	'K',	'L',	'M',	'N',	'O',
+	'P',	'Q',	'R',	'S',	'T',	'U',	'V',	'W',
+	'X',	'Y',	'Z',	0x7b,	0x7c,	0x7d,	0x7e,	0x7f,
+	0x80,	0x81,	0x82,	0x83,	0x84,	0x85,	0x86,	0x87,
+	0x88,	0x89,	0x8a,	0x8b,	0x8c,	0x8d,	0x8e,	0x8f,
+	0x90,	0x91,	0x92,	0x93,	0x94,	0x95,	0x96,	0x97,
+	0x98,	0x99,	0x9a,	0x9b,	0x9c,	0x9d,	0x9e,	0x9f,
+	0xa0,	0xa1,	0xa2,	0xa3,	0xa4,	0xa5,	0xa6,	0xa7,
+	0xa8,	0xa9,	0xaa,	0xab,	0xac,	0xad,	0xae,	0xaf,
+	0xb0,	0xb1,	0xb2,	0xb3,	0xb4,	0xb5,	0xb6,	0xb7,
+	0xb8,	0xb9,	0xba,	0xbb,	0xbc,	0xbd,	0xbe,	0xbf,
+	0xc0,	0xc1,	0xc2,	0xc3,	0xc4,	0xc5,	0xc6,	0xc7,
+	0xc8,	0xc9,	0xca,	0xcb,	0xcc,	0xcd,	0xce,	0xcf,
+	0xd0,	0xd1,	0xd2,	0xd3,	0xd4,	0xd5,	0xd6,	0xd7,
+	0xd8,	0xd9,	0xda,	0xdb,	0xdc,	0xdd,	0xde,	0xdf,
+	0xe0,	0xe1,	0xe2,	0xe3,	0xe4,	0xe5,	0xe6,	0xe7,
+	0xe8,	0xe9,	0xea,	0xeb,	0xec,	0xed,	0xee,	0xef,
+	0xf0,	0xf1,	0xf2,	0xf3,	0xf4,	0xf5,	0xf6,	0xf7,
+	0xf8,	0xf9,	0xfa,	0xfb,	0xfc,	0xfd,	0xfe,	0xff
+	/* n.b. no out-of-range values here */
 };
 
 const short my_tolower_8859_1[1 + 256] = {
@@ -346,27 +382,80 @@ const short my_tolower_8859_1[1 + 256] = {
 	0xb8,	0xb9,	0xba,	0xbb,	0xbc,	0xbd,	0xbe,	0xbf,
 /**/	0xe0,	0xe1,	0xe2,	0xe3,	0xe4,	0xe5,	0xe6,	0xe7,
 /**/	0xe8,	0xe9,	0xea,	0xeb,	0xec,	0xed,	0xee,	0xef,
-/**/	0xf0,	0xf1,	0xf2,	0xf3,	0xf4,	0xf5,	0xf6,	0xd7,
-/**/	0xf8,	0xf9,	0xfa,	0xfb,	0xfc,	0xfd,	0xfe,	0xdf,
+/**/	0xf0,	0xf1,	0xf2,	0xf3,	0xf4,	0xf5,	0xf6,	0xd7/*multiply*/,
+/**/	0xf8,	0xf9,	0xfa,	0xfb,	0xfc,	0xfd,	0xfe,	0xdf/*sz*/,
 	0xe0,	0xe1,	0xe2,	0xe3,	0xe4,	0xe5,	0xe6,	0xe7,
 	0xe8,	0xe9,	0xea,	0xeb,	0xec,	0xed,	0xee,	0xef,
-	0xf0,	0xf1,	0xf2,	0xf3,	0xf4,	0xf5,	0xf6,	0xf7,
-	0xf8,	0xf9,	0xfa,	0xfb,	0xfc,	0xfd,	0xfe,	0xff
+	0xf0,	0xf1,	0xf2,	0xf3,	0xf4,	0xf5,	0xf6,	0xf7/*division*/,
+	0xf8,	0xf9,	0xfa,	0xfb,	0xfc,	0xfd,	0xfe,	0xff/*small-y-umlaut*/,
+	/* n.b. no out-of-range values here */
+};
+
+const short my_toupper_8859_1[1 + 256] = {
+	EOF,
+	0x00,	0x01,	0x02,	0x03,	0x04,	0x05,	0x06,	0x07,
+	0x08,	0x09,	0x0a,	0x0b,	0x0c,	0x0d,	0x0e,	0x0f,
+	0x10,	0x11,	0x12,	0x13,	0x14,	0x15,	0x16,	0x17,
+	0x18,	0x19,	0x1a,	0x1b,	0x1c,	0x1d,	0x1e,	0x1f,
+	0x20,	0x21,	0x22,	0x23,	0x24,	0x25,	0x26,	0x27,
+	0x28,	0x29,	0x2a,	0x2b,	0x2c,	0x2d,	0x2e,	0x2f,
+	0x30,	0x31,	0x32,	0x33,	0x34,	0x35,	0x36,	0x37,
+	0x38,	0x39,	0x3a,	0x3b,	0x3c,	0x3d,	0x3e,	0x3f,
+	0x40,	0x41,	0x42,	0x43,	0x44,	0x45,	0x46,	0x47,
+	0x48,	0x49,	0x4a,	0x4b,	0x4c,	0x4d,	0x4e,	0x4f,
+	0x50,	0x51,	0x52,	0x53,	0x54,	0x55,	0x56,	0x57,
+	0x58,	0x59,	0x5a,	0x5b,	0x5c,	0x5d,	0x5e,	0x5f,
+	0x60,	'A',	'B',	'C',	'D',	'E',	'F',	'G',
+	'H',	'I',	'J',	'K',	'L',	'M',	'N',	'O',
+	'P',	'Q',	'R',	'S',	'T',	'U',	'V',	'W',
+	'X',	'Y',	'Z',	0x7b,	0x7c,	0x7d,	0x7e,	0x7f,
+
+	0x80,	0x81,	0x82,	0x83,	0x84,	0x85,	0x86,	0x87,
+	0x88,	0x89,	0x8a,	0x8b,	0x8c,	0x8d,	0x8e,	0x8f,
+	0x90,	0x91,	0x92,	0x93,	0x94,	0x95,	0x96,	0x97,
+	0x98,	0x99,	0x9a,	0x9b,	0x9c,	0x9d,	0x9e,	0x9f,
+	0xa0,	0xa1,	0xa2,	0xa3,	0xa4,	0xa5,	0xa6,	0xa7,
+	0xa8,	0xa9,	0xaa,	0xab,	0xac,	0xad,	0xae,	0xaf,
+	0xb0,	0xb1,	0xb2,	0xb3,	0xb4,	0xb5,	0xb6,	0xb7,
+	0xb8,	0xb9,	0xba,	0xbb,	0xbc,	0xbd,	0xbe,	0xbf,
+	0xc0,	0xc1,	0xc2,	0xc3,	0xc4,	0xc5,	0xc6,	0xc7,
+	0xc8,	0xc9,	0xca,	0xcb,	0xcc,	0xcd,	0xce,	0xcf,
+	0xd0,	0xd1,	0xd2,	0xd3,	0xd4,	0xd5,	0xd6,	0xd7/*multiply*/,
+	0xd8,	0xd9,	0xda,	0xdb,	0xdc,	0xdd,	0xde,	0xdf/*sz*/,
+/**/	0xc0,	0xc1,	0xc2,	0xc3,	0xc4,	0xc5,	0xc6,	0xc7,
+/**/	0xc8,	0xc9,	0xca,	0xcb,	0xcc,	0xcd,	0xce,	0xcf,
+/**/	0xd0,	0xd1,	0xd2,	0xd3,	0xd4,	0xd5,	0xd6,	0xf7/*division*/,
+/**/	0xd8,	0xd9,	0xda,	0xdb,	0xdc,	0xdd,	0xde,	0xff/*small-y-umlaut*/,
+	/* n.b. no out-of-range values here */
 };
 
 const short *my_tolower_tab = my_tolower_ascii;
+const short *my_toupper_tab = my_toupper_ascii;
 
 /*
- * XXX these demonstrate why implementation as functions won't ever work when
+ * XXX these demonstrate why implementation as functions may not "work" when
  * passed a signed char with a value of -1 (i.e. 0xFF for CHAR_BIT==8) because
  * of course the sign will be extended and the resulting value will be seen as
  * EOF internally.  Even if they were declared to take an "unsigned int", sign
  * extension would still happen and the -1 signed char as a parameter would
  * still be indistinguishable from EOF in the function body.
+ *
+ * Of course this is only really matters if the function internally needs to
+ * detect EOF and handle it specially -- so for the <ctype.h> interfaces I don't
+ * think this actually adversly affects any of them, except maybe tolower() and
+ * toupper(), and maybe toascii(), as well as isalpha() and iscntrl(), as they
+ * will, depending on choice of implementation, either return 0xFF when passed
+ * EOF, or they will return EOF when passed 0xFF.  The latter case may be
+ * innocuous though if the return value is then cast to an unsigned char where
+ * necessary since it will then return to being 0xFF.
  */
+#if 1
+#define DETECT_EOF_INTERNALLY		/* defined */
+#endif
 
 int my_isalpha(int);
 int my_tolower(int);
+int my_toupper(int);
 
 int
 my_isalpha(int ui)
@@ -378,11 +467,13 @@ my_isalpha(int ui)
 	       (unsigned int) ch,
 	       (unsigned int) ((unsigned char) ch),
 	       (unsigned int) ((my_ctype + 1)[(unsigned char) ch]));
+#ifdef DETECT_EOF_INTERNALLY
 	/* XXX this will always fail if called with a (signed char) 0xFF */
 	if (ui == EOF) {
-		printf("my_isalpha(): returning 0 for EOF\n");
+		printf("my_isalpha(): explicitly returning 0 for EOF\n");
 		return 0;
 	}
+#endif
 	return ((int) ((my_ctype + 1)[(unsigned char) ch] & (_U|_L)));
 }
 
@@ -391,16 +482,39 @@ my_tolower(int ui)
 {
 	const unsigned char ch = (unsigned char) ui;
 
-	printf("my_tolower(): ui = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x\n",
+	printf("my_tolower(): ui = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x, my_lo = 0x%x\n",
 	       ui,
 	       (unsigned int) ch,
-	       (unsigned int) ((unsigned char) ch));
+	       (unsigned int) ((unsigned char) ch),
+	       (unsigned int) ((my_tolower_tab + 1)[(unsigned char) ch]));
+#ifdef DETECT_EOF_INTERNALLY
 	/* XXX this will always fail if called with a (signed char) 0xFF */
 	if (ui == EOF) {
-		printf("my_tolower(): returning EOF for EOF\n");
+		printf("my_tolower(): explicitly returning EOF for EOF\n");
 		return EOF;
 	}
+#endif
 	return ((int) ((my_tolower_tab + 1)[(unsigned char) ch]));
+}
+
+int
+my_toupper(int ui)
+{
+	const unsigned char ch = (unsigned char) ui;
+
+	printf("my_toupper(): ui = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x, my_up = 0x%x\n",
+	       ui,
+	       (unsigned int) ch,
+	       (unsigned int) ((unsigned char) ch),
+	       (unsigned int) ((my_toupper_tab + 1)[(unsigned char) ch]));
+#ifdef DETECT_EOF_INTERNALLY
+	/* XXX this will always fail if called with a (signed char) 0xFF */
+	if (ui == EOF) {
+		printf("my_toupper(): explicitly returning EOF for EOF\n");
+		return EOF;
+	}
+#endif
+	return ((int) ((my_toupper_tab + 1)[(unsigned char) ch]));
 }
 
 #define CORRECTP(expr)	((expr) ? " [correct]" : "[ERROR:WRONG]")
@@ -917,9 +1031,12 @@ main()
 	printf("na_isspace(12) = 0x%x %s\n", na_isspace(12), CORRECTP(na_isspace(12)));
 	putchar('\n');
 
+	printf("no setlocale(); /* LC_ALL='%s' */\n", getenv("LC_ALL"));
 	sc = (signed char) ('A' | 0xA0); /* 0xE1, small a, acute accent */
+	uc = 'A' | 0xA0;		/* 0xE1, small a, acute accent */
 	printf("0xE1, small a, acute accent: %c\n", sc);
-	printf("sc = 0x%x\n", (int)(unsigned char) sc);
+	printf("sc = 0x%x ('%c')\n", (unsigned int)(unsigned char) sc, sc);
+	printf("uc = 0x%x ('%c')\n", (unsigned int) uc, uc);
 	printf("my+1[sc & _CTYPE_MASK] = 0x%x\n",
 	       (unsigned int)(my_ctype + 1)[(sc & _CTYPE_MASK)]);
 	printf("my+1[(unsigned char)sc] = 0x%x\n",
@@ -936,9 +1053,16 @@ main()
 	printf("isupper(uc) = 0x%x %s\n", isupper(uc), CORRECTP(!isupper(uc)));
 	putchar('\n');
 
+	setlocale(LC_ALL, "");		 /* POSIX */
+	printf("setlocale(LC_ALL, \"\"); /* POSIX */\n");
+	my_ctype = my_ctype_ascii;
+	my_tolower_tab = my_tolower_ascii;
+	my_toupper_tab = my_toupper_ascii;
 	sc = (signed char) ('A' | 0xA0); /* 0xE1, small a, acute accent */
+	uc = 'A' | 0xA0;		/* 0xE1, small a, acute accent */
 	printf("0xE1, small a, acute accent: %c\n", sc);
-	printf("sc = 0x%x\n", (int)(unsigned char) sc);
+	printf("sc = 0x%x ('%c')\n", (unsigned int)(unsigned char) sc, sc);
+	printf("uc = 0x%x ('%c')\n", (unsigned int) uc, uc);
 	printf("my+1[sc & _CTYPE_MASK] = 0x%x\n",
 	       (unsigned int)(my_ctype + 1)[(sc & _CTYPE_MASK)]);
 	printf("my+1[(unsigned char)sc] = 0x%x\n",
@@ -958,6 +1082,7 @@ main()
 	setlocale(LC_ALL, "en_US.ISO8859-1");
 	my_ctype = my_ctype_8859_1;
 	my_tolower_tab = my_tolower_8859_1;
+	my_toupper_tab = my_toupper_8859_1;
 	printf("setlocale(LC_ALL, \"en_US.ISO8859-1\");\n");
 
 	sc = (signed char) ('A' | 0xA0); /* 0xE1, small a, acute accent */
@@ -1034,6 +1159,7 @@ main()
 	setlocale(LC_ALL, "C");
 	my_ctype = my_ctype_ascii;
 	my_tolower_tab = my_tolower_ascii;
+	my_toupper_tab = my_toupper_ascii;
 	printf("setlocale(LC_ALL, \"C\");\n");
 
 	sc = (signed char) 0xE1;	/* small a, acute accent */
@@ -1067,7 +1193,9 @@ main()
 	setlocale(LC_ALL, "C");
 	my_ctype = my_ctype_ascii;
 	my_tolower_tab = my_tolower_ascii;
+	my_toupper_tab = my_toupper_ascii;
 	printf("setlocale(LC_ALL, \"C\");\n");
+
 	sc = (signed char) 0xC1;	/* capital A, acute accent */
 	uc = 0xC1;			/* capital A, acute accent */
 	i = 0xC1;			/* capital A, acute accent */
@@ -1108,6 +1236,7 @@ main()
 	setlocale(LC_ALL, "en_US.ISO8859-1");
 	my_ctype = my_ctype_8859_1;
 	my_tolower_tab = my_tolower_8859_1;
+	my_toupper_tab = my_toupper_8859_1;
 	printf("setlocale(LC_ALL, \"en_US.ISO8859-1\");\n");
 	sc = (signed char) 0xE1;	/* small a, acute accent */
 	uc = 0xE1;			/* small a, acute accent */
@@ -1139,6 +1268,7 @@ main()
 	setlocale(LC_ALL, "en_US.ISO8859-1");
 	my_ctype = my_ctype_8859_1;
 	my_tolower_tab = my_tolower_8859_1;
+	my_toupper_tab = my_toupper_8859_1;
 	printf("setlocale(LC_ALL, \"en_US.ISO8859-1\");\n");
 	sc = (signed char) 0xC1;	/* capital A, acute accent */
 	uc = 0xC1;			/* capital A, acute accent */
@@ -1202,6 +1332,12 @@ main()
 	 * would return not zero, but rather whatever is true for 0377 in the
 	 * current locale.
 	 */
+	printf("N.B.:  One of the most important tests follows!!!");
+	setlocale(LC_ALL, "en_US.ISO8859-1");
+	my_ctype = my_ctype_8859_1;
+	my_tolower_tab = my_tolower_8859_1;
+	my_toupper_tab = my_toupper_8859_1;
+	printf("setlocale(LC_ALL, \"en_US.ISO8859-1\");\n");
 	sc = (signed char) 0xFF;	/* small y, dieresis */
 	uc = 0xFF;			/* small y, dieresis */
 	i = 0xFF;			/* small y, dieresis */
@@ -1245,6 +1381,15 @@ main()
 	printf("MY_TOLOWER(sc) = 0x%x %s\n", (unsigned int) MY_TOLOWER(sc), CORRECTP(MY_TOLOWER(sc) == 0xFF));
 	printf("MY_TOLOWER(uc) = 0x%x %s\n", (unsigned int) MY_TOLOWER(uc), CORRECTP(MY_TOLOWER(uc) == 0xFF));
 	printf("MY_TOLOWER(i) = 0x%x %s\n", (unsigned int) MY_TOLOWER(i), CORRECTP(MY_TOLOWER(i) == 0xFF));
+	printf("toupper(sc) = 0x%x %s\n", (unsigned int) toupper(sc), CORRECTP(toupper(sc) == 0xFF));
+	printf("toupper(uc) = 0x%x %s\n", (unsigned int) toupper(uc), CORRECTP(toupper(uc) == 0xFF));
+	printf("toupper(i) = 0x%x %s\n", (unsigned int) toupper(i), CORRECTP(toupper(i) == 0xFF));
+	printf("my_toupper(sc) = 0x%x %s\n", my_toupper(sc), CORRECTP(my_toupper(sc) == 0xFF));
+	printf("my_toupper(uc) = 0x%x %s\n", my_toupper(uc), CORRECTP(my_toupper(uc) == 0xFF));
+	printf("my_toupper(i) = 0x%x %s\n", my_toupper(i), CORRECTP(my_toupper(i) == 0xFF));
+	printf("MY_TOUPPER(sc) = 0x%x %s\n", (unsigned int) MY_TOUPPER(sc), CORRECTP(MY_TOUPPER(sc) == 0xFF));
+	printf("MY_TOUPPER(uc) = 0x%x %s\n", (unsigned int) MY_TOUPPER(uc), CORRECTP(MY_TOUPPER(uc) == 0xFF));
+	printf("MY_TOUPPER(i) = 0x%x %s\n", (unsigned int) MY_TOUPPER(i), CORRECTP(MY_TOUPPER(i) == 0xFF));
 	putchar('\n');
 
 	/* These work of coursen: */
@@ -1258,6 +1403,11 @@ main()
 	printf("my_tolower((unsigned char) uc) = 0x%x %s\n", my_tolower((unsigned char) uc), CORRECTP(my_tolower((unsigned char) uc) == 0xFF));
 	putchar('\n');
 
+	setlocale(LC_ALL, "en_US.ISO8859-1");
+	my_ctype = my_ctype_8859_1;
+	my_tolower_tab = my_tolower_8859_1;
+	my_toupper_tab = my_toupper_8859_1;
+	printf("setlocale(LC_ALL, \"en_US.ISO8859-1\");\n");
 	sc = (signed char) 0xFE;	/* small thorn, Icelandic */
 	uc = 0xFE;			/* small thorn, Icelandic */
 	i = 0xFE;			/* small thorn, Icelandic */
