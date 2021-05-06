@@ -239,7 +239,7 @@ const unsigned char my_ctype_ascii[1 + _CTYPE_NUM_CHARS + 8] = {
 /*30*/	0,	0,	0,	0,	0,	0,	0,	0,
 /*31*/	0,	0,	0,	0,	0,	0,	0,	0,
 /*32*/	0,	0,	0,	0,	0,	0,	0,	0,
-	0xE0,	0xE1,	0xE2,	0xE3,	0xE4,	0xE5,	0xE6,	0xE7
+	0xE0,	0xE1,	0xE2,	0xE3,	0xE4,	0xE5,	0xE6,	0xE7 /* xxx out-of-range values */
 };
 
 const unsigned char my_ctype_8859_1[1 + _CTYPE_NUM_CHARS + 8] = {
@@ -277,7 +277,7 @@ const unsigned char my_ctype_8859_1[1 + _CTYPE_NUM_CHARS + 8] = {
 /*30*/	_L,	_L,	_L,	_L,	_L,	_L,	_L,	_L,	/*0xE8*/
 /*31*/	_L,	_L,	_L,	_L,	_L,	_L,	_L,	_P,	/*0xF0*/
 /*32*/	_L,	_L,	_L,	_L,	_L,	_L,	_L,	_L,	/*0xF8*/
-	0xE0,	0xE1,	0xE2,	0xE3,	0xE4,	0xE5,	0xE6,	0xE7
+	0xE0,	0xE1,	0xE2,	0xE3,	0xE4,	0xE5,	0xE6,	0xE7 /* xxx out-of-range values */
 };
 
 const unsigned char *my_ctype = my_ctype_ascii;
