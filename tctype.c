@@ -354,6 +354,12 @@ const short my_toupper_ascii[1 + 256] = {
 	/* n.b. no out-of-range values here */
 };
 
+/*
+ * XXX ToDo:  test that toupper()/tolower() do the right conversions for some
+ * key 8859-1 characters, and especially that they don't convert 0xd7, 0xdf,
+ * 0xf7, and 0xff.
+ */
+
 const short my_tolower_8859_1[1 + 256] = {
 	EOF,
 	0x00,	0x01,	0x02,	0x03,	0x04,	0x05,	0x06,	0x07,
@@ -436,9 +442,7 @@ const short *my_toupper_tab = my_toupper_ascii;
  * XXX these demonstrate why implementation as functions may not "work" when
  * passed a signed char with a value of -1 (i.e. 0xFF for CHAR_BIT==8) because
  * of course the sign will be extended and the resulting value will be seen as
- * EOF internally.  Even if they were declared to take an "unsigned int", sign
- * extension would still happen and the -1 signed char as a parameter would
- * still be indistinguishable from EOF in the function body.
+ * EOF internally.
  *
  * Of course this is only really matters if the function internally needs to
  * detect EOF and handle it specially -- so for the <ctype.h> interfaces I don't
@@ -447,9 +451,11 @@ const short *my_toupper_tab = my_toupper_ascii;
  * will, depending on choice of implementation, either return 0xFF when passed
  * EOF, or they will return EOF when passed 0xFF.  The latter case may be
  * innocuous though if the return value is then cast to an unsigned char where
- * necessary since it will then return to being 0xFF.
+ * necessary since it will then return to being just 0xFF; but both cases may be
+ * a problem if an EOF test is done on the returned value.
  */
 #if 1
+/* n.b.:  this is probably the "safest" implementation... */
 #define DETECT_EOF_INTERNALLY		/* defined */
 #endif
 
@@ -1332,7 +1338,7 @@ main()
 	 * would return not zero, but rather whatever is true for 0377 in the
 	 * current locale.
 	 */
-	printf("N.B.:  One of the most important tests follows!!!");
+	printf("N.B.:  One of the most important tests follows!!!\n");
 	setlocale(LC_ALL, "en_US.ISO8859-1");
 	my_ctype = my_ctype_8859_1;
 	my_tolower_tab = my_tolower_8859_1;
