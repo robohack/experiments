@@ -5,6 +5,36 @@
 	#
 .section	.text
 
+	# Finding the true name of the default "ENTRY" symbol in the
+	# documentation is basically impossible.
+	# 
+	# ld(1) gives no hints whatsoever.
+	# 
+	# ld.info for GNU LD suggests the default entry point might be "start".
+	# 
+	# Indeed in the code (ld/ldlang.c) we can see that a string
+	# entry_symbol_default is set to "start".  But that's not used in
+	# practice, so is not the name of the symbol we have to provide here!
+	# 
+	# However, there's also a default "internal" linker script, and of
+	# course it can contain an "ENTRY()" line, and indeed the default
+	# scripts for elf64-x86-64 on NetBSD/amd64 do just that as follows:
+	#
+	#	ENTRY(_start)
+	# 
+	# These scripts are built into ld(1), though one matching the default
+	# can be found in /usr/libdata/ldscripts/elf_x86_64.xc, which was
+	# generated at build time as the output of a script found in
+	# src/external/gpl3/binutils/dist/ld/scripttempl/elf.sc)
+	# 
+	# One can view the script used by the linker by adding "--verbose" to
+	# the ld command-line options.
+	# 
+	# However note also that ld.info describes an algorithm for setting the
+	# entry address, and so in a simple example like this we don't even need
+	# to define an entry symbol since one of the options is to use "the
+	# address of the first byte of the `.text' section, if present".
+	#
 	.globl _start
 
 _start:
