@@ -1024,12 +1024,24 @@ report(char *machine)
 	 *
 	 * (DBL_DECIMAL_DIG - ceil_ilog10((uintmax_t) llabs(llrint(ceil(dval)))) - 1)
 	 * (DBL_DECIMAL_DIG - lrint(ceil(log10(ceil(fabs(dval))))) - 1)
+	 * (DBL_DECIMAL_DIG - lrint(floor(log10(ceil(fabs(dval))))))
 	 *
 	 * I.e. the maximum number of significant decimal digits that can be
 	 * represented in an IEEE 754 double precision floating point number,
 	 * less the number of decimal digits in the "smallest integer larger
 	 * than the example value (the ceiling)", minus one for the digit that
 	 * is normally to the left of the decimal point in scientific notation.
+	 *
+	 * Note that ceil(log10()) fails for exact powers of 10, so in some
+	 * hypothetical scenario if integer modulo plus a comparison with zero
+	 * is as fast as addition then the following would correct it (but
+	 * unless ceil() also faster than floor(), it's a somewhat pointless
+	 * exercise):
+	 *
+	 *	a = fabs(dval);
+	 * 	x = ceil(log10(a));
+	 * 	if (llrint(a) % 10 == 0)
+	 * 		x += 1;
 	 *
 	 * Here DBL_DECIMAL_DIG is:
 	 *
@@ -1061,12 +1073,12 @@ report(char *machine)
 	       DBL_OUT_DEC_DIG + 1 - ceil_ilog10((uintmax_t) llabs(llrint(ceil(dtmp)))) - 1,
 	       DBL_OUT_DEC_DIG + 1,
 	       ceil_ilog10((uintmax_t) llabs(llrint(ceil(dtmp)))) - 1);
-	printf("1.4 * 165 = %.*f (%%.%ldf aka DBL_DECIMAL_DIG[%d] - ceil(log10(ceil(result)))[%g])\n",
-	       DBL_OUT_DEC_DIG + 1 - (int) lrint(ceil(log10(ceil(fabs(dtmp))))) - 1,
+	printf("1.4 * 165 = %.*f (%%.%ldf aka DBL_DECIMAL_DIG[%d] - floor(log10(ceil(result)))[%g])\n",
+	       DBL_OUT_DEC_DIG + 1 - (int) lrint(floor(log10(floor(fabs(dtmp)))))+1,
 	       dtmp,
-	       DBL_OUT_DEC_DIG + 1 - lrint(ceil(log10(ceil(fabs(dtmp))))) - 1,
+	       DBL_OUT_DEC_DIG + 1 - lrint(floor(log10(ceil(fabs(dtmp))))),
 	       DBL_OUT_DEC_DIG + 1,
-	       ceil(log10(ceil(fabs(dtmp)))) - 1);
+	       floor(log10(ceil(fabs(dtmp)))));
 
 	/*
 	 * Normally one might use the built-in human-friendly formatting with
@@ -1166,9 +1178,9 @@ report(char *machine)
 	 */
 	puts("This shows too many significant digits:");
 	printf("DBL_MAX = %.*f (%%.%df)\n",
-	       DBL_OUT_DEC_DIG + 1 - (int) lrint(ceil(log10(ceil(fabs(DBL_MAX))))) - 1,
+	       DBL_OUT_DEC_DIG + 1 - (int) lrint(floor(log10(ceil(fabs(DBL_MAX))))),
 	       DBL_MAX,
-	       DBL_OUT_DEC_DIG + 1 - (int) lrint(ceil(log10(ceil(fabs(DBL_MAX))))) - 1);
+	       DBL_OUT_DEC_DIG + 1 - (int) lrint(floor(log10(ceil(fabs(DBL_MAX))))));
 
 	/*
 	 * For numbers with a magnitude smaller than 1.0 requires adding the
@@ -1183,9 +1195,9 @@ report(char *machine)
 	 */
 	puts("This doesn't shows enough (or even any) significant digits:");
 	printf("DBL_MIN = %.*f (%%.%df)\n",
-	       DBL_OUT_DEC_DIG + 1 - (int) lrint(ceil(log10(ceil(fabs(DBL_MIN))))) - 1,
+	       DBL_OUT_DEC_DIG + 1 - (int) lrint(floor(log10(ceil(fabs(DBL_MIN))))),
 	       DBL_MIN,
-	       DBL_OUT_DEC_DIG + 1 - (int) lrint(ceil(log10(ceil(fabs(DBL_MIN))))) - 1);
+	       DBL_OUT_DEC_DIG + 1 - (int) lrint(floor(log10(ceil(fabs(DBL_MIN))))));
 
 	putchar('\n');
 
@@ -1493,7 +1505,7 @@ print_decimal(double d)
 	/* xxx this is just to show orthogonally how to calculate this */
 	sigdig = ilog10(uipow(FLT_RADIX, DBL_MANT_DIG - 1));
 # endif
-#else
+#else  /* not PRINT_ROUND_TRIP_SAFE */
 # ifdef DBL_DECIMAL_DIG
 	sigdig = DBL_DECIMAL_DIG - 1;
 # else
@@ -1508,7 +1520,7 @@ print_decimal(double d)
 		printf("z = %.*s\n", (int) sigdig + 1, "0.000000000000000000000"); /* 21 */
 	} else if (fabs(d) >= 0.1 &&
 	           fabs(d) <= flintmax) {
-		dplaces = (int) (sigdig - (size_t) lrint(ceil(log10(ceil(fabs(d))))));
+		dplaces = (int) (sigdig - (size_t) lrint(floor(log10(ceil(fabs(d))))) + 1);
 		if (dplaces < 0) {
 			/* XXX this is likely never less than -1 */
 			/*
@@ -1532,8 +1544,8 @@ print_decimal(double d)
 				 * count as a significant digit.
 				 */
 #if 0
-				printf("ceil(1.0) = %f, log10(ceil(1.0)) = %f, ceil(log10(ceil(1.0))) = %f\n",
-				       ceil(fabs(d)), log10(ceil(fabs(d))), ceil(log10(ceil(fabs(d)))));
+				printf("ceil(1.0) = %f, log10(ceil(1.0)) = %f, floor(log10(ceil(1.0)))+1 = %f\n",
+				       ceil(fabs(d)), log10(ceil(fabs(d))), floor(log10(ceil(fabs(d))))+1);
 #endif
 				dplaces--;
 			}
@@ -2094,6 +2106,46 @@ representations()
 	dq /= 1000000000000.0;
 	print_drep(dq);
 
+	printf("just 999999999999999 (15 9s):\n");
+	dq = 999999999999999LLU;
+	print_drep(dq);
+
+	printf("just 10000000000000000 (15 0s):\n");
+	dq = 1000000000000000LLU;
+	print_drep(dq);
+
+	printf("XXX: rounds up!  just 9999999999999999 (16 9s):\n");
+	dq = 9999999999999999LLU;		/* warning: conversion from 'long int' to 'double' changes value from '9999999999999999' to '1.0e+16' [-Wfloat-conversion] */
+	print_drep(dq);
+
+	printf("just 10000000000000000 (16 0s):\n");
+	dq = 10000000000000000LLU;
+	print_drep(dq);
+
+	printf("XXX: rounds up!  just 99999999999999999 (17 9s):\n");
+	dq = 99999999999999999LLU;		/* warning: conversion from 'long int' to 'double' changes value from '99999999999999999' to '1.0e+17' [-Wfloat-conversion] */
+	print_drep(dq);
+
+	printf("just 100000000000000000 (17 0s):\n");
+	dq = 100000000000000000LLU;
+	print_drep(dq);
+
+	printf("XXX: rounds up!  just 999999999999999999 (18 9s):\n");
+	dq = 999999999999999999LLU;	/* warning: conversion from 'long int' to 'double' changes value from '999999999999999999' to '1.0e+18' [-Wfloat-conversion] */
+	print_drep(dq);
+
+	printf("just 1000000000000000000 (18 0s):\n");
+	dq = 1000000000000000000LLU;
+	print_drep(dq);
+
+	printf("XXX: rounds up!  just 9999999999999999999U (19 9s):\n");
+	dq = 9999999999999999999LLU;	/* warning: conversion from 'long unsigned int' to 'double' changes value from '9999999999999999999' to '1.0e+19' [-Wfloat-conversion] */
+	print_drep(dq);
+
+	printf("just 10000000000000000000 (19 0s):\n");
+	dq = 10000000000000000000LLU;
+	print_drep(dq);
+
 	return;
 }
 
@@ -2225,7 +2277,7 @@ precision()
 	 * magnitude between 1.0 and 1.0eDBL_DIG formatted in base-10, e.g. for
 	 * "%.*f", is:
 	 *
-	 *	DBL_DECIMAL_DIG - (int) lrint(ceil(log10(ceil(fabs(1.0)))))
+	 *	DBL_DECIMAL_DIG - (int) lrint(floor(log10(ceil(fabs(1.0))))) + 1
 	 */
 
 	/*
