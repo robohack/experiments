@@ -1,4 +1,5 @@
 #include <inttypes.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,12 +50,13 @@ main(argc, argv)
 	 *   hex    octal  decimal
 	 * >  7b<   > 173<   > 123<
 	 * >007b<   >0173<   >0123<
-	 *
-	 * Note that GCC -Wformat does not like the '#' (alternate form), only
-	 * has effect for 'o', 'x', 'X', and "aAeEfFgG")
 	 */
 	printf("  >%4x<   >%4o<   >%4d<\n", 123, 123, 123);
 	printf("  >%4.4x<   >%4.4o<   >%4.4d<\n", 123, 123, 123);
+	/*
+	 * N.B.:  GCC -Wformat does not like the '#' (alternate form), only has
+	 * effect for 'o', 'x', 'X', and "aAeEfFgG")
+	 */
 	printf(">%4.4#x<   >%4.4#o<   >%4.4#d<\n", 123, 123, 123);
 	printf(">%*.*#x<   >%*.*#o<   >%*.*#d<\n", 4, 4, 123, 4, 4, 123, 4, 4, 123);
 	printf("  >%4#x<   >%4#o<   >%4#d<\n", 123, 123, 123); /* see the "0x"(x) and "0"(o) */
@@ -62,6 +64,10 @@ main(argc, argv)
 	putchar('\n');
 
 	printf("  |%0*x|   |%0*o|   |%0*d|\n", 8, 123, 8, 123, 8, 123);
+	/*
+	 * N.B.:  GCC -Wformat does not like the '#' (alternate form), only has
+	 * effect for 'o', 'x', 'X', and "aAeEfFgG")
+	 */
 	printf("  |%0*#x|   |%0*#o|   |%0*#d|\n", 8, 123, 8, 123, 8, 123);
 	printf("|%0*.*#x|   |%0*.*#o|   |%0*.*#d|\n", 8, 8, 123, 8, 8, 123, 8, 8, 123);
 
@@ -99,6 +105,52 @@ main(argc, argv)
 
 	printf("%jd\n", (intmax_t) t); /* OK!!! */
 
+	/* POSIX 2008 print with thousand's separator */ {
+		struct lconv *lc;
+
+#ifdef __NetBSD__
+		/*
+		 * XXX NetBSD's "native" environment is probably "C" or "POSIX",
+		 * not something user friendly.  Note also there's no plain
+		 * "en", nor "en_CA", nor "en_US" -- there must be a teritory
+		 * name, and the codset name must also be appended!  (Though
+		 * there is an "en@boldquot" and "en@quot".)
+		 */
+		setlocale(LC_ALL, "en_CA.UTF-8"); /* esp. LC_MONETARY and LC_NUMERIC */
+#else
+		setlocale(LC_ALL, "");
+#endif
+		lc = localeconv();
+		/*
+		 * N.B.: .mon_grouping and .grouping are:
+		 *
+		 *     "a pointer to a vector of integers, each of size char,
+		 *      representing group size from low order digit groups to
+		 *      high order (right to left).  The list may be terminated
+		 *      with 0 or CHAR_MAX.  If the list is terminated with 0,
+		 *      the last group size before the 0 is repeated to account
+		 *      for all the digits.  If the list is terminated with
+		 *      CHAR_MAX, no more grouping is performed."
+		 */
+		printf("Printing currency of '%s', with '%s' group separator for monitary thousands @%s: %'d\n",
+		       lc->currency_symbol,
+		       lc->mon_thousands_sep,
+		       lc->mon_grouping,
+		       1234567890);
+		printf("Printing currency of '%s', with '%s' group separator for monitary thousands @%s: %'f\n",
+		       lc->currency_symbol,
+		       lc->mon_thousands_sep,
+		       lc->mon_grouping,
+		       1234567890.99);
+		printf("Printing with '%s' group separator for thousands @%s: %'d\n",
+		       lc->thousands_sep,
+		       lc->grouping,
+		       1234567890);
+		printf("Printing with '%s' group separator for thousands @%s: %'f\n",
+		       lc->thousands_sep,
+		       lc->grouping,
+		       1234567890.99);
+	}
 	exit(0);
 }
 
