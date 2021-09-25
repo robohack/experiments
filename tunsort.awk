@@ -1,4 +1,5 @@
-#! /usr/bin/awk -f
+#!/usr/bin/awk -f
+
 BEGIN {
 	srand();
 	d = 0;

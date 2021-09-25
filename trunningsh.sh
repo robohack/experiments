@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 : || exec /bin/sh $0 $argv:q
 # uncomment the following if you have trouble with older ksh's on USG systems
 #(alias) >/dev/null 2>&1 && exec /bin/sh "$0" ${1+"$@"}

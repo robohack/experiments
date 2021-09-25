@@ -1,4 +1,4 @@
-#! /bin/ksh
+#!/bin/ksh
 
 # or a POSIX shell with arrays....
 

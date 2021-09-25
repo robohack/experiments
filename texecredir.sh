@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 /usr/bin/printf "1 foo to stdout\n"
 /usr/bin/printf "1 bar to stderr\n" 1>&2

@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 # The correct/best way to handle lists of files which might contain
 # whitespace or metacharacters, etc.

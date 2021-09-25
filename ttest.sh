@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 var="12 bar"
 empty=""

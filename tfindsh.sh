@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 # a script to find the correct POSIX shell pathname
 

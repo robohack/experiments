@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 while read foo ; do
 	printf "%s\n" "$foo"

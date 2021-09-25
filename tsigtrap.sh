@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 # note this causes problems with catching a signal when not run from an
 # interactive session (e.g. when the 'compile' command is used in emacs...

@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 f1=$(mktemp -t jdata)
 f2=$(mktemp -t jdata)

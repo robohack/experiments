@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 if [ $# = 0 ]; then
 	set --	/usr/share/dict/american \

@@ -1,4 +1,4 @@
-#! /bin/ksh
+#!/bin/ksh
 
 # "The results of command substitution shall not be processed for
 # further tilde expansion, parameter expansion, command substitution,

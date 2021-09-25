@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 # try each of these
 #

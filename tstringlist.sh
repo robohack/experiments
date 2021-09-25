@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 #
 # XXX this is stupid -- just use some control char to separate them, and then
 # set IFS to expand them again -- see trunningsh.sh

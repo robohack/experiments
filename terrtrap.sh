@@ -1,4 +1,4 @@
-#! /bin/ksh
+#!/bin/ksh
 
 trap '
 	rc=$?;

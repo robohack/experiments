@@ -1,4 +1,4 @@
-#! /bin/ksh
+#!/bin/ksh
 
 BUILD_FLAGS="CFLAGS=\"-O2 -W\""
 BUILD_DEBUG="\"-Werror -g\""

@@ -1,4 +1,4 @@
-#! /usr/pkg/bin/ruby
+#!/usr/pkg/bin/ruby
 
 trials = 0
 for trial in 1...10000000
