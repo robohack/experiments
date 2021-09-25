@@ -100,6 +100,17 @@ BEGIN {
 			printf("%s: debug enabled\n", argv0);
 			debug = 1;
 		} else if (c == "p") {
+			if (length(Optarg) == 0) {
+				printf("%s: option -%s requires an argument\n", argv0, Optopt);
+				exit 2;
+			}
+			if (debug > 0) {
+				print "match: " match(Optarg, /^[0-9$]*$/) " RSTART: " RSTART " RLENGTH: " RLENGTH
+			}
+			if (match(Optarg, /^[0-9]*$/) == 0) {
+				printf("%s: option -%s requires an integer\n", argv0, Optopt);
+				exit 2;
+			}
 			printf("%s: parameter for -%s: %d\n", argv0, Optopt, Optarg);
 			param = Optarg;
 		} else if (c == "v") {
@@ -108,9 +119,12 @@ BEGIN {
 		} else if (c == "?") {
 			# XXX unsupported in many known versions, but not the above
 			printf("%s: invalid option -%s\n", argv0, Optopt);
+			exit 2;
 		} else if (c == ":") {
 			# XXX unsupported in most known versions (incl. above)
+			# (see length() check for -p)
 			printf("%s: missing parameter for -%s\n", argv0, Optopt);
+			exit 2;
 		} else {
 			printf("%s: ");
 		}
