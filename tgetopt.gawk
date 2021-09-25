@@ -1,4 +1,11 @@
-#! /usr/pkg/bin/gawk -f
+#!/bin/sh
+# -*- awk -*-
+
+# Magic to allow an AWK script to use the first "gawk" in $PATH:
+#
+some_arbitrary_awk_variable=0 "eval" "exec /usr/bin/env" "gawk -f $0 -- ${@}"
+
+# The real AWK code starts here...
 
 # XXX this can only work in GNU AWK since it is the only one which stops
 # processing its own command-line options after the (last?) '-f'.
@@ -122,7 +129,9 @@ BEGIN {
 		ARGV[Optind] = "";
 	}
 
-	# just testing...
+	# AWKs will normally exit if there's no other pattern+action code blocks
+	# than BEGIN{}, but the magic 'var=0 "eval"' line breaks this rule so:
+	#
 	exit 0;
 }
 

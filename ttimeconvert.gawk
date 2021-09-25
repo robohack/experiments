@@ -1,5 +1,11 @@
-#! /usr/pkg/bin/gawk -f
+#!/bin/sh
+# -*- awk -*-
 
+# Magic to allow an AWK script to use the first "gawk" in $PATH:
+#
+some_arbitrary_awk_variable=0 "eval" "exec /usr/bin/env" "gawk -f $0 -- $@"
+
+# The real AWK code starts here...
 
 # XXX this can only work in GNU AWK since it is the only one which
 #  offers the mktime() builtin function
