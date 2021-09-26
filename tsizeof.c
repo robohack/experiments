@@ -1,3 +1,6 @@
+/*
+ * trying to avoid requiring external tests for <sys/cdefs.h>, etc.
+ */
 #if (!defined(HAVE_SYS_CDEFS_H) &&                                      \
      (defined(__linux__) ||						\
       defined(BSD) ||                                                   \
@@ -42,12 +45,9 @@
       defined(__linux__)))
 # define HAVE_STDBOOL_H
 # define HAVE_STDDEF_H
-# define HAVE_SYS_TYPES_H
+# define HAVE_STDINT_H
+# define HAVE_SYS_TYPES_H		/* ??? */
 # define HAVE_WCHAR_H			/* ??? */
-#endif
-
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
 #endif
 
 #ifdef HAVE_STDBOOL_H
@@ -55,9 +55,8 @@
 #else /* !HAVE_STDBOOL_H  */
 
 /*
- * C99 _Bool is very special as it may only ever have the values of 'true'(1)
- * or 'false'(0), but if you don't have it then you must use 'int', or better
- * yet 'unsigned int'.
+ * C99 _Bool is a very special type as it may only ever have the values of
+ * 'true'(1) or 'false'(0), but if you don't have it then you _must_ use 'int'.
  *
  * Note the standard says:
  *
@@ -88,16 +87,22 @@ typedef enum bool_e { false = 0U, true = !false } bool;
 
 #endif /* !HAVE_STDBOOL_H  */
 
-#include <limits.h>			/* needed for CHAR_BIT */
 #ifdef HAVE_STDDEF_H
 # include <stddef.h>
 #endif
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
 #ifdef HAVE_WCHAR_H
 # include <wchar.h>
 #endif
+
+#include <limits.h>			/* needed for CHAR_BIT */
+#include <stdio.h>			/* nearly forever! */
+#include <stdlib.h>			/* C89 */
 
 #ifndef TICK_T_DEFINED			/* xxx hmmmm... is it ever, anywhere? */
 # define TICK_T_DEFINED
@@ -154,7 +159,7 @@ fubar_uchar(unsigned char fc)
  *
  *	char fubar_char_noproto(char);
  *
- * then Clang says:
+ * then Clang says (which is entirely true and to be expected!):
  *
  * warning: promoted type 'int' of K&R function parameter is not compatible with the parameter type 'char' declared in a previous prototype [-Wknr-promoted-parameter]
  *
@@ -164,7 +169,7 @@ fubar_uchar(unsigned char fc)
  */
 char
 fubar_char_noproto(fc)			/* warning: function declaration isn't a prototype */
-	char fc;			/* hidden de-promotion */
+	char fc;			/* N.B.:  hidden de-promotion!!! */
 {
 	return fc;
 }
@@ -173,6 +178,13 @@ short fubar_short(short);
 
 short
 fubar_short(short fc)
+{
+	return fc;
+}
+
+short
+fubar_short_noproto(fc)			/* warning: function declaration isn't a prototype */
+	short fc;			/* N.B.:  hidden de-promotion!!! */
 {
 	return fc;
 }
@@ -268,6 +280,8 @@ main()
 	rs = vs;
 	ri = vi;
 
+	(void) ri;	/* avoid "warning: variable 'ri' set but not used" */
+
 	char_bits = 0;
 	bits = 1;
 	while ((~0U & (~0U >> (bits - 1))) != 1) {
@@ -335,6 +349,7 @@ main()
 	printf("sizeof long = %u.\n", (unsigned int) sizeof(long));
 	printf("sizeof 1LL = %u.\n", (unsigned int) sizeof(1LL));
 	printf("sizeof long long = %u.\n", (unsigned int) sizeof(long long));
+	printf("sizeof longlong_t = %u.\n", (unsigned int) sizeof(longlong_t));
 	printf("sizeof intmax_t = %u.\n", (unsigned int) sizeof(intmax_t));
 
 	printf("sizeof uint8_t = %u.\n", (unsigned int) sizeof(uint8_t));
@@ -393,7 +408,7 @@ main()
 	rc = fubar_char(L'0');		/* "different width" */
 	rc = fubar_char((char) '0');	/* "different width" */
 
-	uc = fubar_uchar(vc);		/* "different width" */
+	uc = fubar_uchar((unsigned char) vc);	/* "different width" */
 	uc = fubar_uchar(true);		/* "different width" */
 	uc = fubar_uchar((unsigned char) true);	/* "different width" */
 	uc = fubar_uchar('0');		/* "different width" */
@@ -412,21 +427,27 @@ main()
 	rs = fubar_short(1);			/* "different width" */
 	rs = fubar_short((short) 1);		/* "different width" */
 
+	/* no warnings for these!  Yay! */
+	rs = fubar_short_noproto(vs);
+	rs = fubar_short_noproto(1);
+	rs = fubar_short_noproto((short) 1);
+
 	/*
 	 * NOTE: the "sizeof" unary operator, when applied to an expression
 	 * yeilds the same result as if "sizeof(type)", where "type" is the
-	 * natural type of the expression result, had been used.  The "sizeof"
-	 * operator does not itself cause any of the usual conversion to be
-	 * applied to the expression when determining its type (provided the
-	 * expression does not itself include operators which do perform usual
+	 * natural type of the expression result.  The "sizeof" operator does
+	 * not itself cause any of the usual conversion to be applied to the
+	 * expression when determining its type (provided the expression does
+	 * not itself include operators which _do_ perform the usual
 	 * conversions).
 	 *
 	 * Because of the lack of the usual conversions, sizeof() applied to a
 	 * plain variable name is the size of the (visible) storage allocated
 	 * for it (it may have invisible padding for alignment, but that is
 	 * never accounted for).  However the size of an expression is the size
-	 * of the storage required for the natural (un-cast) result and all the
-	 * usual conversions are applied in the expression.
+	 * of the storage required for the natural (un-cast) result of that
+	 * expression, and all the usual conversions are applied in the
+	 * expression.
 	 *
 	 * Also note:  "sizeof(expr)" is the same as "sizeof (expr)", i.e. if
 	 * the thing in the parenthesis is not a _type_ name, then "sizeof" is
@@ -434,15 +455,39 @@ main()
 	 * irrelevant as it is for function calls or the value given to the
 	 * "return" statement.
 	 *
-	 * WARNING:  "sizeof expr" is _NOT_ always the same as "sizeof (expr)"!
-	 *
-	 * The extra parenthesis cause another conversion.
+	 * WARNING:  "sizeof expr" (where 'expr' is one term, i.e. a variable
+	 * name) is _NOT_ always the same as "sizeof (expr)" where parens are
+	 * required to encapsulate the result of a multi-term expression, _NOR_
+	 * is it the same when 'expr' is a constant value (which is also subject
+	 * to the usual conversions)!
 	 */
+	printf("\n");
+	printf("sizeof(rb) == %d (1)\n", (int) sizeof(rb));
+	printf("sizeof rb == %d (1)\n", (int) sizeof rb);
+	printf("sizeof (rb + rb) == %d (4!!!)\n", (int) sizeof (rb + rb));
+	printf("sizeof(true) == %d (4!!!)\n", (int) sizeof(true));
+	printf("sizeof true == %d (4!!!)\n", (int) sizeof(true));
+
 	printf("\n");
 	printf("sizeof(rc) == %d (1)\n", (int) sizeof(rc));
 	printf("sizeof rc == %d (1)\n", (int) sizeof rc);
-	printf("sizeof(rc + rc) == %d (4)\n", (int) sizeof(rc + rc));
+	printf("sizeof (rc + rc) == %d (4!!!)\n", (int) sizeof (rc + rc));
+	printf("sizeof('c') == %d (4!!!)\n", (int) sizeof('c'));
+	printf("sizeof 'c' == %d (4!!!)\n", (int) sizeof('c'));
 
+	printf("\n");
+	printf("sizeof(rs) == %d (2)\n", (int) sizeof(rs));
+	printf("sizeof rs == %d (2)\n", (int) sizeof rs);
+	printf("sizeof (rs + rs) == %d (4!!!)\n", (int) sizeof (rs + rs));
+	/* n.b.:  there is no syntax to represent a short constant */
+	printf("sizeof(0xFF) == %d (4!)\n", (int) sizeof(0xFF));
+	printf("sizeof 0xFF == %d (4!)\n", (int) sizeof 0xFF);
+	printf("sizeof(0xFFFF) == %d (4!)\n", (int) sizeof(0xFFFF));
+	printf("sizeof 0xFFFF == %d (4!)\n", (int) sizeof 0xFFFF);
+	printf("sizeof(0xFFFFFF) == %d (4!)\n", (int) sizeof(0xFFFFFF));
+	printf("sizeof 0xFFFFFF == %d (4!)\n", (int) sizeof 0xFFFFFF);
+
+	printf("\n");
 	/*
 	 * sizeof cannot show you the size of the natural result of an
 	 * expression passed as an argument, even when there's a cast on the
@@ -477,7 +522,7 @@ main()
 	       (int) sizeof(rc + rc + L'\0'));
 
 	/* */ {
-		char *a_ptr_to_str = "some str";
+		const char *a_ptr_to_str = "some str";
 		char an_arr_of_ch[] = "another str";
 
 		printf("sizeof(a_ptr_to_str) = %zd\n",
