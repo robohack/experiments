@@ -171,6 +171,8 @@ CWARNFLAGS += -Wshadow
 CWARNFLAGS += -Wwrite-strings
 # this isn't mentioned in 1.42's manual but causes no error
 CWARNFLAGS += -Wstrict-prototypes
+#XXX# -Wsystem-headers does not go well with -Wundef
+#XXX#CWARNFLAGS += -Wsystem-headers
 .endif # ${__GNUC__} >= 1
 
 # in addition to -Wall
@@ -210,6 +212,10 @@ CWARNFLAGS += -Wformat-extra-args
 CWARNFLAGS += -Wundef
 # we may intentionally have large arrays
 #CWARNFLAGS += -Wlarger-than-65536
+# N.B.:  -Wbad-function-cast can be extremely annoying as it complains about
+# conversions by casts which even -Wconversion doesn't complain about.  In
+# theory it does warn about cases where UB(?)/IDB can happen because the return
+# value is out-of-bounds for the target type.
 CWARNFLAGS += -Wbad-function-cast
 .endif
 
