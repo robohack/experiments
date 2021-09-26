@@ -1,4 +1,5 @@
-#! /bin/ksh93
+#!/usr/bin/env ksh93
+# -*- ksh -*-
 
 # XXX WARNING!!! XXX
 #
