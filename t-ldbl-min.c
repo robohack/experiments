@@ -1,5 +1,4 @@
 #include <float.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,8 +11,14 @@ main()
 	//long double rd = *(long double*)&d;
 	long double rd = 3.3621e-4932L;
 
-	printf("DBL_MIN =\t %e (test = %e)\n", DBL_MIN, 1.0);
-	printf("LDBL_MIN =\t %Le (test = %e)\n", LDBL_MIN, 1.0);
+	printf("DBL_MIN = %%e\t %e (test = %e)\n", DBL_MIN, 1.0);
+	printf("LDBL_MIN = %%Le\t %Le (test = %e)\n", LDBL_MIN, 1.0);
+
+	printf("DBL_MIN = %%g\t %g (test = %g)\n", DBL_MIN, 1.0);
+	printf("LDBL_MIN = %%Lg\t %Lg (test = %g)\n", LDBL_MIN, 1.0);
+
+	printf("DBL_MIN = %%a\t %a (test = %a)\n", DBL_MIN, 1.0);
+	printf("LDBL_MIN = %%La\t %La (test = %a)\n", LDBL_MIN, 1.0);
 
 	printf("3.3621e-4932L =\t %Le (test = %e)\n", 3.3621e-4932L, 1.0);
 
