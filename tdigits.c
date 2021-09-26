@@ -1,3 +1,8 @@
+#ifndef __STDC__
+# include "ERROR:  your compiler is too old for this code"
+/* xxx and in fact we use lrint() so really require C99 */
+#endif
+
 #include <sys/types.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -10,65 +15,54 @@
 # include "ERROR:  your system is too brain damaged to support!"
 #endif
 
-#ifdef __APPLE__
-typedef	int64_t		longlong_t;	/* for XDR */
-typedef	uint64_t	u_longlong_t;	/* for XDR */
-#endif
-
 /*
  * The number of digits in a base-10 representation of MAXINT
  *
  * The canonical answer would be:
  *
- *	ceil(log10(MAXINT)) + 1
+ *	floor(log10(MAXINT)) + 1
+ *
+ * or:
+ *
+ *	ceil(log10(MAXINT))
  *
  * XXX these are poorly named, and don't allow for the sign, but they work at
  * the pre-processor level
  */
 #ifndef MAXINT_B10_DIGITS
-# if (__STDC__ - 0) > 0
-#  if (UINT_MAX > 0xffffffffU)
-#   define MAXINT_B10_DIGITS	(20)	/* for a 64-bit int: 9,223,372,036,854,775,808 */
-#  else
-#   define MAXINT_B10_DIGITS	(10)	/* for a 32-bit int 2,147,483,648 */
-#  endif
+# if (UINT_MAX > 0xffffffffU)
+#  define MAXINT_B10_DIGITS	(20)	/* for a 64-bit int: 9,223,372,036,854,775,808 */
 # else
-#  define MAXINT_B10_DIGITS	(10)	/* assume a 32-bit int */
+#  define MAXINT_B10_DIGITS	(10)	/* assume for a 32-bit int 2,147,483,648 */
 # endif
 #endif
 
 #ifndef MAXLONG_B10_DIGITS
-# if (__STDC__ - 0) > 0
-#  if (ULONG_MAX > 0xffffffffUL)
-#   define MAXLONG_B10_DIGITS	(20)	/* for a 64-bit long: 9,223,372,036,854,775,808 */
-#  else
-#   define MAXLONG_B10_DIGITS	(10)	/* for a 32-bit long 2,147,483,648 */
-#  endif
+# if (ULONG_MAX > 0xffffffffUL)
+#  define MAXLONG_B10_DIGITS	(20)	/* for a 64-bit long: 9,223,372,036,854,775,808 */
 # else
-#  define MAXLONG_B10_DIGITS	(10)	/* assume a 32-bit long */
+#  define MAXLONG_B10_DIGITS	(10)	/* assume for a 32-bit long 2,147,483,648 */
 # endif
 #endif
 
 /*
  * XXX are there any implementations with >64-bit long long?
  */
-#if (__STDC__ - 0) > 0
+#ifndef MAXLLONG_B10_DIGITS
 # define MAXLLONG_B10_DIGITS	(20)	/* for a 64-bit long long: 9,223,372,036,854,775,808 */
 #endif
 
 #if (MAXINT_B10_DIGITS == MAXLONG_B10_DIGITS && UINT_MAX != ULONG_MAX)
 # include "ERROR:  assumptions about U*_MAX and MAX*_B10_DIGITS are wrong!"
 #endif
-#if (__STDC__ - 0) > 0
-# if (MAXINT_B10_DIGITS <= 5 && UINT_MAX > 0xffffU)
-#  include "ERROR:  assumptions about MAXINT_B10_DIGITS are wrong! (16bit int?)"
-# endif
-# if (MAXINT_B10_DIGITS <= 10 && UINT_MAX > 0xffffffffU)
-#  include "ERROR:  assumptions about MAXINT_B10_DIGITS are wrong! (32bit int?)"
-# endif
-# if (MAXLONG_B10_DIGITS <= 10 && ULONG_MAX > 0xffffffffU)
-#  include "ERROR:  assumptions about MAXLONG_B10_DIGITS are wrong! (64bit long?)"
-# endif
+#if (MAXINT_B10_DIGITS <= 5 && UINT_MAX > 0xffffU)
+# include "ERROR:  assumptions about MAXINT_B10_DIGITS are wrong! (16bit int?)"
+#endif
+#if (MAXINT_B10_DIGITS <= 10 && UINT_MAX > 0xffffffffU)
+# include "ERROR:  assumptions about MAXINT_B10_DIGITS are wrong! (32bit int?)"
+#endif
+#if (MAXLONG_B10_DIGITS <= 10 && ULONG_MAX > 0xffffffffU)
+# include "ERROR:  assumptions about MAXLONG_B10_DIGITS are wrong! (64bit long?)"
 #endif
 
 
@@ -162,9 +156,11 @@ typedef	uint64_t	u_longlong_t;	/* for XDR */
  *
  * and, together with adding one to do the equivalent of finding the ceiling
  * value, that gets rid of the need to fiddle with odd values:
+ *
+ * N.B.:  This assumes int is at least 32-bits to avoid overflow.....
  */
 #define __MAX_B10STRLEN_FOR_UNSIGNED_TYPE(t) \
-	(((((sizeof(t) * CHAR_BIT)) * 1233) >> 12) + 1)
+	((((((int) sizeof(t) * CHAR_BIT)) * 1233) >> 12) + 1)
 #endif
 /*
  * for signed types we need room for the sign, except for int64_t (and larger?)
@@ -201,22 +197,41 @@ msb(uintmax_t v)
         return mb;
 }
 
-unsigned int intlog2(uintmax_t);
+/*
+ * Most Significant 1 Bit (unrolled?):
+ *
+ * aka "log base 2"
+ *
+ * a "binary search" algorithm using shift and compare operations
+ *
+ * The "log base 2" of an integer is the same as the position of the highest bit
+ * (or most significant bit) set, the MSB.
+ */
+u_int msb_fast(uintmax_t);
 
-unsigned int
-intlog2(uintmax_t v)
+u_int
+msb_fast(uintmax_t v)
 {
-	unsigned int b = 0;
+	u_int b = 0;
 
 #if 0
-	if (!v)				/* not valid for zero... */
+	if (!v)
 		return -1;
 #endif
 
+	/*
+	 * xxx this gets "warning: left shift count >= width of type"; and
+	 * "warning: comparison of unsigned expression >= 0 is always true"; and
+	 * "warning: right shift count >= width of type"
+	 *
+	 * all for the highest step (normally step(64))
+	 */
 #define step(x)	if (v >= ((uintmax_t) 1) << x)		\
 			b += x, v >>= x
 
-	if (sizeof(uintmax_t) == 8)
+	if (sizeof(uintmax_t) > 8)
+		step(64);
+	if (sizeof(uintmax_t) >= 8)
 		step(32);
 	if (sizeof(uintmax_t) >= 4)
 		step(16);
@@ -229,6 +244,22 @@ intlog2(uintmax_t v)
 #undef step
 
 	return b;
+}
+
+unsigned int intlog2(uintmax_t);
+
+unsigned int
+intlog2(uintmax_t v)
+{
+#ifndef __has_builtin
+# define __has_builtin(x) 0  /* for compatibility */
+#endif
+
+#if __has_builtin(__builtin_clz)
+	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ __builtin_clzll(v);
+#else
+	return msb_fast(v);
+#endif
 }
 
 
@@ -266,11 +297,11 @@ intlog2(uintmax_t v)
  *
  * Note log2() doesn't really "round" down -- it's using a zero-based index!
  *
- * So, this implementation is really ceil(log10(ceil(fabs()))), which is what
- * we want:
+ * So, this implementation is still floor(log10(ceil(fabs(N?N:1)))) + 1, which
+ * is what we want:
  */
-int ceil_intlog10(uintmax_t);
-int
+unsigned int ceil_intlog10(uintmax_t);
+unsigned int
 ceil_intlog10(uintmax_t v)
 {
 	static unsigned long long int const PowersOf10[] =
@@ -282,11 +313,13 @@ ceil_intlog10(uintmax_t v)
 		  10000000000000000000LLU };
 	unsigned int r;
 
+#if 0
 	printf("intlog2(%ju) = %d, msb() = %d\n", v, intlog2(v), msb(v));
+#endif
 
 	r = ((unsigned int) msb(v) + 1) * 1233 >> 12;
 
-	return (int) r + 1 - (v < PowersOf10[r]); /* "round" up to find ceil(r) */
+	return r + 1 - (v < PowersOf10[r]); /* "round" up to find ceil(r) */
 }
 
 /*
@@ -320,7 +353,7 @@ u_numPlaces(uintmax_t u)
 }
 
 /*
- * another way to find integer log base 10 of an integer: The Obvious Way:
+ * another way to find integer log base 10 of an integer:  The Obvious Way:
  *
  * unsigned int v; // non-zero 32-bit integer to compute the log base 10 of
  * int r;          // result goes here
@@ -333,12 +366,199 @@ u_numPlaces(uintmax_t u)
  */
 
 
+/*
+ * Kendall Willets found an "economical" solution.
+ *
+ * https://lemire.me/blog/2021/05/28/computing-the-number-of-digits-of-an-integer-quickly/#comment-585924
+ */
+
+/*
+ * Increment the upper 32 bits (log10(T) - 1) when >= T is added.
+ */
+#define K(T)	(((sizeof(#T) - 1) << 32) - T)
+
+u_int digit_count(uint32_t x);
+
+u_int
+digit_count(uint32_t x)
+{
+
+	static uint64_t table[] = {
+		K(0),          K(0),          K(0),		/*    8 */
+		K(10),         K(10),         K(10),		/*   64 */
+		K(100),        K(100),        K(100),		/*  512 */
+		K(1000),       K(1000),       K(1000),		/* 4096 */
+		K(10000),      K(10000),      K(10000),		/*   32K */
+		K(100000),     K(100000),     K(100000),	/*  256K */
+		K(1000000),    K(1000000),    K(1000000),	/* 2048K */
+		K(10000000),   K(10000000),   K(10000000),	/*   16M */
+		K(100000000),  K(100000000),  K(100000000),	/*  128M */
+		K(1000000000), K(1000000000), K(1000000000),	/* 1024M */
+		K(1000000000), K(1000000000)			/*    4B */
+	};
+	u_int lg2 = intlog2(x);
+	uint64_t n = (uint64_t) x + table[lg2];
+
+	return (u_int) (n >> 32);
+}
+
+
+/*
+ * Integer log base 10, modified binary search, from StackOverflow....
+ *
+ * XXX seems to assume int == int32
+ */
+int ilog10c(unsigned x);		/* add one to result for digit count */
+
+int
+ilog10c(unsigned x)
+{
+	if (x > 99) {
+		if (x < 1000000) {
+			if (x < 10000) {
+				return 3 + ((int)(x - 1000) >> 31);
+				// return 3 - ((x - 1000) >> 31);              // Alternative.
+				// return 2 + ((999 - x) >> 31);               // Alternative.
+				// return 2 + ((x + 2147482648) >> 31);        // Alternative.
+			} else {
+				return 5 + ((int)(x - 100000) >> 31);
+			}
+		} else {
+			if (x < 100000000) {
+				return 7 + ((int)(x - 10000000) >> 31);
+			} else {
+				return 9 + ((int)((x-1000000000)&~x) >> 31);
+				// return 8 + (((x + 1147483648) | x) >> 31);  // Alternative.
+			}
+		}
+	}
+	/* else */
+	if (x > 9) {
+		return 1;
+	}
+	/* else */
+	return ((int)(x - 1) >> 31);
+	// return ((int)(x - 1) >> 31) | ((unsigned)(9 - x) >> 31);  // Alternative.
+	// return (x > 9) + (x > 0) - 1;                             // Alternative.
+}
+
+
 int main(void);
 
 int
 main()
 {
-	char sbuf[2];
+	int i;
+	static unsigned long long int const values[] = {
+		1LLU,
+		10LLU,
+		100LLU,
+		1000LLU,
+		10000LLU,
+		100000LLU,
+		1000000LLU,
+		10000000LLU,
+		100000000LLU,
+		1000000000LLU,
+		10000000000LLU,
+		100000000000LLU,
+		1000000000000LLU,
+		10000000000000LLU,
+		100000000000000LLU,
+		1000000000000000LLU,
+		10000000000000000LLU,		/* -1 conversion to double is inaccurate */
+		100000000000000000LLU,		/* -1 conversion to double is inaccurate */
+		1000000000000000000LLU,		/* -1 conversion to double is inaccurate */
+		10000000000000000000LLU,	/* -1 conversion to double is inaccurate */
+		CHAR_MAX,
+		UCHAR_MAX,
+		SHRT_MAX,
+		USHRT_MAX,
+		INT_MAX,
+		UINT_MAX,
+		LONG_MAX,
+		ULONG_MAX,
+		LLONG_MAX,
+		ULLONG_MAX,
+	};
+
+	/*
+	 * N.B.:  using an IEEE 754 floating point implementation of log10(3f),
+	 * means that any integer value larger than 2^53 bits (signed, i.e. plus
+	 * a sign bit) (i.e. values with more than 15 base-10 digits) may suffer
+	 * rounding to a representable value and thus may result in the "wrong"
+	 * log10() result....
+	 *
+	 * Note also that ceil(log10()) fails for exact powers of 10, so if
+	 * integer modulo plus a comparison with zero is as fast as addition
+	 * then this would correct it (but unless ceil() also faster than
+	 * floor(), it's a somewhat pointless excercise):
+	 *
+	 * 	y = imaxabs(v ? v : 1);
+	 * 	x = ceil(log10(y));
+	 * 	if (y % 10 == 0)
+	 * 		x += 1;
+	 */
+	for (i = 0; i < (int) (sizeof(values) / sizeof(values[0])); i++) {
+/* */		if (values[i]-1 != 0) {
+		printf("[%2d] % 2d: ceil(log10(%llu)) = %ld\n", i, u_numPlaces(values[i]-1), values[i]-1, lrint(ceil(log10((double) values[i]-1))));
+		if (lrint(ceil(log10((double) values[i]-1))) != u_numPlaces(values[i]-1)) {
+			printf("XXX: ceil() is wrong!\n");
+		}
+		printf("[%2d] % 2d: rint(log10(%llu))+1 = %ld\n", i, u_numPlaces(values[i]-1), values[i]-1, lrint(log10((double) values[i]-1)) + 1);
+		if (lrint(log10((double) values[i]-1)) + 1 != u_numPlaces(values[i]-1)) {
+			printf("XXX: rint() is wrong!\n");
+		}
+		printf("[%2d] % 2d: floor(log10(%llu))+1 = %ld\n", i, u_numPlaces(values[i]-1), values[i]-1, lrint(floor(log10((double) values[i]-1))) + 1);
+		if (lrint(floor(log10((double) values[i]-1))) + 1 != u_numPlaces(values[i]-1)) {
+			printf("XXX: floor() is wrong!\n");
+		}
+		printf("[%2d] % 2d: ceil_intlog10(%llu) = %d\n", i, u_numPlaces(values[i]-1), values[i]-1, ceil_intlog10(values[i]-1));
+		if (ceil_intlog10(values[i]-1) != u_numPlaces(values[i]-1)) {
+			printf("XXX: ceil_intlog10() is wrong!\n");
+		}
+		putchar('\n');
+/* */		}
+
+		printf("[%2d] % 2d: ceil(log10(%llu)) = %ld\n", i, u_numPlaces(values[i]), values[i], lrint(ceil(log10((double) values[i]))));
+		if (lrint(ceil(log10((double) values[i]))) != u_numPlaces(values[i])) {
+			printf("XXX: ceil() is wrong!\n");
+		}
+		printf("[%2d] % 2d: rint(log10(%llu))+1 = %ld\n", i, u_numPlaces(values[i]), values[i], lrint(log10((double) values[i])) + 1);
+		if (rint(log10((double) values[i])) + 1 != u_numPlaces(values[i])) {
+			printf("XXX: rint() is wrong!\n");
+		}
+		printf("[%2d] % 2d: floor(log10(%llu))+1 = %ld\n", i, u_numPlaces(values[i]), values[i], lrint(floor(log10((double) values[i]))) + 1);
+		if (lrint(floor(log10((double) values[i]))) + 1 != u_numPlaces(values[i])) {
+			printf("XXX: floor() is wrong!\n");
+		}
+		printf("[%2d] % 2d: ceil_intlog10(%llu) = %d\n", i, u_numPlaces(values[i]), values[i], ceil_intlog10(values[i]));
+		if (ceil_intlog10(values[i]) != u_numPlaces(values[i])) {
+			printf("XXX: ceil_intlog10() is wrong!\n");
+		}
+		putchar('\n');
+
+/* */		if (values[i] < ULLONG_MAX) {
+		printf("[%2d] % 2d: ceil(log10(%llu)) = %ld\n", i, u_numPlaces(values[i]+1), values[i]+1, lrint(ceil(log10((double) values[i]+1))));
+		if (lrint(ceil(log10((double) values[i]+1))) != u_numPlaces(values[i]+1)) {
+			printf("XXX: ceil() is wrong!\n");
+		}
+		printf("[%2d] % 2d: rint(log10(%llu))+1 = %ld\n", i, u_numPlaces(values[i]+1), values[i]+1, lrint(log10((double) values[i]+1)) + 1);
+		if (lrint(log10((double) values[i]+1)) + 1 != u_numPlaces(values[i]+1)) {
+			printf("XXX: rint() is wrong!\n");
+		}
+		printf("[%2d] % 2d: floor(log10(%llu))+1 = %ld\n", i, u_numPlaces(values[i]+1), values[i]+1, lrint(floor(log10((double) values[i]+1))) + 1);
+		if (lrint(floor(log10((double) values[i]+1))) + 1 != u_numPlaces(values[i]+1)) {
+			printf("XXX: floor() is wrong!\n");
+		}
+		printf("[%2d] % 2d: ceil_intlog10(%llu) = %d\n", i, u_numPlaces(values[i]+1), values[i]+1, ceil_intlog10(values[i]+1));
+		if (ceil_intlog10(values[i]+1) != u_numPlaces(values[i]+1)) {
+			printf("XXX: ceil_intlog10() is wrong!\n");
+		}
+/* */		}
+		putchar('\n');
+		putchar('\n');
+	}
 
 	printf("DIGIT_SCALE=\t%20s\n", "0123456789 123456789");
 	printf("CHAR_MAX=\t%20jd\n", (intmax_t) CHAR_MAX);
@@ -363,30 +583,30 @@ main()
 	printf("log10(UINT_MAX) = %f\n",log10((double) UINT_MAX));
 	printf("log10(LLONG_MAX) = %f\n", log10((double) LLONG_MAX));
 	printf("log10(ULLONG_MAX) = %f\n",log10((double) ULLONG_MAX));
-	printf("floor(log10(CHAR_MAX)) = %d\n", (int) floor(log10((double) CHAR_MAX)));
-	printf("floor(log10(UCHAR_MAX)) = %d\n", (int) floor(log10((double) UCHAR_MAX)));
-	printf("floor(log10(SHRT_MAX)) = %d\n", (int) floor(log10((double) SHRT_MAX)));
-	printf("floor(log10(USHRT_MAX)) = %d\n",(int) floor(log10((double) USHRT_MAX)));
-	printf("floor(log10(INT_MAX)) = %d\n", (int) floor(log10((double) INT_MAX)));
-	printf("floor(log10(UINT_MAX)) = %d\n", (int) floor(log10((double) UINT_MAX)));
-	printf("floor(log10(LLONG_MAX)) = %d\n", (int) floor(log10((double) LLONG_MAX)));
-	printf("floor(log10(ULLONG_MAX)) = %d\n", (int) floor(log10((double) ULLONG_MAX)));
-	printf("rint(log10(CHAR_MAX)) = %d\n", (int) rint(log10((double) CHAR_MAX)));
-	printf("rint(log10(UCHAR_MAX)) = %d\n", (int) rint(log10((double) UCHAR_MAX)));
-	printf("rint(log10(SHRT_MAX)) = %d\n", (int) rint(log10((double) SHRT_MAX)));
-	printf("rint(log10(USHRT_MAX)) = %d\n",(int) rint(log10((double) USHRT_MAX)));
-	printf("rint(log10(INT_MAX)) = %d\n", (int) rint(log10((double) INT_MAX)));
-	printf("rint(log10(UINT_MAX)) = %d\n", (int) rint(log10((double) UINT_MAX)));
-	printf("rint(log10(LLONG_MAX)) = %d\n", (int) rint(log10((double) LLONG_MAX)));
-	printf("rint(log10(ULLONG_MAX)) = %d\n", (int) rint(log10((double) ULLONG_MAX)));
-	printf("ceil(log10(CHAR_MAX)) = %d\n", (int) ceil(log10((double) CHAR_MAX)));
-	printf("ceil(log10(UCHAR_MAX)) = %d\n", (int) ceil(log10((double) UCHAR_MAX)));
-	printf("ceil(log10(SHRT_MAX)) = %d\n", (int) ceil(log10((double) SHRT_MAX)));
-	printf("ceil(log10(USHRT_MAX)) = %d\n",(int) ceil(log10((double) USHRT_MAX)));
-	printf("ceil(log10(INT_MAX)) = %d\n", (int) ceil(log10((double) INT_MAX)));
-	printf("ceil(log10(UINT_MAX)) = %d\n", (int) ceil(log10((double) UINT_MAX)));
-	printf("ceil(log10(LLONG_MAX)) = %d\n", (int) ceil(log10((double) LLONG_MAX)));
-	printf("ceil(log10(ULLONG_MAX)) = %d\n", (int) ceil(log10((double) ULLONG_MAX)));
+	printf("floor(log10(CHAR_MAX)) = %ld\n", lrint(floor(log10((double) CHAR_MAX))));
+	printf("floor(log10(UCHAR_MAX)) = %ld\n", lrint(floor(log10((double) UCHAR_MAX))));
+	printf("floor(log10(SHRT_MAX)) = %ld\n", lrint(floor(log10((double) SHRT_MAX))));
+	printf("floor(log10(USHRT_MAX)) = %ld\n",lrint(floor(log10((double) USHRT_MAX))));
+	printf("floor(log10(INT_MAX)) = %ld\n", lrint(floor(log10((double) INT_MAX))));
+	printf("floor(log10(UINT_MAX)) = %ld\n", lrint(floor(log10((double) UINT_MAX))));
+	printf("floor(log10(LLONG_MAX)) = %ld\n", lrint(floor(log10((double) LLONG_MAX))));
+	printf("floor(log10(ULLONG_MAX)) = %ld\n", lrint(floor(log10((double) ULLONG_MAX))));
+	printf("rint(log10(CHAR_MAX)) = %ld\n", lrint(rint(log10((double) CHAR_MAX))));
+	printf("rint(log10(UCHAR_MAX)) = %ld\n", lrint(rint(log10((double) UCHAR_MAX))));
+	printf("rint(log10(SHRT_MAX)) = %ld\n", lrint(rint(log10((double) SHRT_MAX))));
+	printf("rint(log10(USHRT_MAX)) = %ld\n", lrint(rint(log10((double) USHRT_MAX))));
+	printf("rint(log10(INT_MAX)) = %ld\n", lrint(rint(log10((double) INT_MAX))));
+	printf("rint(log10(UINT_MAX)) = %ld\n", lrint(rint(log10((double) UINT_MAX))));
+	printf("rint(log10(LLONG_MAX)) = %ld\n", lrint(rint(log10((double) LLONG_MAX))));
+	printf("rint(log10(ULLONG_MAX)) = %ld\n", lrint(rint(log10((double) ULLONG_MAX))));
+	printf("ceil(log10(CHAR_MAX)) = %ld\n", lrint(ceil(log10((double) CHAR_MAX))));
+	printf("ceil(log10(UCHAR_MAX)) = %ld\n", lrint(ceil(log10((double) UCHAR_MAX))));
+	printf("ceil(log10(SHRT_MAX)) = %ld\n", lrint(ceil(log10((double) SHRT_MAX))));
+	printf("ceil(log10(USHRT_MAX)) = %ld\n", lrint(ceil(log10((double) USHRT_MAX))));
+	printf("ceil(log10(INT_MAX)) = %ld\n", lrint(ceil(log10((double) INT_MAX))));
+	printf("ceil(log10(UINT_MAX)) = %ld\n", lrint(ceil(log10((double) UINT_MAX))));
+	printf("ceil(log10(LLONG_MAX)) = %ld\n", lrint(ceil(log10((double) LLONG_MAX))));
+	printf("ceil(log10(ULLONG_MAX)) = %ld\n", lrint(ceil(log10((double) ULLONG_MAX))));
 
 	putchar('\n');
 
@@ -439,54 +659,75 @@ main()
 	putchar('\n');
 
 
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(u_char) =\t\t% 2d (actual=% 2d, log10=% 2d)\n",
+	/*
+	 * xxx newer GCC (e.g. >9.0) uses __builtin_snprintf() here and then
+	 * complains bitterly that the "output" is truncated if the size is not
+	 * zero (even if/when the buffer supplied is easily large enough).
+	 * Idiot compiler -- thinks it's so smart, but nope.  Duh, of course
+	 * it's truncated -- we only want to find out how much space we it would
+	 * use -- we know it's more than we supply.
+	 *
+	 * Also, apparently SUSv2 and C99 contradict each other if snprintf() is
+	 * called with size==0 then SUSv2 stipulates an unspecified return value
+	 * less than 1 (representing the behaviour of ancient non-standard
+	 * implementations?), while C99 allows the pointer to a string to be
+	 * NULL and will then return the number of characters that would have
+	 * been written in case the output string pointer was valid and the size
+	 * was large enough.
+	 *
+	 * XXX N.B.:  Note also that sometimes (e.g. on LP64 systems without
+	 * native 128 ints) longlong_t (and u_longlong_t) are not actually "long
+	 * long", but rather just plain "long", and again newer compilers (like
+	 * GCC >9.0) will complain that %lld doesn't match longlong_t!
+	 */
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(u_char) =\t\t% 2d (actual=% 2d, log10=% 2ld)\n",
 	       __MAX_B10STRLEN_FOR_INT_TYPE(u_char),
-	       snprintf(sbuf, (size_t) 1, "%llu", (u_longlong_t) UCHAR_MAX),
-	       (int) ceil(log10((double) UCHAR_MAX)));
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(signed char) =\t% 2d (actual=% 2d, log10=% 2d+1)\n",
+	       snprintf(NULL, (size_t) 0, "%llu", (unsigned long long) UCHAR_MAX),
+	       lrint(ceil(log10((double) UCHAR_MAX))));
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(signed char) =\t% 2d (actual=% 2d, log10=% 2ld+2)\n",
 	       __MAX_B10STRLEN_FOR_INT_TYPE(signed char),
-	       snprintf(sbuf, (size_t) 1, "%lld", (longlong_t) CHAR_MIN),
-	       (int) ceil(log10((double) CHAR_MAX)));
+	       snprintf(NULL, (size_t) 0, "%lld", (long long) CHAR_MIN),
+	       lrint(log10((double) CHAR_MAX)));
 
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(u_short) =\t\t% 2d (actual=% 2d, log10=% 2d)\n",
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(u_short) =\t\t% 2d (actual=% 2d, log10=% 2ld)\n",
 	       __MAX_B10STRLEN_FOR_INT_TYPE(u_short),
-	       snprintf(sbuf, (size_t) 1, "%llu", (u_longlong_t) USHRT_MAX),
-	       (int) ceil(log10((double) USHRT_MAX)));
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(short) =\t\t% 2d (actual=% 2d, log10=% 2d+1)\n",
+	       snprintf(NULL, (size_t) 0, "%llu", (unsigned long long) USHRT_MAX),
+	       lrint(log10((double) USHRT_MAX)));
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(short) =\t\t% 2d (actual=% 2d, log10=% 2ld+2)\n",
 	       __MAX_B10STRLEN_FOR_INT_TYPE(short),
-	       snprintf(sbuf, (size_t) 1, "%lld", (longlong_t) SHRT_MIN),
-	       (int) ceil(log10((double) SHRT_MAX)));
+	       snprintf(NULL, (size_t) 0, "%lld", (long long) SHRT_MIN),
+	       lrint(log10((double) SHRT_MAX)));
 
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(u_int) =\t\t%d (actual=%d, log10=%d)\n",
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(u_int) =\t\t%d (actual=%d, log10=%ld)\n",
 	       __MAX_B10STRLEN_FOR_INT_TYPE(u_int),
-	       snprintf(sbuf, (size_t) 1, "%llu", (u_longlong_t) UINT_MAX),
-	       (int) ceil(log10((double) UINT_MAX)));
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(int) =\t\t%d (actual=%d, log10=%d+1)\n",
+	       snprintf(NULL, (size_t) 0, "%llu", (unsigned long long) UINT_MAX),
+	       lrint(log10((double) UINT_MAX)));
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(int) =\t\t%d (actual=%d, log10=% 2ld+2)\n",
 	       __MAX_B10STRLEN_FOR_INT_TYPE(int),
-	       snprintf(sbuf, (size_t) 1, "%lld", (longlong_t) INT_MIN),
-	       (int) ceil(log10((double) INT_MAX)));
+	       snprintf(NULL, (size_t) 0, "%lld", (long long) INT_MIN),
+	       lrint(log10((double) INT_MAX)));
 
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(u_long) =\t\t%d (actual=%d, log10=%d)\n",
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(u_long) =\t\t%d (actual=%d, log10=%ld)\n",
 	       __MAX_B10STRLEN_FOR_INT_TYPE(u_long),
-	       snprintf(sbuf, (size_t) 1, "%llu", (u_longlong_t) ULONG_MAX),
-	       (int) ceil(log10((double) ULONG_MAX)));
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(long) =\t\t%d (actual=%d, log10=%d+1)\n",
+	       snprintf(NULL, (size_t) 0, "%llu", (unsigned long long) ULONG_MAX),
+	       lrint(log10((double) ULONG_MAX)));
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(long) =\t\t%d (actual=%d, log10=%ld+2)\n",
 	       __MAX_B10STRLEN_FOR_INT_TYPE(long),
-	       snprintf(sbuf, (size_t) 1, "%lld", (longlong_t) LONG_MIN),
-	       (int) ceil(log10((double) LONG_MAX)));
+	       snprintf(NULL, (size_t) 0, "%lld", (long long) LONG_MIN),
+	       lrint(log10((double) LONG_MAX)));
 
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(u_longlong_t) =\t%d (actual=%d, log10=%d)\n",
-	       __MAX_B10STRLEN_FOR_INT_TYPE(u_longlong_t),
-	       snprintf(sbuf, (size_t) 1, "%llu", (u_longlong_t) ULLONG_MAX),
-	       (int) ceil(log10((double) ULLONG_MAX)));
-	printf("__MAX_B10STRLEN_FOR_INT_TYPE(long long) =\t%d (actual=%d, log10=%d+1)\n",
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(unsigned long long) =\t%d (actual=%d, log10=%ld)\n",
+	       __MAX_B10STRLEN_FOR_INT_TYPE(unsigned long long),
+	       snprintf(NULL, (size_t) 0, "%llu", (unsigned long long) ULLONG_MAX),
+	       lrint(log10((double) ULLONG_MAX)));
+	printf("__MAX_B10STRLEN_FOR_INT_TYPE(long long) =\t%d (actual=%d, log10=%ld+2)\n",
 	       __MAX_B10STRLEN_FOR_INT_TYPE(long long),
-	       snprintf(sbuf, (size_t) 1, "%lld", (longlong_t) LLONG_MIN),
-	       (int) ceil(log10((double) LLONG_MAX)));
+	       snprintf(NULL, (size_t) 0, "%lld", (long long) LLONG_MIN),
+	       lrint((log10((double) LLONG_MAX))));
 
 #if 0
-	printf("%lld\n", (longlong_t) LLONG_MIN);
-	printf("%llu\n", (u_longlong_t) ULLONG_MAX);
+	printf("%lld\n", (long long) LLONG_MIN);
+	printf("%llu\n", (unsigned long long) ULLONG_MAX);
 #endif
 
 
