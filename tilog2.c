@@ -308,7 +308,7 @@ intlog2(uintmax_t v)
 }
 
 /*
- * Most Significant 1 Bit:
+ * Most Significant 1 Bit (unrolled?):
  *
  * aka "log base 2"
  *
@@ -328,9 +328,11 @@ msb(uintmax_t v)
 		return -1;
 
 	/*
-	 * xxx this gets both "warning: left shift count >= width of type"
-	 * (twice) and "warning: comparison of unsigned expression >= 0 is
-	 * always true" for the highest step (normally step(64))
+	 * xxx this gets "warning: left shift count >= width of type"; and
+	 * "warning: comparison of unsigned expression >= 0 is always true"; and
+	 * "warning: right shift count >= width of type"
+	 *
+	 * all for the highest step (normally step(64))
 	 */
 #define step(x)	if (v >= ((uintmax_t) 1) << x)		\
 			b += x, v >>= x
@@ -351,6 +353,26 @@ msb(uintmax_t v)
 
 	return b;
 }
+
+u_int msb_naive(uintmax_t);
+
+
+/*
+ * Another variant of intlog2()
+ */
+u_int
+msb_naive(uintmax_t x)
+{
+	u_int mb;
+
+	for (mb = 0; x; mb++) {
+		x >>= 1;
+	}
+
+	return mb;
+}
+
+
 
 uint32_t just_msb32(uint32_t x);
 uint64_t just_msb64(uint64_t x);
@@ -561,6 +583,23 @@ binary_fmtsz(uintmax_t x,
 }
 
 
+/* use  */
+unsigned int fast_intlog2(uintmax_t);
+
+unsigned int
+fast_intlog2(uintmax_t v)
+{
+#ifndef __has_builtin
+# define __has_builtin(x) 0  /* for compatibility */
+#endif
+
+#if __has_builtin(__builtin_clz)
+	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ __builtin_clzll(v);
+#else
+	return (unsigned int) msb(v);
+#endif
+}
+
 int main(void);
 
 int
@@ -659,9 +698,10 @@ main()
 #endif
 	putchar('\n');
 
-	printf("LOG2(0<<0) = %02d%s\n", LOG2(0LLU<<0), ispow2(0LLU<<0) ? "" : " FAILED: ispow2()!");
+#define TLOG2 fast_intlog2
+	printf("LOG2(0<<0) = %02d%s\n", TLOG2(0LLU<<0), ispow2(0LLU<<0) ? "" : " FAILED: ispow2()!");
 	for (ui = 0; ui < 64; ui++) {
-		printf("LOG2(1<<%02d) = %d%s%s\n", ui, LOG2(1LLU<<ui), LOG2(1LLU<<ui) == ui ? "" : " FAILED: LOG2()", ispow2(1LLU<<ui) ? "" : " FAILED: ispow2()!");
+		printf("LOG2(1<<%02d) = %d%s%s\n", ui, TLOG2(1LLU<<ui), TLOG2(1LLU<<ui) == ui ? "" : " FAILED: LOG2()", ispow2(1LLU<<ui) ? "" : " FAILED: ispow2()!");
 	}
 
 	exit(0);
