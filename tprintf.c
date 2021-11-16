@@ -53,6 +53,8 @@ main(argc, argv)
 	 */
 	printf("  >%4x<   >%4o<   >%4d<\n", 123, 123, 123);
 	printf("  >%4.4x<   >%4.4o<   >%4.4d<\n", 123, 123, 123);
+	printf("  >%04.4x<   >%04.4o<   >%04.4d<\n", 123, 123, 123);
+	printf("  >%.4x<   >%.4o<   >%.4d<\n", 123, 123, 123);
 	/*
 	 * N.B.:  GCC -Wformat does not like the '#' (alternate form), only has
 	 * effect for 'o', 'x', 'X', and "aAeEfFgG")
@@ -60,6 +62,14 @@ main(argc, argv)
 	printf(">%4.4#x<   >%4.4#o<   >%4.4#d<\n", 123, 123, 123);
 	printf(">%*.*#x<   >%*.*#o<   >%*.*#d<\n", 4, 4, 123, 4, 4, 123, 4, 4, 123);
 	printf("  >%4#x<   >%4#o<   >%4#d<\n", 123, 123, 123); /* see the "0x"(x) and "0"(o) */
+
+	putchar('\n');
+	/*
+	 *     In no case does a non-existent or small field width cause truncation of a
+	 *     numeric field; if the result of a conversion is wider than the field
+	 *     width, the field is expanded to contain the conversion result.
+	 */
+	printf("  >%02.2x<   >%02.2o<   >%02.2d<\n", 123, 123, 123);
 
 	putchar('\n');
 
