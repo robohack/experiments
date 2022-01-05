@@ -28,6 +28,8 @@ main()
 	printf("\n");
 	printf("        1 = (%%" PRId64 ")%" PRId64 "\n", (u_quad_t) 1);
 	printf("INT64_MAX = (%%" PRId64 ")%" PRId64 "\n", (u_quad_t) l);
+	printf("        1 = (%%ju)%ju\n", (uintmax_t) 1);
+	printf("INT64_MAX = (%%ju)%ju\n", (uintmax_t) l);
 	exit(0);
 	/* NOTREACHED */
 }
