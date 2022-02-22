@@ -48,6 +48,16 @@ for i in "${@}"; do
 	echo "arg #${c}: \"${i}\""
 done
 
+echo ""
+echo "Implied-args:"
+
+c=0
+for i
+do
+	c=$(expr ${c} + 1)
+	echo "implied arg #${c}: \"${i}\""
+done
+
 # xxx this may or may not be right...
 if [ ${#} -ne ${c}  ]; then
 	echo "WARNING:  your shell needs to use the \${1+\"\${0)\" trick!"
@@ -120,6 +130,28 @@ c=0
 for i in "${@}"; do
 	c=$(expr ${c} + 1)
 	echo "args-via-var-@ #${c}: \"${i}\""
+done
+
+echo ""
+echo "orig-via-var-and-set-implied:"
+
+# properly pass parameters via a variable
+# (see above for setting it with newlines)
+
+# xxx Zsh 4.3.17) messes this up badly
+
+Sifs=${IFS}
+# set IFS to a newline as per ORIG_ARGV setup
+IFS="
+"
+set -- ${ORIG_ARGV}
+IFS=${Sifs}
+
+c=0
+for i
+do
+	c=$(expr ${c} + 1)
+	echo "args-via-var-implied #${c}: \"${i}\""
 done
 
 echo ""
