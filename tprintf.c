@@ -39,11 +39,12 @@ main(argc, argv)
 	 */
 	printf("`%4s'    `% 4s'    `%-4s'\n", "aa", "bb", "cc");
 	printf("`%*s'    `% *s'    `%-*s'\n", 4, "aa", 4, "bb", 4, "cc");
-	printf("`%*s'    `% *s'    `%-*s'\n", 4, "aaaaXXX", 4, "bbbbXXX", 4, "ccccXXX");
+	printf("`%*s' `% *s' `%-*s'\n", 4, "aaaaXXX", 4, "bbbbXXX", 4, "ccccXXX");
 	printf("`%*.*s'    `% *.*s'    `%-*.*s'\n", 2, 4, "aaaaXXX", 2, 4, "bbbbXXX", 2, 4, "ccccXXX");
 	printf("`%*.*s'    `% *.*s'    `%-*.*s'\n", 4, 2, "aaaaXXX", 4, 2, "bbbbXXX", 4, 2, "ccccXXX");
 	printf("`%4.*s'    `% 4.*s'    `%-4.*s'\n", 2, "aaaaXXX", 2, "bbbbXXX", 2, "ccccXXX");
 	printf("`%.*s'    `% .*s'    `%-.*s'\n", 4, "aaaaXXX", 4, "bbbbXXX", 4, "ccccXXX");
+	printf("`%.*s'      `% .*s'      `%-.*s'\n", 4, "aa", 4, "bb", 4, "cc");
 	putchar('\n');
 
 	/*
