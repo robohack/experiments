@@ -1,46 +1,60 @@
 #!/bin/sh
 
-DATE=date
-DATER="${DATE} -r 0"
+DATE="date"
+DATER0="${DATE} -r 0"
 CAT=cat
-CATV="${CAT} -v"
+CATVT="${CAT} -vt"
 
+STDC="%c"
 ISO8601='%Y-%m-%dT%H:%M:%SZ'
-TAB=$(printf '\t')
 
-# Lesson:  Don't put code in a variable -- put it in a function!
-DATEALL ()
-{
-	${DATE} -r 0 "+foo${TAB}${ISO8601}${TAB}none"
-}
-echo "plain '${DATE}' and ${DATER}"
+TAB=`printf '\t'`
 
 TZ=0
 export TZ
 
-${DATE}
-${DATER}
-${DATER} +"foo${TAB}${ISO8601}${TAB}none"
+DATEALL ()
+{
+	${DATER0} "+foo${TAB}${ISO8601}${TAB}none"
+}
+
+DATEP ()
+{
+	${DATER0} "$@"
+}
+
+echo
+echo 'a run of "${DATER0}", "${DATER0}" plus fmt, and the functions "DATEALL" and "DATEP":'
+echo
+
+${DATER0}
+${DATER0} +"foo${TAB}${ISO8601}${TAB}none"
 DATEALL
+DATEP +"foo${TAB}${ISO8601}${TAB}none"
 
-echo "through a pipe to cat"
-${DATE} | ${CAT}
-${DATER} | ${CAT}
-${DATER} | ${CATV}
-${DATER} \
-	+"foo${TAB}${ISO8601}${TAB}none" | \
-	${CAT}
-DATEALL | ${CAT}
+echo
+echo "now each through a pipe to '${CATVT}':"
+echo
 
-echo "through a pipe to while"
-${DATE} | while read txt; do
-	echo "Read: ${txt}"
+${DATER0} | ${CATVT}
+${DATER0} +"foo ${ISO8601} none" | ${CATVT}
+${DATER0} +"foo${TAB}${ISO8601}${TAB}none" | ${CATVT}
+DATEALL | ${CATVT}
+DATEP +"foo${TAB}${ISO8601}${TAB}none" | ${CATVT}
+
+echo
+echo "now through a pipe to 'while read':"
+echo
+
+${DATER0} | while read txt more; do
+		echo "Read: ${txt}"
+		if [ -n "$more" ]; then
+			echo "read: got more: '$more' (as expected)"
+		fi
 	done
-${DATER} | while read txt; do
-	echo "Read: ${txt}"
-	done
-${DATER} +"foo${TAB}${ISO8601}${TAB}none" | \
-	while read foo txt none; do
+# XXX wasn't this supposed to fail somehow?!?!?!?
+${DATER0} +"foo ${ISO8601} none" | \
+	while read foo txt none more; do
 		if [ "${foo}" != "foo" ]; then
 			echo "read: field splitting failed: '${foo}' != 'foo'"
 		fi
@@ -48,10 +62,26 @@ ${DATER} +"foo${TAB}${ISO8601}${TAB}none" | \
 			echo "read: field splitting failed: '${none}' != 'none'"
 		fi
 		echo "Read: '${txt}'"
+		if [ -n "$more" ]; then
+			echo "read: got more: '$more' (as expected)"
+		fi
 	done
-
+# XXX wasn't this supposed to fail too?!?!?!?
+${DATER0} +"foo${TAB}${ISO8601}${TAB}none" | \
+	while read foo txt none more; do
+		if [ "${foo}" != "foo" ]; then
+			echo "read: field splitting failed: '${foo}' != 'foo'"
+		fi
+		if [ "${none}" != "none" ]; then
+			echo "read: field splitting failed: '${none}' != 'none'"
+		fi
+		echo "Read: '${txt}'"
+		if [ -n "$more" ]; then
+			echo "read: got more: '$more' (NOT EXPECTED!)"
+		fi
+	done
 DATEALL | \
-	while read foo txt none; do
+	while read foo txt none more; do
 		if [ "${foo}" != "foo" ]; then
 			echo "read: field splitting failed: '${foo}' != 'foo'"
 		fi
@@ -59,4 +89,27 @@ DATEALL | \
 			echo "read: field splitting failed: '${none}' != 'none'"
 		fi
 		echo "Read: '${txt}'"
+		if [ -n "$more" ]; then
+			echo "read: got more: '$more' (NOT EXPECTED!)"
+		fi
 	done
+DATEP +"foo${TAB}${ISO8601}${TAB}none" | \
+	while read foo txt none more; do
+		if [ "${foo}" != "foo" ]; then
+			echo "read: field splitting failed: '${foo}' != 'foo'"
+		fi
+		if [ "${none}" != "none" ]; then
+			echo "read: field splitting failed: '${none}' != 'none'"
+		fi
+		echo "Read: '${txt}'"
+		if [ -n "$more" ]; then
+			echo "read: got more: '$more' (NOT EXPECTED!)"
+		fi
+	done
+
+# Change the leading "sh" to whatever other shell you want to test...
+#
+# Local Variables:
+# eval: (make-local-variable 'compile-command)
+# compile-command: (concat "sh ./" (file-name-nondirectory (buffer-file-name)))
+# End:
