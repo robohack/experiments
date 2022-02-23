@@ -1,3 +1,12 @@
+/*
+ * The Baudot Code was originally patented by Émile Baudot in 1872.  It defines
+ * one character control sequence: "delete", which lives on in our terminals
+ * (i.e. terminal emulators) as ASCII character DEL (0x7F).
+ *
+ * Baudot's name also gives us the "baud" rate that this little C funcion parses.
+ *
+ * One continuous connection from the now distant past to the present!
+ */
 int
 parse_baudrate(int requested)
 {
