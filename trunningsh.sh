@@ -29,24 +29,18 @@ for var in "${@}"; do
 ${var}"
 done
 
-echo $0: \${1+\"\${@}\"}: ${1+"${@}"}
-echo $0: \"\${@}\": "${@}"
-
-# remove all arguments after any that is "n" (ash/sh set "n" to empty)
-# xxx pdksh cannot do this and gives a 'bad substitution' error
-# xxx ksh93 and bash only set the "n" to emptyness leaving rest
-# xxx dash (0.5.7-3) does not emit the empty argument in place of "n"
-echo $0: \${1+\"\${@%n}\"}: ${1+"${@%n}"}
-echo $0: \"\${@%n}\": "${@%n}"
+echo $0: \${1+\"\${@}\"}':	'${1+"${@}"}
+echo $0: \"\${@}\"':	'"${@}"
 
 echo ""
 echo "all-args:"
 
 c=0
 for i in "${@}"; do
-	c=$(expr ${c} + 1)
+	c=`expr ${c} + 1`
 	echo "arg #${c}: \"${i}\""
 done
+
 
 echo ""
 echo "Implied-args:"
@@ -54,7 +48,7 @@ echo "Implied-args:"
 c=0
 for i
 do
-	c=$(expr ${c} + 1)
+	c=`expr ${c} + 1`
 	echo "implied arg #${c}: \"${i}\""
 done
 
@@ -64,35 +58,28 @@ if [ ${#} -ne ${c}  ]; then
 	exit 1
 fi
 
+
 echo ""
-echo "arg-less-n:"
+echo "Implied-args-one-line:"
 
-# remove all arguments after any that is "n"
 c=0
-for i in "${@%n}"; do
-	c=$(expr ${c} + 1)
-	echo "arg-less-n #${c}: \"${i}\""
-done
-
-echo "again:"
-
-c2=0
-for i in ${1+"${@%n}"}; do
-	c2=$(expr ${c2} + 1)
-	echo "arg-less-n #${c2}: \"${i}\""
+for i do
+	c=`expr ${c} + 1`
+	echo "implied arg one line #${c}: \"${i}\""
 done
 
 # xxx this may or may not be right...
-if [ ${c2} -ne ${c}  ]; then
-	echo "WARNING:  your shell needs to use the \${1+\"\${0%n)\" trick!"
+if [ ${#} -ne ${c}  ]; then
+	echo "WARNING:  your shell needs to use the \${1+\"\${0)\" trick!"
 	exit 1
 fi
+
 
 echo ""
 echo "orig-via-plain:"
 c=0
 for i in ${PLAIN_ARGV}; do
-	c=$(expr ${c} + 1)
+	c=`expr ${c} + 1`
 	echo "args-via-plain #${c}: \"${i}\""
 done
 
@@ -106,10 +93,11 @@ IFS="
 "
 c=0
 for i in ${ORIG_ARGV}; do
-	c=$(expr ${c} + 1)
+	c=`expr ${c} + 1`
 	echo "args-via-var #${c}: \"${i}\""
 done
 IFS=${Sifs}
+
 
 echo ""
 echo "orig-via-var-and-set:"
@@ -128,9 +116,10 @@ IFS=${Sifs}
 
 c=0
 for i in "${@}"; do
-	c=$(expr ${c} + 1)
+	c=`expr ${c} + 1`
 	echo "args-via-var-@ #${c}: \"${i}\""
 done
+
 
 echo ""
 echo "orig-via-var-and-set-implied:"
@@ -150,9 +139,66 @@ IFS=${Sifs}
 c=0
 for i
 do
-	c=$(expr ${c} + 1)
+	c=`expr ${c} + 1`
 	echo "args-via-var-implied #${c}: \"${i}\""
 done
+
+
+echo ""
+echo "orig-via-var-and-set-implied-one-line:"
+
+# properly pass parameters via a variable
+# (see above for setting it with newlines)
+
+# xxx Zsh 4.3.17) messes this up badly
+
+Sifs=${IFS}
+# set IFS to a newline as per ORIG_ARGV setup
+IFS="
+"
+set -- ${ORIG_ARGV}
+IFS=${Sifs}
+
+c=0
+for i do
+	c=`expr ${c} + 1`
+	echo "args-via-var-implied-one-line #${c}: \"${i}\""
+done
+
+
+echo ""
+
+# remove all arguments after any that is "n" (ash/sh set "n" to empty)
+# xxx Heirloom, pdksh, and bosh cannot do this and give a 'bad substitution' error
+# xxx ksh93 and bash only set the "n" to emptyness leaving rest
+# xxx dash (0.5.7-3) does not emit the empty argument in place of "n"
+echo $0: \${1+\"\${@%n}\"}':	'${1+"${@%n}"}
+echo $0: \"\${@%n}\"':	'"${@%n}"
+
+echo ""
+echo "arg-less-n:"
+
+# remove all arguments after any that is "n"
+c=0
+for i in "${@%n}"; do
+	c=`expr ${c} + 1`
+	echo "arg-less-n #${c}: \"${i}\""
+done
+
+echo "again:  (with \${!+\"\$@\"})"
+
+c2=0
+for i in ${1+"${@%n}"}; do
+	c2=`expr ${c2} + 1`
+	echo "arg-less-n #${c2}: \"${i}\""
+done
+
+# xxx this may or may not be right...
+if [ ${c2} -ne ${c}  ]; then
+	echo "WARNING:  your shell needs to use the \${1+\"\${0%n)\" trick!"
+	exit 1
+fi
+
 
 echo ""
 echo "arg-less-t-optarg:"
@@ -183,11 +229,11 @@ for var in ${ORIG_ARGV}; do
 	set -- "${@}" "${var}"
 done
 IFS=${Sifs}
-echo ""
+echo "result:"
 c=0
 for i in "${@}"; do
-	c=$(expr ${c} + 1)
-	echo "arg-less-'-t optarg' #${c}: \"${i}\""
+	c=`expr ${c} + 1`
+	echo "arg-less-opt-optarg: '-t optarg' #${c}: \"${i}\""
 done
 
 # Local Variables:
