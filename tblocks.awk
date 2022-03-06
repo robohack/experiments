@@ -33,5 +33,5 @@ BEGIN {
 
 # Local Variables:
 # eval: (make-local-variable 'compile-command)
-# compile-command: (concat "echo $PATH; echo $PATH | awk -f " (file-name-nondirectory (buffer-file-name)) " | dd count=1024 | od -c")
+# compile-command: (concat "awk -f " (file-name-nondirectory (buffer-file-name)) " | dd count=1024 | od -c")
 # End:
