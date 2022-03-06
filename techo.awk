@@ -1,13 +1,15 @@
 #!/usr/bin/awk -f
 
-# Simulate echo(1), from awk(1)
+# Mostly simulate echo(1), from awk(1)
 
 BEGIN {
 	for (i = 1; i < ARGC; i++) {
 		printf("%s ", ARGV[i]);
 	}
 	printf "\n"
-	# awk will exit if there's no other pattern+action code blocks than BEGIN{}
+
+	# awk will exit if there are no other pattern+action code blocks than BEGIN{}
+#	exit;
 }
 
 # Local Variables:
