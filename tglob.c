@@ -1,6 +1,8 @@
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <glob.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -28,11 +30,12 @@ makefile(const char *dn,
 static bool
 test_in_symlink_to_dir(void)
 {
-	char dfn[128] = "";
-	char lfn[128] = "";
+	char dfn[PATH_MAX] = "";
+	char lfn[PATH_MAX] = "";
 	char *fn1;
 	char *fn2;
 	int ret;
+	bool failed;
 	size_t i;
 	glob_t pglob;
 
@@ -59,7 +62,7 @@ test_in_symlink_to_dir(void)
 	 * This is effectively what CVS does to find "*,v" files in modules, and
 	 * if a module directory is a symlink then this should still work....
 	 *
-	 * XXX However on NetBSD this does not work!
+	 * XXX However at once upon a time on NetBSD (5.2?) this did not work!
 	 *
 	 * But it does work with:
 	 *
@@ -86,7 +89,46 @@ test_in_symlink_to_dir(void)
 	unlink(lfn);
 	rmdir(dfn);
 
-	return (pglob.gl_pathc != 2);
+	failed = (pglob.gl_pathc != 2);
+
+	globfree(&pglob);
+
+	return failed;
+}
+
+static bool
+list_files(const char *path, const char *pattern)
+{
+	char	fpath[PATH_MAX];
+	glob_t	globbed;
+	int	i;
+	size_t  j;
+
+	(void) snprintf(fpath, sizeof(fpath), "%s/%s", path, pattern);
+
+	if ((i = glob(fpath, GLOB_NOSORT, NULL, &globbed)) != 0) {
+		switch (i) {
+		case GLOB_NOMATCH:
+			warn("no files matching ``%s'' found", fpath);
+			break;
+		case GLOB_ABORTED:
+			warn("globbing aborted");
+			break;
+		case GLOB_NOSPACE:
+			warn("out-of-memory during globbing");
+			break;
+		default:
+			warn("unknown error during globbing");
+			break;
+		}
+		return true;
+	}
+	for (j = 0; j < globbed.gl_pathc; j++) {
+		printf("file #%zu: %s\n", (intmax_t) j, globbed.gl_pathv[j]);
+	}
+	globfree(&globbed);
+
+	return false;
 }
 
 /*
@@ -98,6 +140,7 @@ test_dangling_symlink_matching(void)
 	char lfn1[128] = "";
 	char lfn2[128] = "";
 	int ret;
+	bool failed = false;
 	size_t i;
 	glob_t pglob;
 
@@ -108,6 +151,8 @@ test_dangling_symlink_matching(void)
 	strlcpy(lfn2, "/tmp/testsymlink.XXXXXX", sizeof(lfn2));
 	mktemp(lfn2);
 	symlink("/usr", lfn2);          /* an existing file! */
+
+	failed = list_files("/tmp", "testsymlink.*");
 
 	chdir("/tmp");
 	ret = glob("testsymlink.*", 0, 0, &pglob);
@@ -120,11 +165,13 @@ test_dangling_symlink_matching(void)
 	for (i = 0; i < pglob.gl_pathc; i++) {
 		printf("%s: pglob.gl_pathv[%ju] = \"%s\"\n", __func__, (uintmax_t) i, pglob.gl_pathv[i]);
 	}
+
 	unlink(lfn1);
 	unlink(lfn2);
 
-	return (pglob.gl_pathc != 2);
+	return failed | (pglob.gl_pathc != 2);
 }
+
 
 int
 main()
