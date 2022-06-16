@@ -431,6 +431,71 @@ main()
 	printf("MAXSINT(long long)   = %20lld, LLONG_MAX =  %20lld\n",
 	       (long long) MAXSINT(long long), (long long) LLONG_MAX);
 
+
+#ifdef __CHAR_WIDTH__
+	printf("char is %u-bit\n", (unsigned int) __CHAR_WIDTH__);
+#endif
+#ifdef __SCHAR_WIDTH__
+	printf("schar is %u-bit\n", (unsigned int) __SCHAR_WIDTH__);
+#endif
+#ifdef __WCHAR_WIDTH__
+	printf("wchar is %u-bit\n", (unsigned int) __WCHAR_WIDTH__);
+#endif
+#ifdef __SHRT_WIDTH__
+	printf("short is %u-bit\n", (unsigned int) __SHRT_WIDTH__);
+#endif
+#ifdef __INTMAX_WIDTH__
+	printf("intmax is %u-bit\n", (unsigned int) __INTMAX_WIDTH__);
+#endif
+#ifdef __INTPTR_WIDTH__
+	printf("intptr is %u-bit\n", (unsigned int) __INTPTR_WIDTH__);
+#endif
+#ifdef __PTRDIFF_WIDTH__
+	printf("pgrdiff is %u-bit\n", (unsigned int) __PTRDIFF_WIDTH__);
+#endif
+#ifdef __INT_WIDTH__
+	printf("int is %u-bit\n", (unsigned int) __INT_WIDTH__);
+#endif
+#ifdef __INT_FAST8_WIDTH__
+	printf("int_fast8 is %u-bit\n", (unsigned int) __INT_FAST8_WIDTH__);
+#endif
+#ifdef __INT_FAST16_WIDTH__
+	printf("int_fast16 is %u-bit\n", (unsigned int) __INT_FAST16_WIDTH__);
+#endif
+#ifdef __INT_FAST32_WIDTH__
+	printf("int_fast32 is %u-bit\n", (unsigned int) __INT_FAST32_WIDTH__);
+#endif
+#ifdef __INT_FAST64_WIDTH__
+	printf("int_fast64 is %u-bit\n", (unsigned int) __INT_FAST64_WIDTH__);
+#endif
+#ifdef __INT_LEAST8_WIDTH__
+	printf("int_least8 is %u-bit\n", (unsigned int) __INT_LEAST8_WIDTH__);
+#endif
+#ifdef __INT_LEAST16_WIDTH__
+	printf("int_least16 is %u-bit\n", (unsigned int) __INT_LEAST16_WIDTH__);
+#endif
+#ifdef __INT_LEAST32_WIDTH__
+	printf("int_least32 is %u-bit\n", (unsigned int) __INT_LEAST32_WIDTH__);
+#endif
+#ifdef __INT_LEAST64_WIDTH__
+	printf("int_least64 is %u-bit\n", (unsigned int) __INT_LEAST64_WIDTH__);
+#endif
+#ifdef __WINT_WIDTH__
+	printf("wint is %u-bit\n", (unsigned int) __WINT_WIDTH__);
+#endif
+#ifdef __LONG_WIDTH__
+	printf("long is %u-bit\n", (unsigned int) __LONG_WIDTH__);
+#endif
+#ifdef __LONG_LONG_WIDTH__
+	printf("long long is %u-bit\n", (unsigned int) __LONG_LONG_WIDTH__);
+#endif
+#ifdef __SIG_ATOMIC_WIDTH__
+	printf("sig_atomic is %u-bit\n", (unsigned int) __SIG_ATOMIC_WIDTH__);
+#endif
+#ifdef __SIZE_WIDTH__
+	printf("size is %u-bit\n", (unsigned int) __SIZE_WIDTH__);
+#endif
+
 	exit(0);
 }
 
