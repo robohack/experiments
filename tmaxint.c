@@ -345,8 +345,10 @@ main()
 	       (unsigned long long) MAX_INT(time_t));
 	printf("MAX_INT(off_t)       = 0x%18llx\n",
 	       (unsigned long long) MAX_INT(off_t));
+#if 0 /* xxx fpos_t is a struct on some systems! */
 	printf("MAX_INT(fpos_t)      = 0x%18llx\n",
 	       (unsigned long long) MAX_INT(fpos_t));
+#endif
 	printf("MAX_INT(size_t)      = 0x%18llx\n",
 	       (unsigned long long) MAX_INT(size_t));
 	printf("MAX_INT(ssize_t)     = 0x%18llx\n",
