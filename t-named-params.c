@@ -64,14 +64,67 @@ _nba_find(struct _find_args fa)
 #include <nba.h>
  */
 
-int main(void);
+struct stuff {
+	int x;
+	int y;
+	int z;
+};
+
+static void
+print_stuff(struct stuff *sptr)
+{
+	printf("%p: x=%d, y=%d, z=%d\n", (void *) sptr, sptr->x, sptr->y, sptr->z);
+}
 
 /*
- * Finally here are a couple of example use cases.
- *
- * The caller uses the Find() macro (notice the capitalization) to provide one
- * or more parameters.
+ * show that the storage for a struct literal is ephemeral and sometimes reused
  */
+static void
+stuff_storage(void)
+{
+	int i;
+	struct stuff *a_of_p[10];
+	struct stuff a_of_s[10];
+
+	printf("Direct:    ");
+	print_stuff(&(struct stuff) { .z = 9, .x = 8, .y = 7 });
+
+	for (i = 0; i < 10; i++) {
+		/*
+		 * The storage for the struct literal used here may be reused
+		 * every time the loop is executed, and may even be the same as
+		 * the one above:
+		 */
+		a_of_p[i] = &(struct stuff) { .z = i, .y = 2, .x = 1};
+		/*
+		 * Here's the safe usage where we copy the literal into an auto
+		 * allocated array of structs:
+		 */
+		a_of_s[i] = (struct stuff) { .z = i, .y = 2, .x = 1};
+		printf("a_of_p[%d]: ", i);
+		print_stuff(a_of_p[i]);
+		printf("a_of_s[%d]: ", i);
+		print_stuff(&a_of_s[i]);
+	}
+
+	putchar('\n');
+	printf("Trying to print everything again:\n");
+	printf("Direct2:   ");
+	/*
+	 * sometimes this literal uses the same storage as one of the ones
+	 * above:
+	 */
+	print_stuff(&(struct stuff) { .z = 5, .y = 4, .x = 6 });
+	for (i = 0; i < 10; i++) {
+		printf("a_of_p[%d]: ", i);
+		print_stuff(a_of_p[i]);
+		printf("a_of_s[%d]: ", i);
+		print_stuff(&a_of_s[i]);
+	}
+}
+
+int main(void);
+
 int
 main()
 {
@@ -93,6 +146,9 @@ main()
 			.name = n
 		);
 	}
+
+	putchar('\n');
+	stuff_storage();
 
 	exit(0);
 }
