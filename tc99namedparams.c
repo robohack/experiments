@@ -3,7 +3,13 @@
 #include <string.h>
 
 /*
- *	Mostly taken from Tony Finch:
+ * This is kind of over-kill, but demonstrates how to use C99's
+ * ".../__VA_ARGS__" macro features to implement a slightly cleaner appearing
+ * calls to functions with named arguments.
+ *
+ * See also t-named-params.c
+ *
+ * This example is mostly taken from Tony Finch:
  *
  *	Named and optional function arguments in Std-C99
  *	[[by abusing initializers]]
@@ -42,10 +48,10 @@ typedef unsigned int  uint;		/* as it should always have been... */
  */
 
 struct repeat_params {
-	void	*appctx;/* must be first and be optional (with a default value) or an un-used dummy */
-	char	*str;	/* first usable-as-positional param must be preceded by dummy/default one */
-	uint	 n;	/* rest can be used positionally, and can have defaults */
-	char	*sep;
+	void		*appctx;/* must be first and be optional (with a default value) or an un-used dummy */
+	const char	*str;	/* first usable-as-positional param must be preceded by dummy/default one */
+	uint	 	n;	/* rest can be used positionally, and can have defaults */
+	const char	*sep;
 };
 
 /*
@@ -96,9 +102,9 @@ repeat(struct repeat_params p)
  */
 static inline char *
 repeat2_impl(void	*appctx,
-             char	*str,
+             const char	*str,
              uint	 n,
-             char	*sep)
+             const char	*sep)
 {
 	char	*r;
 
