@@ -37,8 +37,11 @@ void
 _nba_find(struct _find_args fa)
 {
 
-	printf("Search criteria:\n");
+	printf("Criteria:\n");
 
+	/*
+	 * testing against default initializers shows all params are optional
+	 */
 	if (fa.name != NULL) {
 		printf("\tName: [%s]\n", fa.name);
 	}
@@ -76,6 +79,10 @@ main()
 	const char *names[] = {"Albert", "Jane", NULL};
 	int i;
 
+	/*
+	 * The caller uses the NbaFind() macro (notice the capitalization) to
+	 * provide one or more parameters.
+	 */
 	NbaFind(
 		.min_age = 16,
 		.max_age = 20
