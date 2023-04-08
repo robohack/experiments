@@ -15,7 +15,7 @@
 # define _NBA_H
 
 struct _find_args {
-	char *name;
+	const char *name;
 	unsigned int min_age;
 	unsigned int max_age;
 };
@@ -72,8 +72,8 @@ int main(void);
 int
 main()
 {
-	char *n;
-	char *names[] = {"Albert", "Jane", NULL};
+	const char *n;
+	const char *names[] = {"Albert", "Jane", NULL};
 	int i;
 
 	NbaFind(
