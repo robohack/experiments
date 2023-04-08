@@ -2,6 +2,8 @@
  * idea and example from:
  *
  *	http://mina.naguib.ca/blog/2010/12/09/c-optional-and-name-based-arguments.html
+ *
+ * See also tc99namedparams.c
  */
 
 #include <stdio.h>
