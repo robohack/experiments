@@ -18,55 +18,6 @@
 #
 # Pkgsrc will install on a vast number of systems, including MS-Windows with
 # Cygwin.  Simon's Bmake works on many Unix-like systems.
-#
-# Note:  You can use MAKEOBJDIRPREFIX as so to build everything elsewhere, even
-# withing a single sub-directory of the top of the source tree (i.e. instead of
-# polluting the rest of the source tree with "obj" sub-directories):
-#
-#	mkdir build
-#	bsdmake MAKEOBJDIRPREFIX=$(pwd)/build
-#
-# However doing so more or less implies always invoking the build at the top of
-# the source tree, with MAKEOBJDIRPREFIX set either on the command-line or in
-# the environment).
-#
-# If you don't use MAKEOBJDIRPREFIX then "obj.${MACHINE}" sub-directories will
-# be created for each directory with products, except on OSX where the "bsdmake
-# obj" facility is somewhat broken and by default either assumes "/usr/obj"
-# exists (on older systems with a native "bsdmake"), or uses
-# "/usr/local/Cellar/bsdmake/24/obj" for systems with Apple "bsdmake" installed
-# by Homebrew.  You can avoid this by creating "obj.${MACHINE}" sub-directories
-# in every source sub-directory first, like this (assuming you're using git):
-#
-#	find . -type d -name .git -prune -o -type d ! -name .git ! -name 'obj.*' ! -name . -exec mkdir {}/obj.$(uname -m) \;
-#
-# Then use "bsdmake NO_OBJ=yes" to build, etc.
-#
-# If you want to (as would be sane to do) go back to using a 'build' directory
-# then you can remove all the obj.* detritus with:
-#
-#	find . -type d -name .git -prune -o -type d ! -name .git ! -name 'obj.*' ! -name . -exec rm -rf {}/obj.$(uname -m) \;
-#
-# N.B.:  Some variants of BSD Make treat $MAKEOBJDIR as a sub-directory under
-# /usr/obj, and others treat it as a sub-directory under ${.CURDIR}.  You have
-# been warned.  Just use $MAKEOBJDIRPREFIX.
-#
-# If you use MAKEOBJDIRPREFIX then to install the results into a "dist" subtree
-# (which you can then distribute as a binary distribution that can be un-packed
-# wherever desired) you can do:
-#
-#	bsdmake MAKEOBJDIRPREFIX=$(pwd)/build DESTDIR=$(pwd)/dist install
-#
-# If you don't use MAKEOBJDIRPREFIX, then it's just:
-#
-#	bsdmake DESTDIR=$(pwd)/dist install
-#
-# DESTDIR can of course be any directory, e.g. /usr/local.
-#
-# (This is not the normal use of DESTDIR in BSD Make, but it is the best way for
-# out-of-tree builds, and it does not get in the way of pkgsrc either.)
-#
-# N.B.:  Do not specify DESTDIR for the build phase!
 
 .if exists(/usr/share/mk/bsd.own.mk) || \
     exists(/usr/pkg/share/mk/bsd.own.mk) || \
