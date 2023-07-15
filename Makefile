@@ -20,6 +20,15 @@
 # Pkgsrc will install on a vast number of systems, including MS-Windows with
 # Cygwin.  Simon's Bmake works on many Unix-like systems.
 
+# You can define USE_UBSAN or USE_ASAN on the command line to enable the
+# Undefined or Address sanitizers with recent enough Clang or GCC.  Note if your
+# system supports these you may of course use its way of enabling them instead
+# (e.g. on NetBSD set "MKSANITIZER=yes USE_SANITIZER=address").
+#
+# N.B.:  The address sanitizer is not available when the PaX ASLR (Address Space
+# Layout Randomization) feature is enabled on a given system, but it can be
+# disabled for a given binary with paxctl(8):  paxctl +a ${prog}
+
 .if exists(/usr/share/mk/bsd.own.mk) || \
     exists(/usr/pkg/share/mk/bsd.own.mk) || \
     exists(/usr/pkg/share/mk/bsdmake/bsd.own.mk) || \
@@ -35,7 +44,7 @@
 MAN =	# empty
 
 #
-# find all CC pre-defines with:
+# You can usually find all CC pre-defines with:
 #
 #	echo "" | cc -E -dM -x c - | sort
 #
@@ -51,38 +60,38 @@ MAN =	# empty
 # N.B.:  these tricks do not work for lcc
 
 .if !defined(__GNUC__)
-__GNUC__ !=		echo __GNUC__ | $(CC) -E -c - | sed '/\#/d;s/__GNUC__//'
+__GNUC__ !=		echo __GNUC__ | $(CC) -E - | sed '/\#/d;s/__GNUC__//'
 .endif
 .if empty(__GNUC__)
 . undef __GNUC__
 .else
 . if !defined(__GNUC_MINOR__)
-__GNUC_MINOR__ !=	echo __GNUC_MINOR__ | $(CC) -E -c - | sed '/\#/d;s/__GNUC_MINOR__//'
+__GNUC_MINOR__ !=	echo __GNUC_MINOR__ | $(CC) -E - | sed '/\#/d;s/__GNUC_MINOR__//'
 . endif
 . if !defined(__GNUC_PATCHLEVEL__)
-__GNUC_PATCHLEVEL__ !=	echo __GNUC_PATCHLEVEL__ | $(CC) -E -c - | sed '/\#/d;s/__GNUC_PATCHLEVEL__//'
+__GNUC_PATCHLEVEL__ !=	echo __GNUC_PATCHLEVEL__ | $(CC) -E - | sed '/\#/d;s/__GNUC_PATCHLEVEL__//'
 . endif
 .endif
 
 # Note: for now Clang also defines the __GNUC*__ macros above...
 
 # Note: on all recent Mac OS X (and soon FreeBSD), "cc" is "clang"
-# On Mac OS X 10.8 "gcc" is actually "llvm-gcc" too!
+# On Mac OS X 10.8 and newer "gcc" is actually "llvm-gcc" too!
 
 .if !defined(__clang__)
-__clang__ !=		echo __clang__ | $(CC) -E -c - | sed '/\#/d;s/__clang__//'
+__clang__ !=		echo __clang__ | $(CC) -E - | sed '/\#/d;s/__clang__//'
 .endif
 .if empty(__clang__)
 . undef __clang__
 .else
 . if !defined(__clang_major__)
-__clang_major__ !=	echo __clang_major__ | $(CC) -E -c - | sed '/\#/d;s/__clang_major__//'
+__clang_major__ !=	echo __clang_major__ | $(CC) -E - | sed '/\#/d;s/__clang_major__//'
 . endif
 . if !defined(__clang_minor__)
-__clang_minor__ !=	echo __clang_minor__ | $(CC) -E -c - | sed '/\#/d;s/__clang_minor__//'
+__clang_minor__ !=	echo __clang_minor__ | $(CC) -E - | sed '/\#/d;s/__clang_minor__//'
 . endif
 . if !defined(__clang_patchlevel__)
-__clang_patchlevel__ !=	echo __clang_patchlevel__ | $(CC) -E -c - | sed '/\#/d;s/__clang_patchlevel__//'
+__clang_patchlevel__ !=	echo __clang_patchlevel__ | $(CC) -E - | sed '/\#/d;s/__clang_patchlevel__//'
 . endif
 .endif
 
@@ -98,8 +107,25 @@ __GNULD__ !=		$(LD) -v | awk '{print int($$4);}' | tr -d ' \012'
 . endif
 .endif
 
-NOGCCERROR = 1
-WARNS = 0
+# Note:  FreeBSD's mk-files (<bsd.sys.mk>) use this directly
+#
+CSTD ?= c99
+
+.if !empty(unix:M*NetBSD*)
+# prevent NetBSD's mk-files from adding -std=gnu99 to CFLAGS
+COVERITY_TOP_CONFIG =	1
+.endif
+
+# In general for "experiments" we don't want -Werror
+#
+NOGCCERROR ?= 1
+
+# I do not usually use any system-supplied "WARNS" level.
+#
+# On recent NetBSD a high enough setting includes "-Wundef", which then
+# complains about numerous issues in system headers!
+#
+WARNS ?= 0
 
 # -Winline
 #
@@ -222,81 +248,111 @@ CWARNFLAGS += -fmessage-length=0
 . if ${__clang_major__} <= 5
 CWARNFLAGS += -fcatch-undefined-behavior
 .  if ${__clang_major__} == 4 || (${__clang_major__} == 3 && ${__clang_minor__} >= 3)
+.   if defined(USE_UBSAN)
 # i.e. clang 3.3 or clang 4.x (but not clang 5.x)
 CWARNFLAGS += -fsanitize=undefined
+.   endif
 .  endif
 . else
 .  if ${__clang_major__} >= 7
 # N.B.:  It is not possible to combine more than one of the -fsanitize=address,
 # -fsanitize=thread, and -fsanitize=memory checkers in the same program.
-#xxx 'address' may not work (requires intrumentation of all program code)
-#CWARNFLAGS += -fsanitize=address
-##CWARNFLAGS += -fsanitize-address-use-after-scope
+.   if defined(USE_UBSAN)
 # sadly Apple LLVM version 8.1.0 (clang-802.0.42) says:
-#   clang: error: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin16.6.0'
-# manual says:  MemorySanitizer is supported on Linux x86_64/MIPS64/AArch64
-#CWARNFLAGS += -fsanitize=memory -fsanitize-memory-track-origins=2
+# clang: error: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin16.6.0'
+#CWARNFLAGS += -fsanitize=memory
 #CWARNFLAGS += -fsanitize=thread
 CWARNFLAGS += -fsanitize=undefined
-CWARNFLAGS += -fno-omit-frame-pointer
 # Apple LLVM version 8.1.0 (clang-802.0.42) says:
 # ld: file not found: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/8.1.0/lib/darwin/libclang_rt.safestack_osx.a
 # clang: error: linker command failed with exit code 1 (use -v to see invocation)
 #CWARNFLAGS += -fsanitize=safe-stack
 #xxx this may not be useful?
 #CWARNFLAGS += -fsanitize=dataflow --fsanitize=cfi
+.   endif
+.   if defined(USE_ASAN)
+#xxx 'address' may not work (requires intrumentation of all program code)
+CWARNFLAGS += -fsanitize=address
+# (may also require setting ASAN_OPTIONS in the runtime environment,
+# e.g. ASAN_OPTIONS=detect_leaks=1)
+.   endif
 .  else
 # clang > 5.0 < 7.x(?)
+.   if defined(USE_UBSAN)
 # Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn) says:
 #  clang: error: unsupported argument 'undefined' to option 'fsanitize='
 #CWARNFLAGS += -fsanitize=undefined
+.   endif
+.   if defined(USE_ASAN)
+# ???
+#CWARNFLAGS += -fsanitize=address
+.   endif
 .  endif
 . endif
-# n.b.:  for single-file targets this is a bit of an over-kill, but....
 # -fsanitize must also be provided to the linker (for hidden runtime libraries)
 LDFLAGS += ${CWARNFLAGS:M-fsanitize=*}
 .endif
 
 .if defined(__GNUC__) || defined(__clang__)
 # WARNING: C99 (and C11) allow compilers to perform optimizations based on the
-# "strict" aliasing, overflow, and enums rules which _will_ change the behaviour
-# of previously correct C90 and earlier code!
+# "strict aliasing" rules which _will_ change the behaviour of previously
+# correct C90 and earlier code!
 CFLAGS += -fno-strict-aliasing
+.endif
 
-. if (defined(__GNUC__) && \
-	${__GNUC__} >= 4 && ${__GNUC_MINOR__} >= 2)
-# WARNING:  Prevent the optimizer from assuming that the program
-# follows the strict signed overflow semantics permitted for the
-# language.
-CFLAGS += -fno-strict-overflow
+.if defined(__GNUC__) && !defined(__clang__)
+. if defined(USE_UBSAN)
+# xxx hmmmm which, exactly?
+.  if ${__GNUC__} >= 5
+CWARNFLAGS += -fsanitize=undefined
+# -fsanitize=undefined has sub-options
+CWARNFLAGS += -fsanitize=alignment
+CWARNFLAGS += -fsanitize=bool
+CWARNFLAGS += -fsanitize=bounds
+CWARNFLAGS += -fsanitize=enum
+CWARNFLAGS += -fsanitize=float-cast-overflow
+CWARNFLAGS += -fsanitize=float-divide-by-zero
+CWARNFLAGS += -fsanitize=integer-divide-by-zero
+CWARNFLAGS += -fsanitize=null
+CWARNFLAGS += -fsanitize=object-size
+CWARNFLAGS += -fsanitize=shift
+LDFLAGS += -fsanitize=undefined -pthread
+# xxx adding these _almost_ allows static linking on NetBSD, but for shm_open()
+# and shm_unlink() not being resolved from librt even when it is specified
+#LDADD += -lrt
+#LDADD += -pthread
+LDSTATIC := # empty -- undefined sanitizer effectively does not support static linking
+.  endif
+. endif
+. if defined(USE_ASAN)
+.  if ${__GNUC__} > 4 || \
+	(${__GNUC__} == 4 && ${__GNUC_MINOR__} >= 8)
+CWARNFLAGS += -fsanitize=address
+LDFLAGS += -fsanitize=address
+LDSTATIC := # empty -- address sanitizer does not support static linking
+.  endif
+. endif
+# N.B.:  LeakSanitizer is incompatible with -fsanitize=address and -fsanitize=thread
+# (may also require setting LSAN_OPTIONS in the runtime environment)
+. if defined(USE_LEAKSAN)
+LDFLAGS += -fsanitize=leak
+LDSTATIC := # empty -- leak sanitizer does not support static linking
 . endif
 .endif
 
-# XXX in GCC -fstrict-enums apparently only applies to C++
-.if defined(__GNUC__) && defined(__clang__)
-# WARNING:  Prevent the compiler from optimizing "using the assumption
-# that a value of enumerated type can only be one of the values of the
-# enumeration"
-CFLAGS += -fno-strict-enums
-.endif
-
-.if (defined(__GNUC__) && !defined(__clang__) && \
-	${__GNUC__} >= 4 && ${__GNUC_MINOR__} >= 2)
-# WARNING:  Force the compiler to always read the whole underlying value!
-CFLAGS += -fno-strict-volatile-bitfields
-.endif
-
 # N.B.:  -g3 is required if debugging is wanted while optimizing with -O2.
-DBUG ?= -g
-OPTIM ?= # empty
+DBG ?= -g3
+OPTIM ?= -O2
+
+# this will only have effect on BSDs, not Darwin/OSX/macOS, and it is added to
+# LDFLAGS by the system mk-files (sys.mk in general, but also <bsd.prog.mk>
+# sometimes.  Note that some of the sanitizers don't work when static-linked.
+#
 LDSTATIC ?= -static
 
 .if (defined(_HOST_OSNAME) && (${_HOST_OSNAME} == "Darwin")) || defined(.FreeBSD)
 # for both FreeBSD and Mac OS X....
 NO_SHARED = YES
-CFLAGS += ${DBUG}
-CFLAGS += ${OPTIM}
-CFLAGS += ${CPPFLAGS}
 .else
 NOSHARED = YES
 .endif
@@ -308,7 +364,7 @@ LDFLAGS += -Wl,--warn-common
 LDFLAGS += -Wl,--unresolved-symbols=report-all
 #LDFLAGS += -Wl,--error-unresolved-symbols
 . else
-.  if !empty(${DBUG:M-g})
+.  if !empty(${DBG:M-g})
 # hmmm....  GNU ld(1) doesn't need -g, but some linkers do
 #LDFLAGS += -Wl,-g
 .  endif
@@ -324,11 +380,54 @@ LDFLAGS += -Wl,--unresolved-symbols=report-all
 . include <bsd.prog.mk>
 .endif
 
+.if empty(CFLAGS:M*${DBG}*)
+CFLAGS += ${DBG}
+.endif
+.if empty(CFLAGS:M*${OPTIM}*)
+CFLAGS += ${OPTIM}
+.endif
+
+CFLAGS += -std=${CSTD}
+CFLAGS += ${CPPFLAGS}
+
 .if (defined(__GNUC__) && ${__GNUC__} >= 1) || \
 	(defined(__clang__) && ${__clang__} >= 1)
 . if empty(CFLAGS:M*-pipe*)
 CFLAGS +=	-pipe
 . endif
+.endif
+
+.if defined(__GNUC__) || defined(__clang__) && \
+	empty(CFLAGS:M*-fno-strict-aliasing*)
+# WARNING: C99 (and C11) allow compilers to perform optimizations based on the
+# "strict" aliasing, overflow, and enums rules which _will_ change the behaviour
+# of previously correct C90 and earlier code!
+CFLAGS += -fno-strict-aliasing
+
+. if (defined(__GNUC__) && \
+	${__GNUC__} >= 4 && ${__GNUC_MINOR__} >= 2) && \
+	empty(CFLAGS:M*-fno-strict-overflow*)
+# WARNING:  Prevent the optimizer from assuming that the program
+# follows the strict signed overflow semantics permitted for the
+# language.
+CFLAGS += -fno-strict-overflow
+. endif
+.endif
+
+# XXX in GCC -fstrict-enums apparently only applies to C++
+.if defined(__GNUC__) && defined(__clang__) && \
+	empty(CFLAGS:M*-fno-strict-enums*)
+# WARNING:  Prevent the compiler from optimizing "using the assumption
+# that a value of enumerated type can only be one of the values of the
+# enumeration"
+CFLAGS += -fno-strict-enums
+.endif
+
+.if (defined(__GNUC__) && !defined(__clang__) && \
+	${__GNUC__} >= 4 && ${__GNUC_MINOR__} >= 2) && \
+	empty(CFLAGS:M*-fno-strict-volatile-bitfields*)
+# WARNING:  Force the compiler to always read the whole underlying value!
+CFLAGS += -fno-strict-volatile-bitfields
 .endif
 
 # Dunno for sure if this is right, but Apple's PowerPC GCC-4.0.1 does not have
@@ -373,11 +472,12 @@ CFLAGS +=	-fstack-protector-all
 CWARNFLAGS +=	-Wstack-protector
 .endif
 
-# this is a hack for my own NetBSD releases where older versions don't include
-# CPPFLAGS in the LINK macro, so the ".c:" rule won't get CPPFLAGS (note: it's
-# tempting to include "&& empty(LINK.c:M*CPPFLAGS*)" in the expression, but that
-# won't work because empty() expands the variable entirely before applying
-# modifiers.)
+# This is a hack for my own NetBSD releases where older versions don't include
+# CPPFLAGS in the LINK macro, so the ".c:" rule won't get CPPFLAGS..
+#
+# (Note:  it's tempting to include "&& empty(LINK.c:M*CPPFLAGS*)" in the
+# expression, but that won't work because empty() expands the variable entirely
+# before applying modifiers.)
 .if !empty(unix:M*NetBSD*) && !defined(COMPILE_LINK.c)
 LDFLAGS += ${CPPFLAGS}
 .endif
@@ -389,6 +489,17 @@ LDFLAGS += ${_CCLINKFLAGS}
 .endif
 
 PATTERNS ?=	Makefile CStandard.c g*.c t*.awk t*.[ch] t*.c++ t*.sh t*.clisp t*.mk t*.go go.mod go.sum
+
+.if ((defined(_HOST_OSNAME) && (${_HOST_OSNAME} == "Darwin")) || \
+	(defined(OS) && (${OS} == "Darwin")) || \
+	(defined(.FreeBSD) && (${.FreeBSD} == "false")))
+#
+# xxx does Clang make .dSYM directories on FreeBSD too???
+#
+clean: 			macos-clean-dSYM
+macos-clean-dSYM:	.PHONY
+	rm -rf ${PROG}.dSYM
+.endif
 
 #DEST_RSH_HOSTS ?=	historically.local
 DEST_OpenSSH_HOSTS ?=	very.local central.weird.com # freebsd.local mail.reptiles.org
