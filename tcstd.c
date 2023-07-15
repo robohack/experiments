@@ -33,7 +33,23 @@ main()
 
 #ifdef __GNUC__
 	printf("__GNUC__ = %ld\n", (long) __GNUC__);
-	puts("Unfortunately GCC always supports its extensions\n-- use '-pedantic' to get warnings when/where they are used");
+	puts("Unfortunately GCC always supports most of its extensions\n-- use '-pedantic' to get warnings when/where they are used");
+	/*
+	 * __STRICT_ANSI__ is really just a hint to system header files to allow
+	 * them to avoid defining or declaring macros and/or symbols which are
+	 * not compatible with ISO C.  As noted above, language extensions
+	 * implemented by the compiler are always implemented, though warnings
+	 * can be enabled to let you know if you've used something non-standard
+	 * (though in the past there have been some bugs with these warnings not
+	 * always appearing!).
+	 */
+# ifdef __STRICT_ANSI__
+	puts("__STRICT_ANSI__ is defined, header files may omit some non-ISO-C symbols");
+# endif
+#else
+# ifdef __STRICT_ANSI__
+	puts("Nice!  __STRICT_ANSI__ is defined in a non-GCC compiler!!!!");
+# endif
 #endif
 
 	exit(0);
