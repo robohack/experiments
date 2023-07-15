@@ -86,7 +86,9 @@ __clang_patchlevel__ !=	echo __clang_patchlevel__ | $(CC) -E -c - | sed '/\#/d;s
 . endif
 .endif
 
-.if ((defined(_HOST_OSNAME) && (${_HOST_OSNAME} == "Darwin")) || (defined(OS) && (${OS} == "Darwin")) || (defined(.FreeBSD) && (${.FreeBSD} == "false")))
+.if ((defined(_HOST_OSNAME) && (${_HOST_OSNAME} == "Darwin")) || \
+	(defined(OS) && (${OS} == "Darwin")) || \
+	(defined(.FreeBSD) && (${.FreeBSD} == "false")))
 #
 # NOTE: Mac OS X does not use GNU ld, but....
 #
