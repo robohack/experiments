@@ -28,6 +28,12 @@
 . include <bsd.own.mk>
 .endif
 
+# This is so we can use <bsd.prog.mk> without any manual page.  Note though that
+# PROG is never defined -- this Makefile is intended to build a single program
+# specified as the target on its command line.
+#
+MAN =	# empty
+
 #
 # find all CC pre-defines with:
 #
@@ -306,8 +312,6 @@ LDFLAGS += -Wl,--unresolved-symbols=report-all
 .  endif
 . endif
 .endif
-
-MAN =	# empty
 
 .if exists(/usr/share/mk/bsd.prog.mk) || \
     exists(/usr/pkg/share/mk/bsd.prog.mk) || \
