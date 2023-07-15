@@ -2,11 +2,12 @@
 #
 #	Makefile - of the BSD variety
 #
-# (on Mac OS X, use "bsdmake"; on macOS install "Bmake")
+# (on older Mac OS X, use "bsdmake"; on macOS install "bmake")
 #
 # Use "LDLIBS+=-llibrary" to add libraries to the command line
 #
-# Use "CPPFLAGS+=-flags" to add CC flags (do not use CFLAGS)
+# Use "CPPFLAGS+=-flags" to add CC flags (do not use CFLAGS on the command line,
+# though it can be set in the environment)
 #
 # Use "CPPFLAGS+=-S -o -" with a ".o" target to see assembler
 #
