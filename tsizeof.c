@@ -331,7 +331,7 @@ main()
 #if (__STDC_VERSION__ - 0) >= 199901L
 	printf("sizeof _Bool = %u.\n", (unsigned int) sizeof(_Bool));
 #else
-	/* both GCC and Clang offer _Bool even with --std=c89 (not even a warning with --pedantic) */
+	/* both GCC and Clang offer _Bool even with -std=c89 (but newer versions offer a warning with -pedantic) */
 	printf("sizeof _Bool = %u.\n", (unsigned int) sizeof(_Bool));
 #endif
 	printf("sizeof char = %u.\n", (unsigned int) sizeof(char));
@@ -358,7 +358,7 @@ main()
 	printf("sizeof uint64_t = %u.\n", (unsigned int) sizeof(uint64_t));
 
 #if !defined(__linux__) || !defined(__STRICT_ANSI__)
-	/* quad_t is not defined with "gcc --std=c89", etc. */
+	/* quad_t is not defined with "gcc -std=c89", etc. */
 	printf("sizeof quad_t = %u.\n", (unsigned int) sizeof(quad_t));
 #endif
 	printf("sizeof intptr_t = %u.\n", (unsigned int) sizeof(intptr_t));
@@ -525,9 +525,9 @@ main()
 		const char *a_ptr_to_str = "some str";
 		char an_arr_of_ch[] = "another str";
 
-		printf("sizeof(a_ptr_to_str) = %zd\n",
+		printf("sizeof(a_ptr_to_str) = %zd\n", /* warning: ISO C90 does not support the 'z' gnu_printf length modifier [-Wformat=] */
 		       sizeof(a_ptr_to_str));
-		printf("sizeof(an_arr_of_ch) = %zd\n",
+		printf("sizeof(an_arr_of_ch) = %zd\n", /* warning: ISO C90 does not support the 'z' gnu_printf length modifier [-Wformat=] */
 		       sizeof(an_arr_of_ch));
 	}
 
