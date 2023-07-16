@@ -17,7 +17,20 @@
 
 #define _CTYPE_NUM_CHARS	(1U << CHAR_BIT)
 
-/* XXX these are the same macros as NetBSD's, and so must be identical */
+/*
+ * XXX the following _? macros are the same macros as NetBSD-5's, and so must be
+ * defined identically.
+ *
+ * N.B.:  In NetBSD since 5.x the names have changes, and indeed the meaning of
+ * the values has also changed as there is now a new "Alpha" character class
+ * that combines (_U|_L), a new "Graph" class that combines (_P|_U|_L|_N), a new
+ * "X Digit" class that combines (_N|_X), and of course also a new "Print" class
+ * that combines (_P|_U|_L|_N|_B).  There are also new "Ideogram", "Special",
+ * and "Phonogram" character classes as well, but as yet these are not used in
+ * new is*() macros.
+ *
+ * XXX these should probably be enums, not macros!
+ */
 #if defined(_U) && _U != 0x01
 # error "_U != 0x01"
 #elif !defined(_U)
@@ -69,7 +82,7 @@
  *	    undefined.
  *
  * The safest way for an application to meet this is to do its own cast to
- * (unsigned char).  However this implementation hides that safely in inline
+ * (unsigned char).  However this implementation hides that safely in "inline"
  * code, thus letting applications go on believing they can directly pass a
  * signed char.
  *
@@ -123,6 +136,68 @@
 	})
 
 /*
+ * It is also possible to implement these as true C99 inline functions, e.g. if
+ * "statement expressions" are not available, but here we suffer the same
+ * problem of default parameter conversions causing sign extension and thus
+ * confusing an ISO-8859-1 small y with dieresis, i.e. (signed char)0xFF, with
+ * an EOF.  See also further discussion below for my_isalpha() et al.
+ *
+ * These implementations blindly choose to recognize EOF vs. 0xFF.  See
+ * DETECT_EOF_INTERNALLY below for the alternative in other implementations.
+ */
+# if !defined(__GNUC__) ||						\
+	(defined(__GNUC__) && defined(__STRICT_ANSI__))
+#  define inline	__inline__
+# endif
+
+extern const unsigned char	*my_ctype;
+
+static inline int
+my_inline_is_ctype(int ch,
+		   int msk)
+{
+	const unsigned char uc = (unsigned char) ch;
+
+	return (ch == -1) ? 0 :
+		((int) ((my_ctype + 1)[uc] & msk));
+}
+
+/* xxx these could be inlines too, but macros maybe clearer? */
+#define	IL_ISDIGIT(c)	my_inline_is_ctype(c, _N)
+#define	IL_ISLOWER(c)	my_inline_is_ctype(c, _L)
+#define	IL_ISSPACE(c)	my_inline_is_ctype(c, _S)
+#define	IL_ISPUNCT(c)	my_inline_is_ctype(c, _P)
+#define	IL_ISUPPER(c)	my_inline_is_ctype(c, _U)
+#define	IL_ISALPHA(c)	my_inline_is_ctype(c, (_U|_L))
+#define	IL_ISXDIGIT(c)	my_inline_is_ctype(c, (_N|_X))
+#define	IL_ISALNUM(c)	my_inline_is_ctype(c, (_U|_L|_N))
+#define	IL_ISPRINT(c)	my_inline_is_ctype(c, (_P|_U|_L|_N|_B))
+#define	IL_ISGRAPH(c)	my_inline_is_ctype(c, (_P|_U|_L|_N))
+#define	IL_ISCNTRL(c)	my_inline_is_ctype(c, _C)
+
+extern const short	*my_tolower_tab;
+
+static inline int
+IL_TOLOWER(int ch)
+{
+	const unsigned char uc = (unsigned char) ch;
+
+	return (ch == -1) ? -1 :
+		((int) ((my_tolower_tab + 1)[uc]));
+}
+
+extern const short	*my_toupper_tab;
+
+static inline int
+IL_TOUPPER(int ch)
+{
+	const unsigned char uc = (unsigned char) ch;
+
+	return (ch == -1) ? -1 :
+		((int) ((my_toupper_tab + 1)[uc]));
+}
+
+/*
  * some crazy ASCII-only range-checking implementation (that mostly works)
  *
  * (I don't remember where I found this.....)
@@ -138,68 +213,157 @@
  * The big disadvantage is that it's impossible to switch at run-time to a
  * different locale, even within 8-bit locales.
  */
-#define _IN_RANGE(X, A, B)						\
+#if defined(__GNUC__)
+# if (__GNUC__ > 4) ||							\
+	((__GNUC__ == 4) && (__GNUC_MINOR__ >= 9))
+/*
+ * ToDo:  use __auto_type instead of typeof
+ *
+ * N.B.:  also implemented in Clang since late 2015.  Also implemented in at
+ * least Intel CC, Helix QAC, Klocwork, and armCC.  Typically it might be
+ * expected that all compilers implementing such GCC compatability will also
+ * define __GNUC__.
+ *
+ * Using __auto_type instead of typeof has two advantages:
+ *
+ * - Each argument to the macro appears only once in the expansion of the macro.
+ *   This prevents the size of the macro expansion growing exponentially when
+ *   calls to such macros are nested inside arguments of such macros.
+ *
+ * - If the argument to the macro has variably modified type, it is evaluated
+ *   only once when using __auto_type, but twice if typeof is used.
+ */
+#  define auto	__auto_type		/* xxx potential conflict in C2x? */
+#  define _IN_RANGE(X, A, B)						\
     ({									\
-      const __typeof__(X) _r = (X);					\
+      const auto _r = (X);						\
       _r >= (A) && _r <= (B);						\
     })
+#  define na_isalpha(X)							\
+    ({									\
+      const auto _x = (X);						\
+      na_islower(_x) || na_isupper(_x);					\
+    })
+#  define na_iscntrl(X)							\
+    ({									\
+      const auto _x = (X);						\
+      _IN_RANGE(_x, 0, 0x1F) || _x == 0x7F;				\
+    })
+#  define na_isalnum(X)							\
+    ({									\
+      const auto _y = (X);						\
+      na_isalpha(_y) || na_isdigit(_y);					\
+    })
+#  define na_isgraph(X)							\
+    ({									\
+      const auto _z = (X);						\
+      na_isalnum(_z) || na_ispunct(_z);					\
+    })
+/* xxx why the 'x' below ??? this is probably wrong and incomplet */
+#  define na_isprint(X)							\
+    ({									\
+      const auto _s = (X);						\
+      na_isgraph(_s) || _s == 'x';					\
+    })
+#  define na_ispunct(X)							\
+    ({									\
+      const auto _t = (X);						\
+      !na_isalnum(_t) && _t != ' ';					\
+    })
+#  define na_isspace(X)							\
+    ({                                                                  \
+      const auto _x = (X);						\
+      _x == ' ' || _x == '\t' || _x == '\v' || _x == '\n' || _x == '\r' \
+                || _x == '\f';						\
+    })
+#  define na_isxdigit(X)						\
+    ({									\
+      const auto _x = (X);						\
+      na_isdigit(_x) || _IN_RANGE(_x, 'a', 'f') || _IN_RANGE(_x, 'A', 'F'); \
+    })
+#  define na_tolower(X)							\
+    ({									\
+      const auto _x = (X);						\
+      na_isupper(_x) ? _x|' ' : _x;					\
+    })
+#  define na_toupper(X)							\
+    ({									\
+      const auto _x = (X);						\
+      na_islower(_x) ? _x&~' ' : _x;					\
+    })
+# endif
+#endif
+
+#ifndef _IN_RANGE
+/* resort to typeof */
+# if !defined(__GNUC__) ||						\
+	(defined(__GNUC__) && defined(__STRICT_ANSI__))
+#  define typeof	__typeof__
+# endif
+# define _IN_RANGE(X, A, B)						\
+    ({									\
+      const typeof(X) _r = (X);						\
+      _r >= (A) && _r <= (B);						\
+    })
+# define na_isalpha(X)							\
+    ({									\
+      const typeof(X) _x = (X);						\
+      na_islower(_x) || na_isupper(_x);					\
+    })
+# define na_iscntrl(X)							\
+    ({									\
+      const typeof(X) _x = (X);						\
+      _IN_RANGE(_x, 0, 0x1F) || _x == 0x7F;				\
+    })
+# define na_isalnum(X)							\
+    ({									\
+      const typeof(X) _y = (X);						\
+      na_isalpha(_y) || na_isdigit(_y);					\
+    })
+# define na_isgraph(X)							\
+    ({									\
+      const typeof(X) _z = (X);						\
+      na_isalnum(_z) || na_ispunct(_z);					\
+    })
+/* xxx why the 'x' below ??? this is probably wrong and incomplet */
+# define na_isprint(X)							\
+    ({									\
+      const typeof(X) _s = (X);						\
+      na_isgraph(_s) || _s == 'x';					\
+    })
+# define na_ispunct(X)							\
+    ({									\
+      const typeof(X) _t = (X);						\
+      !na_isalnum(_t) && _t != ' ';					\
+    })
+# define na_isspace(X)							\
+    ({                                                                  \
+      const typeof(X) _x = (X);						\
+      _x == ' ' || _x == '\t' || _x == '\v' || _x == '\n' || _x == '\r' \
+                || _x == '\f';						\
+    })
+# define na_isxdigit(X)							\
+    ({									\
+      const typeof(X) _x = (X);						\
+      na_isdigit(_x) || _IN_RANGE(_x, 'a', 'f') || _IN_RANGE(_x, 'A', 'F'); \
+    })
+# define na_tolower(X)							\
+    ({									\
+      const typeof(X) _x = (X);						\
+      na_isupper(_x) ? _x|' ' : _x;					\
+    })
+# define na_toupper(X)							\
+    ({									\
+      const typeof(X) _x = (X);						\
+      na_islower(_x) ? _x&~' ' : _x;					\
+    })
+#endif
 
 #define na_isascii(X) (_IN_RANGE((X), 0, 0x7F))
 #define na_isdigit(X) (_IN_RANGE((X), '0', '9'))
 #define na_isupper(X) (_IN_RANGE((X), 'A', 'Z'))
 #define na_islower(X) (_IN_RANGE((X), 'a', 'z'))
-#define na_isalpha(X)							\
-    ({									\
-      const __typeof__(X) _x = (X);					\
-      na_islower(_x) || na_isupper(_x);					\
-    })
-#define na_iscntrl(X)							\
-    ({									\
-      const __typeof__(X) _x = (X);					\
-      _IN_RANGE(_x, 0, 0x1F) || _x == 0x7F;				\
-    })
-#define na_isalnum(X)							\
-    ({									\
-      const __typeof__(X) _y = (X);					\
-      na_isalpha(_y) || na_isdigit(_y);					\
-    })
-#define na_isgraph(X)							\
-    ({									\
-      const __typeof__(X) _z = (X);					\
-      na_isalnum(_z) || na_ispunct(_z);					\
-    })
-/* xxx why the 'x' below ??? this is probably wrong and incomplet */
-#define na_isprint(X)							\
-    ({									\
-      const __typeof__(X) _s = (X);					\
-      na_isgraph(_s) || _s == 'x';					\
-    })
-#define na_ispunct(X)							\
-    ({									\
-      const __typeof__(X) _t = (X);					\
-      !na_isalnum(_t) && _t != ' ';					\
-    })
-#define na_isspace(X)							\
-    ({                                                                  \
-      const __typeof__(X) _x = (X);					\
-      _x == ' ' || _x == '\t' || _x == '\v' || _x == '\n' || _x == '\r' \
-                || _x == '\f';						\
-    })
-#define na_isxdigit(X)							\
-    ({									\
-      const __typeof__(X) _x = (X);					\
-      na_isdigit(_x) || _IN_RANGE(_x, 'a', 'f') || _IN_RANGE(_x, 'A', 'F'); \
-    })
-#define na_tolower(X)							\
-    ({									\
-      const __typeof__(X) _x = (X);					\
-      na_isupper(_x) ? _x|' ' : _x;					\
-    })
-#define na_toupper(X)							\
-    ({									\
-      const __typeof__(X) _x = (X);					\
-      na_islower(_x) ? _x&~' ' : _x;					\
-    })
+
 
 
 const unsigned char my_ctype_ascii[1 + _CTYPE_NUM_CHARS + 8] = {
@@ -441,41 +605,48 @@ const short *my_toupper_tab = my_toupper_ascii;
 /*
  * XXX these demonstrate why implementation as functions may not "work" when
  * passed a signed char with a value of -1 (i.e. 0xFF for CHAR_BIT==8) because
- * of course the sign will be extended and the resulting value will be seen as
- * EOF internally.
+ * of course the sign will be extended by "the usual paramter conversions" and
+ * the resulting value will be seen as EOF internally.
  *
  * Of course this is only really matters if the function internally needs to
  * detect EOF and handle it specially -- so for the <ctype.h> interfaces I don't
- * think this actually adversly affects any of them, except maybe tolower() and
- * toupper(), and maybe toascii(), as well as isalpha() and iscntrl(), as they
- * will, depending on choice of implementation, either return 0xFF when passed
- * EOF, or they will return EOF when passed 0xFF.  The latter case may be
- * innocuous though if the return value is then cast to an unsigned char where
- * necessary since it will then return to being just 0xFF; but both cases may be
- * a problem if an EOF test is done on the returned value.
+ * think this actually adversly affects many of them, except maybe tolower() and
+ * toupper() as they will, depending on choice of implementation, either return
+ * 0xFF when passed either EOF, or they will return EOF when passed 0xFF.  The
+ * latter case may be innocuous though if the return value is then cast to an
+ * unsigned char where necessary since it will then return to being just 0xFF;
+ * but both cases may be a problem if an EOF test is done on the returned value.
+ *
+ * isalpha() and islower() will also fail for ISO8859 0xFF, where they should
+ * return '1', but of course they should also return '0' for EOF.
+ *
+ * N.B.:  of course code using signed char and expecting to handle ISO8859
+ * perfectly is just asking for problems!  But people are often caught off guard
+ * when plain "char" is signed by default!
  */
 #if 1
-/* n.b.:  this is probably the "safest" implementation... */
-#define DETECT_EOF_INTERNALLY		/* defined */
+/* n.b.:  this is probably the "safest" implementation...  handle EOF correctly! */
+# define DETECT_EOF_INTERNALLY		/* defined */
 #endif
 
 int my_isalpha(int);
+int my_islower(int);
 int my_tolower(int);
 int my_toupper(int);
 
 int
-my_isalpha(int ui)
+my_isalpha(int ich)
 {
-	const unsigned char ch = (unsigned char) ui;
+	const unsigned char ch = (unsigned char) ich;
 
-	printf("my_isalpha(): ui = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x, my_ct = 0x%x\n",
-	       ui,
+	printf("my_isalpha(): ich = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x, my_ct = 0x%x\n",
+	       ich,
 	       (unsigned int) ch,
 	       (unsigned int) ((unsigned char) ch),
 	       (unsigned int) ((my_ctype + 1)[(unsigned char) ch]));
 #ifdef DETECT_EOF_INTERNALLY
 	/* XXX this will always fail if called with a (signed char) 0xFF */
-	if (ui == EOF) {
+	if (ich == EOF) {
 		printf("my_isalpha(): explicitly returning 0 for EOF\n");
 		return 0;
 	}
@@ -484,19 +655,39 @@ my_isalpha(int ui)
 }
 
 int
-my_tolower(int ui)
+my_islower(int ich)
 {
-	const unsigned char ch = (unsigned char) ui;
+	const unsigned char ch = (unsigned char) ich;
 
-	printf("my_tolower(): ui = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x, my_lo = 0x%x\n",
-	       ui,
+	printf("my_islower(): ich = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x, my_ct = 0x%x\n",
+	       ich,
+	       (unsigned int) ch,
+	       (unsigned int) ((unsigned char) ch),
+	       (unsigned int) ((my_ctype + 1)[(unsigned char) ch]));
+#ifdef DETECT_EOF_INTERNALLY
+	/* XXX this will always fail if called with a (signed char) 0xFF */
+	if (ich == EOF) {
+		printf("my_islower(): explicitly returning 0 for EOF\n");
+		return 0;
+	}
+#endif
+	return ((int) ((my_ctype + 1)[(unsigned char) ch] & _L));
+}
+
+int
+my_tolower(int ich)
+{
+	const unsigned char ch = (unsigned char) ich;
+
+	printf("my_tolower(): ich = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x, my_lo = 0x%x\n",
+	       ich,
 	       (unsigned int) ch,
 	       (unsigned int) ((unsigned char) ch),
 	       (unsigned int) ((my_tolower_tab + 1)[(unsigned char) ch]));
 #ifdef DETECT_EOF_INTERNALLY
 	/* XXX this will always fail if called with a (signed char) 0xFF */
-	if (ui == EOF) {
-		printf("my_tolower(): explicitly returning EOF for EOF\n");
+	if (ich == EOF) {
+		printf("my_tolower(): explicitly returning EOF for EOF ('argument is returned unchanged')\n");
 		return EOF;
 	}
 #endif
@@ -504,19 +695,19 @@ my_tolower(int ui)
 }
 
 int
-my_toupper(int ui)
+my_toupper(int ich)
 {
-	const unsigned char ch = (unsigned char) ui;
+	const unsigned char ch = (unsigned char) ich;
 
-	printf("my_toupper(): ui = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x, my_up = 0x%x\n",
-	       ui,
+	printf("my_toupper(): ich = 0x%x, ch = 0x%x, (unsigned char) ch = 0x%x, my_up = 0x%x\n",
+	       ich,
 	       (unsigned int) ch,
 	       (unsigned int) ((unsigned char) ch),
 	       (unsigned int) ((my_toupper_tab + 1)[(unsigned char) ch]));
 #ifdef DETECT_EOF_INTERNALLY
 	/* XXX this will always fail if called with a (signed char) 0xFF */
-	if (ui == EOF) {
-		printf("my_toupper(): explicitly returning EOF for EOF\n");
+	if (ich == EOF) {
+		printf("my_toupper(): explicitly returning EOF for EOF ('argument is returned unchanged')\n");
 		return EOF;
 	}
 #endif
@@ -575,7 +766,7 @@ skipwhitespace(const char **sp)
 static void
 skipwhitespace_broken(const char **sp)
 {
-    char _ctype_uc_, _comment = 0;		/* xxx _uc_ is overwritten by MY_ISSPACE()'s _uc_ */
+    char _ctype_uc_, _comment = 0;		/* xxx _ctype_uc_ is overwritten by MY_ISSPACE()'s _ctype_uc_ */
 
     while ((_ctype_uc_ = *(*sp))) {
 	if (_ctype_uc_ == '(') {
@@ -590,9 +781,23 @@ skipwhitespace_broken(const char **sp)
 	    (*sp)--;
 	} else if (! MY_ISSPACE(_ctype_uc_)) {
 		/*
-		 * GCC from the line above:
+		 * GCC-?.?.? from the line above:
 tctype.c:449: warning: declaration of '_ctype_uc_' shadows a previous local
 tctype.c:436: warning: shadowed declaration is here
+		 *
+		 * GCC-9.3.0:
+tctype.c:92:23: warning: declaration of '_ctype_uc_' shadows a previous local [-Wshadow]
+   92 |   const unsigned char _ctype_uc_ = (unsigned char) _ctype_ui_; \
+      |                       ^~~~~~~~~~
+tctype.c:99:23: note: in expansion of macro 'MY__IS_CTYPER'
+   99 | #define MY_ISSPACE(c) MY__IS_CTYPER(c, _S)
+      |                       ^~~~~~~~~~~~~
+tctype.c:627:15: note: in expansion of macro 'MY_ISSPACE'
+  627 |  } else if (! MY_ISSPACE(_ctype_uc_)) {
+      |               ^~~~~~~~~~
+tctype.c:614:10: note: shadowed declaration is here
+  614 |     char _ctype_uc_, _comment = 0;  (* xxx _ctype_uc_ is overwritten by MY_ISSPACE()'s _ctype_uc_ *)
+      |          ^~~~~~~~~~
 		 *
 		 * Clang (10.x) says:
 tctype.c:449:15: warning: declaration shadows a local variable [-Wshadow]
@@ -605,7 +810,7 @@ tctype.c:70:23: note: expanded from macro 'MY__IS_CTYPER'
                 const unsigned char _ctype_uc_ = (unsigned char) _ctype_ui_; \
                                     ^
 tctype.c:436:10: note: previous declaration is here
-    char _ctype_uc_, _comment = 0;              (* xxx _uc_ is overwritten by MY_ISSPACE()'s _uc_ *)
+    char _ctype_uc_, _comment = 0;              (* xxx _ctype_uc_ is overwritten by MY_ISSPACE()'s _ctype_uc_ *)
          ^
 		 */
 		switch (_ctype_uc_) {
@@ -733,6 +938,7 @@ main()
 	volatile unsigned int bits;
 	volatile unsigned int char_bits;
 
+	printf("NOTE:  plain 'char' is %s\n", (CHAR_MIN < 0) ? "signed" : "unsigned");
 	char_bits = 0;
 	bits = 1;
 	while ((~0U & (~0U >> (bits - 1))) != 1) {
@@ -744,7 +950,7 @@ main()
 	printf("char bits = %d %s CHAR_BIT [%d]\n", char_bits,
 	       char_bits == CHAR_BIT ? "==" : "!=", (int) CHAR_BIT);
 
-	printf("CHAR_BIT = %d\n", CHAR_BIT);
+	printf("1 << CHAR_BIT = %d\n", 1 << CHAR_BIT);
 #ifdef NBBY
 	printf("NBBY = %d\n", NBBY);
 	if (NBBY != CHAR_BIT) {
@@ -753,6 +959,7 @@ main()
 #endif
 	printf("char mask = 0x%x\n", ~(UINT_MAX << CHAR_BIT));
 	printf("sizeof(EOF) = %lu\n", (unsigned long) sizeof(EOF));
+	putchar('\n');
 
 #if 0					/* xxx default is my_ctype_ascii */
 	my_ctype = my_ctype_8859_1;
@@ -910,89 +1117,113 @@ main()
 
 	printf("isdigit('2') = 0x%x %s\n", isdigit('2'), CORRECTP(isdigit('2')));
 	printf("MY_ISDIGIT('2') = 0x%x %s\n", MY_ISDIGIT('2'), CORRECTP(MY_ISDIGIT('2')));
+	printf("IL_ISDIGIT('2') = 0x%x %s\n", IL_ISDIGIT('2'), CORRECTP(IL_ISDIGIT('2')));
 	printf("na_isdigit('2') = 0x%x %s\n", na_isdigit('2'), CORRECTP(na_isdigit('2')));
 	putchar('\n');
 
 	printf("isdigit('a') = 0x%x %s\n", isdigit('a'), CORRECTP(!isdigit('a')));
 	printf("MY_ISDIGIT('a') = 0x%x %s\n", MY_ISDIGIT('a'), CORRECTP(!MY_ISDIGIT('a')));
+	printf("IL_ISDIGIT('a') = 0x%x %s\n", IL_ISDIGIT('a'), CORRECTP(!IL_ISDIGIT('a')));
 	printf("na_isdigit('a') = 0x%x %s\n", na_isdigit('a'), CORRECTP(!na_isdigit('a')));
 	putchar('\n');
 
 	printf("isdigit('\\0') = 0x%x %s\n", isdigit('\0'), CORRECTP(!isdigit('\0')));
 	printf("MY_ISDIGIT('\\0') = 0x%x %s\n", MY_ISDIGIT('\0'), CORRECTP(!MY_ISDIGIT('\0')));
+	printf("IL_ISDIGIT('\\0') = 0x%x %s\n", IL_ISDIGIT('\0'), CORRECTP(!IL_ISDIGIT('\0')));
 	printf("na_isdigit('\\0') = 0x%x %s\n", na_isdigit('\0'), CORRECTP(!na_isdigit('\0')));
 	putchar('\n');
 
 	printf("isdigit('1') = 0x%x %s\n", isdigit(one), CORRECTP(isdigit(one)));
 	printf("MY_ISDIGIT('1') = 0x%x %s\n", MY_ISDIGIT(one), CORRECTP(MY_ISDIGIT(one)));
+	printf("IL_ISDIGIT('1') = 0x%x %s\n", IL_ISDIGIT(one), CORRECTP(IL_ISDIGIT(one)));
 	printf("na_isdigit('1') = 0x%x %s\n", na_isdigit(one), CORRECTP(na_isdigit(one)));
 	putchar('\n');
 
 	printf("isalnum(0) = 0x%x %s\n", isalnum(0), CORRECTP(!isalnum(0)));
 	printf("MY_ISALNUM(0) = 0x%x %s\n", MY_ISALNUM(0), CORRECTP(!MY_ISALNUM(0)));
+	printf("IL_ISALNUM(0) = 0x%x %s\n", IL_ISALNUM(0), CORRECTP(!IL_ISALNUM(0)));
 	printf("na_isalnum(0) = 0x%x %s\n", na_isalnum(0), CORRECTP(!na_isalnum(0)));
 	putchar('\n');
 
 	printf("isalnum('a') = 0x%x %s\n", isalnum('a'), CORRECTP(isalnum('a')));
 	printf("MY_ISALNUM('a') = 0x%x %s\n", MY_ISALNUM('a'), CORRECTP(MY_ISALNUM('a')));
+	printf("IL_ISALNUM('a') = 0x%x %s\n", IL_ISALNUM('a'), CORRECTP(IL_ISALNUM('a')));
 	printf("na_isalnum('a') = 0x%x %s\n", na_isalnum('a'), CORRECTP(na_isalnum('a')));
 	putchar('\n');
 
 	printf("isalnum('1') = 0x%x %s\n", isalnum('1'), CORRECTP(isalnum('1')));
 	printf("MY_ISALNUM('1') = 0x%x %s\n", MY_ISALNUM('1'), CORRECTP(MY_ISALNUM('1')));
+	printf("IL_ISALNUM('1') = 0x%x %s\n", IL_ISALNUM('1'), CORRECTP(IL_ISALNUM('1')));
 	printf("na_isalnum('1') = 0x%x %s\n", na_isalnum('1'), CORRECTP(na_isalnum('1')));
 	putchar('\n');
 
 	printf("isalnum(' ') = 0x%x %s\n", isalnum(' '), CORRECTP(!isalnum(' ')));
 	printf("MY_ISALNUM(' ') = 0x%x %s\n", MY_ISALNUM(' '), CORRECTP(!MY_ISALNUM(' ')));
+	printf("IL_ISALNUM(' ') = 0x%x %s\n", IL_ISALNUM(' '), CORRECTP(!IL_ISALNUM(' ')));
 	printf("na_isalnum(' ') = 0x%x %s\n", na_isalnum(' '), CORRECTP(!na_isalnum(' ')));
 	putchar('\n');
 
 	printf("islower(SP) = 0x%x %s\n", islower(EOF), CORRECTP(!islower(EOF)));
+	printf("MY_ISLOWER(SP) = 0x%x %s\n", MY_ISLOWER(EOF), CORRECTP(!MY_ISLOWER(EOF)));
+	printf("IL_ISLOWER(SP) = 0x%x %s\n", IL_ISLOWER(EOF), CORRECTP(!IL_ISLOWER(EOF)));
+	printf("na_islower(SP) = 0x%x %s\n", na_islower(EOF), CORRECTP(!na_islower(EOF)));
+
 	printf("isupper(SP) = 0x%x %s\n", isupper(EOF), CORRECTP(!isupper(EOF)));
+	printf("MY_ISUPPER(SP) = 0x%x %s\n", MY_ISUPPER(EOF), CORRECTP(!MY_ISUPPER(EOF)));
+	printf("IL_ISUPPER(SP) = 0x%x %s\n", IL_ISUPPER(EOF), CORRECTP(!IL_ISUPPER(EOF)));
+	printf("na_isupper(SP) = 0x%x %s\n", na_isupper(EOF), CORRECTP(!na_isupper(EOF)));
 	putchar('\n');
 
 	printf("isspace(0) = 0x%x %s\n", isspace(0), CORRECTP(!isspace(0)));
 	printf("na_isspace(0) = 0x%x %s\n", na_isspace(0), CORRECTP(!na_isspace(0)));
 	printf("MY_ISSPACE(0) = 0x%x %s\n", MY_ISSPACE(0), CORRECTP(!MY_ISSPACE(0)));
+	printf("IL_ISSPACE(0) = 0x%x %s\n", IL_ISSPACE(0), CORRECTP(!IL_ISSPACE(0)));
 
 	printf("isspace('a') = 0x%x %s\n", isspace('a'), CORRECTP(!isspace('a')));
 	printf("na_isspace('a') = 0x%x %s\n", na_isspace('a'), CORRECTP(!na_isspace('a')));
 	printf("MY_ISSPACE('a') = 0x%x %s\n", MY_ISSPACE('a'), CORRECTP(!MY_ISSPACE('a')));
+	printf("IL_ISSPACE('a') = 0x%x %s\n", IL_ISSPACE('a'), CORRECTP(!IL_ISSPACE('a')));
 
 	printf("isspace('1') = 0x%x %s\n", isspace('1'), CORRECTP(!isspace('1')));
 	printf("na_isspace('1') = 0x%x %s\n", na_isspace('1'), CORRECTP(!na_isspace('1')));
 	printf("MY_ISSPACE('1') = 0x%x %s\n", MY_ISSPACE('1'), CORRECTP(!MY_ISSPACE('1')));
+	printf("IL_ISSPACE('1') = 0x%x %s\n", IL_ISSPACE('1'), CORRECTP(!IL_ISSPACE('1')));
 
 	printf("isspace('.') = 0x%x %s\n", isspace('.'), CORRECTP(!isspace('.')));
 	printf("na_isspace('.') = 0x%x %s\n", na_isspace('.'), CORRECTP(!na_isspace('.')));
 	printf("MY_ISSPACE('.') = 0x%x %s\n", MY_ISSPACE('.'), CORRECTP(!MY_ISSPACE('.')));
+	printf("IL_ISSPACE('.') = 0x%x %s\n", IL_ISSPACE('.'), CORRECTP(!IL_ISSPACE('.')));
 
 	printf("isspace(EOF) = 0x%x %s\n", isspace(EOF), CORRECTP(!isspace(EOF)));
 	printf("na_isspace(EOF) = 0x%x %s\n", na_isspace(EOF), CORRECTP(!na_isspace(EOF)));
 	printf("MY_ISSPACE(EOF) = 0x%x %s\n", MY_ISSPACE(EOF), CORRECTP(!MY_ISSPACE(EOF)));
+	printf("IL_ISSPACE(EOF) = 0x%x %s\n", IL_ISSPACE(EOF), CORRECTP(!IL_ISSPACE(EOF)));
 	putchar('\n');
 
 	sc = ' ';
 	printf("isspace(sc = '%c'[0x%x]) = 0x%x %s\n", sc, sc, isspace(sc), CORRECTP(isspace(sc)));
 	printf("na_isspace(sc = '%c'[0x%x]) = 0x%x %s\n", sc, sc, na_isspace(sc), CORRECTP(na_isspace(sc)));
 	printf("MY_ISSPACE(sc = '%c'[0x%x]) = 0x%x %s\n", sc, sc, MY_ISSPACE(sc), CORRECTP(MY_ISSPACE(sc)));
+	printf("IL_ISSPACE(sc = '%c'[0x%x]) = 0x%x %s\n", sc, sc, IL_ISSPACE(sc), CORRECTP(IL_ISSPACE(sc)));
 
 	uc = ' ';
 	printf("isspace(uc = '%c'[0x%x]) = 0x%x %s\n", uc, uc, isspace(uc), CORRECTP(isspace(uc)));
 	printf("na_isspace(uc = '%c'[0x%x]) = 0x%x %s\n", uc, uc, na_isspace(uc), CORRECTP(na_isspace(uc)));
 	printf("MY_ISSPACE(uc = '%c'[0x%x]) = 0x%x %s\n", uc, uc, MY_ISSPACE(uc), CORRECTP(MY_ISSPACE(uc)));
+	printf("IL_ISSPACE(uc = '%c'[0x%x]) = 0x%x %s\n", uc, uc, IL_ISSPACE(uc), CORRECTP(IL_ISSPACE(uc)));
 	putchar('\n');
 
 	sc = 'a';
 	printf("isspace(sc = '%c'[0x%x]) = 0x%x %s\n", sc, sc, isspace(sc), CORRECTP(!isspace(sc)));
 	printf("na_isspace(sc = '%c'[0x%x]) = 0x%x %s\n", sc, sc, na_isspace(sc), CORRECTP(!na_isspace(sc)));
 	printf("MY_ISSPACE(sc = '%c'[0x%x]) = 0x%x %s\n", sc, sc, MY_ISSPACE(sc), CORRECTP(!MY_ISSPACE(sc)));
+	printf("IL_ISSPACE(sc = '%c'[0x%x]) = 0x%x %s\n", sc, sc, IL_ISSPACE(sc), CORRECTP(!IL_ISSPACE(sc)));
 
 	uc = 'a';
 	printf("isspace(uc = '%c'[0x%x]) = 0x%x %s\n", uc, uc, isspace(uc), CORRECTP(!isspace(uc)));
 	printf("na_isspace(uc = '%c'[0x%x]) = 0x%x %s\n", uc, uc, na_isspace(uc), CORRECTP(!na_isspace(uc)));
 	printf("MY_ISSPACE(uc = '%c'[0x%x]) = 0x%x %s\n", uc, uc, MY_ISSPACE(uc), CORRECTP(!MY_ISSPACE(uc)));
+	printf("IL_ISSPACE(uc = '%c'[0x%x]) = 0x%x %s\n", uc, uc, IL_ISSPACE(uc), CORRECTP(!IL_ISSPACE(uc)));
 	putchar('\n');
 
 	printf("isspace(SP) = 0x%x %s\n", isspace(' '), CORRECTP(isspace(' ')));
@@ -1021,6 +1252,20 @@ main()
 	printf("MY_ISSPACE(11) = 0x%x %s\n", MY_ISSPACE(11), CORRECTP(MY_ISSPACE(11)));
 	printf("MY_ISSPACE(FF) = 0x%x %s\n", MY_ISSPACE('\f'), CORRECTP(MY_ISSPACE('\f')));
 	printf("MY_ISSPACE(12) = 0x%x %s\n", MY_ISSPACE(12), CORRECTP(MY_ISSPACE(12)));
+	putchar('\n');
+
+	printf("IL_ISSPACE(SP) = 0x%x %s\n", IL_ISSPACE(' '), CORRECTP(IL_ISSPACE(' ')));
+	printf("IL_ISSPACE(32) = 0x%x %s\n", IL_ISSPACE(32), CORRECTP(IL_ISSPACE(32)));
+	printf("IL_ISSPACE(NL) = 0x%x %s\n", IL_ISSPACE('\n'), CORRECTP(IL_ISSPACE('\n')));
+	printf("IL_ISSPACE(10) = 0x%x %s\n", IL_ISSPACE(10), CORRECTP(IL_ISSPACE(10)));
+	printf("IL_ISSPACE(CR) = 0x%x %s\n", IL_ISSPACE('\r'), CORRECTP(IL_ISSPACE('\r')));
+	printf("IL_ISSPACE(13) = 0x%x %s\n", IL_ISSPACE(13), CORRECTP(IL_ISSPACE(13)));
+	printf("IL_ISSPACE(TAB) = 0x%x %s\n", IL_ISSPACE('\t'), CORRECTP(IL_ISSPACE('\t')));
+	printf("IL_ISSPACE(9) = 0x%x %s\n", IL_ISSPACE(9), CORRECTP(IL_ISSPACE(9)));
+	printf("IL_ISSPACE(VT) = 0x%x %s\n", IL_ISSPACE('\v'), CORRECTP(IL_ISSPACE('\v')));
+	printf("IL_ISSPACE(11) = 0x%x %s\n", IL_ISSPACE(11), CORRECTP(IL_ISSPACE(11)));
+	printf("IL_ISSPACE(FF) = 0x%x %s\n", IL_ISSPACE('\f'), CORRECTP(IL_ISSPACE('\f')));
+	printf("IL_ISSPACE(12) = 0x%x %s\n", IL_ISSPACE(12), CORRECTP(IL_ISSPACE(12)));
 	putchar('\n');
 
 	printf("na_isspace(SP) = 0x%x %s\n", na_isspace(' '), CORRECTP(na_isspace(' ')));
@@ -1360,53 +1605,77 @@ main()
 	printf("isalpha(sc) = 0x%x %s\n", isalpha(sc), CORRECTP(isalpha(sc)));
 	printf("isalpha(uc) = 0x%x %s\n", isalpha(uc), CORRECTP(isalpha(uc)));
 	printf("isalpha(i) = 0x%x %s\n", isalpha(i), CORRECTP(isalpha(i)));
-	printf("my_isalpha(sc) = 0x%x %s\n", my_isalpha(sc), CORRECTP(my_isalpha(sc)));
+	printf("my_isalpha(sc) = 0x%x %s [ERROR EXPECTED]\n", my_isalpha(sc), CORRECTP(my_isalpha(sc))); /* EXPECT: 0x0 [ERROR:WRONG] */
 	printf("my_isalpha(uc) = 0x%x %s\n", my_isalpha(uc), CORRECTP(my_isalpha(uc)));
 	printf("my_isalpha(i) = 0x%x %s\n", my_isalpha(i), CORRECTP(my_isalpha(i)));
 	printf("MY_ISALPHA(sc) = 0x%x %s\n", MY_ISALPHA(sc), CORRECTP(MY_ISALPHA(sc)));
 	printf("MY_ISALPHA(uc) = 0x%x %s\n", MY_ISALPHA(uc), CORRECTP(MY_ISALPHA(uc)));
 	printf("MY_ISALPHA(i) = 0x%x %s\n", MY_ISALPHA(i), CORRECTP(MY_ISALPHA(i)));
+	printf("IL_ISALPHA(sc) = 0x%x %s [ERROR EXPECTED]\n", IL_ISALPHA(sc), CORRECTP(IL_ISALPHA(sc))); /* EXPECT: 0x0 [ERROR:WRONG] */
+	printf("IL_ISALPHA(uc) = 0x%x %s\n", IL_ISALPHA(uc), CORRECTP(IL_ISALPHA(uc)));
+	printf("IL_ISALPHA(i) = 0x%x %s\n", IL_ISALPHA(i), CORRECTP(IL_ISALPHA(i)));
 	printf("islower(sc) = 0x%x %s\n", islower(sc), CORRECTP(islower(sc)));
 	printf("islower(uc) = 0x%x %s\n", islower(uc), CORRECTP(islower(uc)));
 	printf("islower(i) = 0x%x %s\n", islower(i), CORRECTP(islower(i)));
+	printf("my_islower(sc) = 0x%x %s [ERROR EXPECTED]\n", my_islower(sc), CORRECTP(my_islower(sc))); /* EXPECT: 0x0 [ERROR:WRONG] */
+	printf("my_islower(uc) = 0x%x %s\n", my_islower(uc), CORRECTP(my_islower(uc)));
+	printf("my_islower(i) = 0x%x %s\n", my_islower(i), CORRECTP(my_islower(i)));
 	printf("MY_ISLOWER(sc) = 0x%x %s\n", MY_ISLOWER(sc), CORRECTP(MY_ISLOWER(sc)));
 	printf("MY_ISLOWER(uc) = 0x%x %s\n", MY_ISLOWER(uc), CORRECTP(MY_ISLOWER(uc)));
 	printf("MY_ISLOWER(i) = 0x%x %s\n", MY_ISLOWER(i), CORRECTP(MY_ISLOWER(i)));
+	printf("IL_ISLOWER(sc) = 0x%x %s [ERROR EXPECTED]\n", IL_ISLOWER(sc), CORRECTP(IL_ISLOWER(sc))); /* EXPECT: 0x0 [ERROR:WRONG] */
+	printf("IL_ISLOWER(uc) = 0x%x %s\n", IL_ISLOWER(uc), CORRECTP(IL_ISLOWER(uc)));
+	printf("IL_ISLOWER(i) = 0x%x %s\n", IL_ISLOWER(i), CORRECTP(IL_ISLOWER(i)));
 	printf("isupper(sc) = 0x%x %s\n", isupper(sc), CORRECTP(!isupper(sc)));
 	printf("isupper(uc) = 0x%x %s\n", isupper(uc), CORRECTP(!isupper(uc)));
 	printf("isupper(i) = 0x%x %s\n", isupper(i), CORRECTP(!isupper(i)));
 	printf("MY_ISUPPER(sc) = 0x%x %s\n", MY_ISUPPER(sc), CORRECTP(!MY_ISUPPER(sc)));
 	printf("MY_ISUPPER(uc) = 0x%x %s\n", MY_ISUPPER(uc), CORRECTP(!MY_ISUPPER(uc)));
 	printf("MY_ISUPPER(i) = 0x%x %s\n", MY_ISUPPER(i), CORRECTP(!MY_ISUPPER(i)));
+	printf("IL_ISUPPER(sc) = 0x%x %s\n", IL_ISUPPER(sc), CORRECTP(!IL_ISUPPER(sc)));
+	printf("IL_ISUPPER(uc) = 0x%x %s\n", IL_ISUPPER(uc), CORRECTP(!IL_ISUPPER(uc)));
+	printf("IL_ISUPPER(i) = 0x%x %s\n", IL_ISUPPER(i), CORRECTP(!IL_ISUPPER(i)));
 	printf("tolower(sc) = 0x%x %s\n", (unsigned int) tolower(sc), CORRECTP(tolower(sc) == 0xFF));
 	printf("tolower(uc) = 0x%x %s\n", (unsigned int) tolower(uc), CORRECTP(tolower(uc) == 0xFF));
 	printf("tolower(i) = 0x%x %s\n", (unsigned int) tolower(i), CORRECTP(tolower(i) == 0xFF));
-	printf("my_tolower(sc) = 0x%x %s\n", my_tolower(sc), CORRECTP(my_tolower(sc) == 0xFF));
+	printf("my_tolower(sc) = 0x%x %s [ERROR EXPECTED]\n", my_tolower(sc), CORRECTP(my_tolower(sc) == 0xFF)); /* EXPECT: 0xffffffff [ERROR:WRONG] */
 	printf("my_tolower(uc) = 0x%x %s\n", my_tolower(uc), CORRECTP(my_tolower(uc) == 0xFF));
 	printf("my_tolower(i) = 0x%x %s\n", my_tolower(i), CORRECTP(my_tolower(i) == 0xFF));
 	printf("MY_TOLOWER(sc) = 0x%x %s\n", (unsigned int) MY_TOLOWER(sc), CORRECTP(MY_TOLOWER(sc) == 0xFF));
 	printf("MY_TOLOWER(uc) = 0x%x %s\n", (unsigned int) MY_TOLOWER(uc), CORRECTP(MY_TOLOWER(uc) == 0xFF));
 	printf("MY_TOLOWER(i) = 0x%x %s\n", (unsigned int) MY_TOLOWER(i), CORRECTP(MY_TOLOWER(i) == 0xFF));
+	printf("IL_TOLOWER(sc) = 0x%x %s [ERROR EXPECTED]\n", (unsigned int) IL_TOLOWER(sc), CORRECTP(IL_TOLOWER(sc) == 0xFF)); /* EXPECT: 0xffffffff [ERROR:WRONG] */
+	printf("IL_TOLOWER(uc) = 0x%x %s\n", (unsigned int) IL_TOLOWER(uc), CORRECTP(IL_TOLOWER(uc) == 0xFF));
+	printf("IL_TOLOWER(i) = 0x%x %s\n", (unsigned int) IL_TOLOWER(i), CORRECTP(IL_TOLOWER(i) == 0xFF));
 	printf("toupper(sc) = 0x%x %s\n", (unsigned int) toupper(sc), CORRECTP(toupper(sc) == 0xFF));
 	printf("toupper(uc) = 0x%x %s\n", (unsigned int) toupper(uc), CORRECTP(toupper(uc) == 0xFF));
 	printf("toupper(i) = 0x%x %s\n", (unsigned int) toupper(i), CORRECTP(toupper(i) == 0xFF));
-	printf("my_toupper(sc) = 0x%x %s\n", my_toupper(sc), CORRECTP(my_toupper(sc) == 0xFF));
+	printf("my_toupper(sc) = 0x%x %s [ERROR EXPECTED]\n", my_toupper(sc), CORRECTP(my_toupper(sc) == 0xFF)); /* EXPECT: 0xffffffff [ERROR:WRONG] */
 	printf("my_toupper(uc) = 0x%x %s\n", my_toupper(uc), CORRECTP(my_toupper(uc) == 0xFF));
 	printf("my_toupper(i) = 0x%x %s\n", my_toupper(i), CORRECTP(my_toupper(i) == 0xFF));
 	printf("MY_TOUPPER(sc) = 0x%x %s\n", (unsigned int) MY_TOUPPER(sc), CORRECTP(MY_TOUPPER(sc) == 0xFF));
 	printf("MY_TOUPPER(uc) = 0x%x %s\n", (unsigned int) MY_TOUPPER(uc), CORRECTP(MY_TOUPPER(uc) == 0xFF));
 	printf("MY_TOUPPER(i) = 0x%x %s\n", (unsigned int) MY_TOUPPER(i), CORRECTP(MY_TOUPPER(i) == 0xFF));
+	printf("IL_TOUPPER(sc) = 0x%x %s [ERROR EXPECTED]\n", (unsigned int) IL_TOUPPER(sc), CORRECTP(IL_TOUPPER(sc) == 0xFF)); /* EXPECT: 0xffffffff [ERROR:WRONG] */
+	printf("IL_TOUPPER(uc) = 0x%x %s\n", (unsigned int) IL_TOUPPER(uc), CORRECTP(IL_TOUPPER(uc) == 0xFF));
+	printf("IL_TOUPPER(i) = 0x%x %s\n", (unsigned int) IL_TOUPPER(i), CORRECTP(IL_TOUPPER(i) == 0xFF));
 	putchar('\n');
 
-	/* These work of coursen: */
+	/* These work of course: */
 	printf("isalpha((unsigned char) sc) = 0x%x %s\n", isalpha((unsigned char) sc), CORRECTP(isalpha((unsigned char) sc)));
 	printf("my_isalpha((unsigned char) sc) = 0x%x %s\n", my_isalpha((unsigned char) sc), CORRECTP(my_isalpha((unsigned char) sc)));
+	printf("MY_ISALPHA((unsigned char) sc) = 0x%x %s\n", MY_ISALPHA((unsigned char) sc), CORRECTP(MY_ISALPHA((unsigned char) sc)));
+	printf("IL_ISALPHA((unsigned char) sc) = 0x%x %s\n", IL_ISALPHA((unsigned char) sc), CORRECTP(IL_ISALPHA((unsigned char) sc)));
 	printf("islower((unsigned char) sc) = 0x%x %s\n", islower((unsigned char) sc), CORRECTP(islower((unsigned char) sc)));
 	printf("isupper((unsigned char) sc) = 0x%x %s\n", isupper((unsigned char) sc), CORRECTP(!isupper((unsigned char) sc)));
 	printf("tolower((unsigned char) sc) = 0x%x %s\n", tolower((unsigned char) sc), CORRECTP(tolower((unsigned char) sc) == 0xFF));
 	printf("tolower((unsigned char) uc) = 0x%x %s\n", tolower((unsigned char) uc), CORRECTP(tolower((unsigned char) uc) == 0xFF));
 	printf("my_tolower((unsigned char) sc) = 0x%x %s\n", my_tolower((unsigned char) sc), CORRECTP(my_tolower((unsigned char) sc) == 0xFF));
 	printf("my_tolower((unsigned char) uc) = 0x%x %s\n", my_tolower((unsigned char) uc), CORRECTP(my_tolower((unsigned char) uc) == 0xFF));
+	printf("MY_TOLOWER((unsigned char) sc) = 0x%x %s\n", MY_TOLOWER((unsigned char) sc), CORRECTP(MY_TOLOWER((unsigned char) sc) == 0xFF));
+	printf("MY_TOLOWER((unsigned char) uc) = 0x%x %s\n", MY_TOLOWER((unsigned char) uc), CORRECTP(MY_TOLOWER((unsigned char) uc) == 0xFF));
+	printf("IL_TOLOWER((unsigned char) sc) = 0x%x %s\n", IL_TOLOWER((unsigned char) sc), CORRECTP(IL_TOLOWER((unsigned char) sc) == 0xFF));
+	printf("IL_TOLOWER((unsigned char) uc) = 0x%x %s\n", IL_TOLOWER((unsigned char) uc), CORRECTP(IL_TOLOWER((unsigned char) uc) == 0xFF));
 	putchar('\n');
 
 	setlocale(LC_ALL, "en_US.ISO8859-1");
@@ -1436,18 +1705,27 @@ main()
 	printf("MY_ISALPHA(sc) = 0x%x %s\n", MY_ISALPHA(sc), CORRECTP(MY_ISALPHA(sc)));
 	printf("MY_ISALPHA(uc) = 0x%x %s\n", MY_ISALPHA(uc), CORRECTP(MY_ISALPHA(uc)));
 	printf("MY_ISALPHA(i) = 0x%x %s\n", MY_ISALPHA(i), CORRECTP(MY_ISALPHA(i)));
+	printf("IL_ISALPHA(sc) = 0x%x %s\n", IL_ISALPHA(sc), CORRECTP(IL_ISALPHA(sc)));
+	printf("IL_ISALPHA(uc) = 0x%x %s\n", IL_ISALPHA(uc), CORRECTP(IL_ISALPHA(uc)));
+	printf("IL_ISALPHA(i) = 0x%x %s\n", IL_ISALPHA(i), CORRECTP(IL_ISALPHA(i)));
 	printf("islower(sc) = 0x%x %s\n", islower(sc), CORRECTP(islower(sc)));
 	printf("islower(uc) = 0x%x %s\n", islower(uc), CORRECTP(islower(uc)));
 	printf("islower(i) = 0x%x %s\n", islower(i), CORRECTP(islower(i)));
 	printf("MY_ISLOWER(sc) = 0x%x %s\n", MY_ISLOWER(sc), CORRECTP(MY_ISLOWER(sc)));
 	printf("MY_ISLOWER(uc) = 0x%x %s\n", MY_ISLOWER(uc), CORRECTP(MY_ISLOWER(uc)));
 	printf("MY_ISLOWER(i) = 0x%x %s\n", MY_ISLOWER(i), CORRECTP(MY_ISLOWER(i)));
+	printf("IL_ISLOWER(sc) = 0x%x %s\n", IL_ISLOWER(sc), CORRECTP(IL_ISLOWER(sc)));
+	printf("IL_ISLOWER(uc) = 0x%x %s\n", IL_ISLOWER(uc), CORRECTP(IL_ISLOWER(uc)));
+	printf("IL_ISLOWER(i) = 0x%x %s\n", IL_ISLOWER(i), CORRECTP(IL_ISLOWER(i)));
 	printf("isupper(sc) = 0x%x %s\n", isupper(sc), CORRECTP(!isupper(sc)));
 	printf("isupper(uc) = 0x%x %s\n", isupper(uc), CORRECTP(!isupper(uc)));
 	printf("isupper(i) = 0x%x %s\n", isupper(i), CORRECTP(!isupper(i)));
 	printf("MY_ISUPPER(sc) = 0x%x %s\n", MY_ISUPPER(sc), CORRECTP(!MY_ISUPPER(sc)));
 	printf("MY_ISUPPER(uc) = 0x%x %s\n", MY_ISUPPER(uc), CORRECTP(!MY_ISUPPER(uc)));
 	printf("MY_ISUPPER(i) = 0x%x %s\n", MY_ISUPPER(i), CORRECTP(!MY_ISUPPER(i)));
+	printf("IL_ISUPPER(sc) = 0x%x %s\n", IL_ISUPPER(sc), CORRECTP(!IL_ISUPPER(sc)));
+	printf("IL_ISUPPER(uc) = 0x%x %s\n", IL_ISUPPER(uc), CORRECTP(!IL_ISUPPER(uc)));
+	printf("IL_ISUPPER(i) = 0x%x %s\n", IL_ISUPPER(i), CORRECTP(!IL_ISUPPER(i)));
 	printf("tolower(sc) = 0x%x %s\n", (unsigned int) tolower(sc), CORRECTP(tolower(sc) == 0xFE));
 	printf("tolower(uc) = 0x%x %s\n", (unsigned int) tolower(uc), CORRECTP(tolower(uc) == 0xFE));
 	printf("tolower(i) = 0x%x %s\n", (unsigned int) tolower(i), CORRECTP(tolower(i) == 0xFE));
@@ -1457,18 +1735,40 @@ main()
 	printf("MY_TOLOWER(sc) = 0x%x %s\n", (unsigned int) MY_TOLOWER(sc), CORRECTP(MY_TOLOWER(sc) == 0xFE));
 	printf("MY_TOLOWER(uc) = 0x%x %s\n", (unsigned int) MY_TOLOWER(uc), CORRECTP(MY_TOLOWER(uc) == 0xFE));
 	printf("MY_TOLOWER(i) = 0x%x %s\n", (unsigned int) MY_TOLOWER(i), CORRECTP(MY_TOLOWER(i) == 0xFE));
+	printf("IL_TOLOWER(sc) = 0x%x %s\n", (unsigned int) IL_TOLOWER(sc), CORRECTP(IL_TOLOWER(sc) == 0xFE));
+	printf("IL_TOLOWER(uc) = 0x%x %s\n", (unsigned int) IL_TOLOWER(uc), CORRECTP(IL_TOLOWER(uc) == 0xFE));
+	printf("IL_TOLOWER(i) = 0x%x %s\n", (unsigned int) IL_TOLOWER(i), CORRECTP(IL_TOLOWER(i) == 0xFE));
 	putchar('\n');
 
 	printf("isalpha(EOF) = 0x%x %s\n", isalpha(EOF), CORRECTP(!isalpha(EOF)));
+	printf("na_isalpha(EOF) = 0x%x %s\n", na_isalpha(EOF), CORRECTP(!na_isalpha(EOF)));
 	printf("my_isalpha(EOF) = 0x%x %s\n", my_isalpha(EOF), CORRECTP(!my_isalpha(EOF)));
 	printf("MY_ISALPHA(EOF) = 0x%x %s\n", MY_ISALPHA(EOF), CORRECTP(!MY_ISALPHA(EOF)));
+	printf("IL_ISALPHA(EOF) = 0x%x %s\n", IL_ISALPHA(EOF), CORRECTP(!IL_ISALPHA(EOF)));
 	printf("na_isalpha(EOF) = 0x%x %s\n", na_isalpha(EOF), CORRECTP(!na_isalpha(EOF)));
+
 	printf("islower(EOF) = 0x%x %s\n", islower(EOF), CORRECTP(!islower(EOF)));
+	printf("na_islower(EOF) = 0x%x %s\n", na_islower(EOF), CORRECTP(!na_islower(EOF)));
+	printf("my_islower(EOF) = 0x%x %s\n", my_islower(EOF), CORRECTP(!my_islower(EOF)));
+	printf("MY_ISLOWER(EOF) = 0x%x %s\n", MY_ISLOWER(EOF), CORRECTP(!MY_ISLOWER(EOF)));
+	printf("IL_ISLOWER(EOF) = 0x%x %s\n", IL_ISLOWER(EOF), CORRECTP(!IL_ISLOWER(EOF)));
+
 	printf("isupper(EOF) = 0x%x %s\n", isupper(EOF), CORRECTP(!isupper(EOF)));
+	printf("na_isupper(EOF) = 0x%x %s\n", na_isupper(EOF), CORRECTP(!na_isupper(EOF)));
+	printf("MY_ISUPPER(EOF) = 0x%x %s\n", MY_ISUPPER(EOF), CORRECTP(!MY_ISUPPER(EOF)));
+	printf("IL_ISUPPER(EOF) = 0x%x %s\n", IL_ISUPPER(EOF), CORRECTP(!IL_ISUPPER(EOF)));
+
 	printf("tolower(EOF) = 0x%x %s\n", (unsigned int) tolower(EOF), CORRECTP(tolower(EOF) == EOF));
+	printf("na_tolower(EOF) = 0x%x %s\n", (unsigned int) na_tolower(EOF), CORRECTP(na_tolower(EOF) == EOF));
 	printf("my_tolower(EOF) = 0x%x %s\n", my_tolower(EOF), CORRECTP(my_tolower(EOF) == EOF));
 	printf("MY_TOLOWER(EOF) = 0x%x %s\n", (unsigned int) MY_TOLOWER(EOF), CORRECTP(MY_TOLOWER(EOF) == EOF));
-	printf("na_tolower(EOF) = 0x%x %s\n", (unsigned int) na_tolower(EOF), CORRECTP(na_tolower(EOF) == EOF));
+	printf("IL_TOLOWER(EOF) = 0x%x %s\n", (unsigned int) IL_TOLOWER(EOF), CORRECTP(IL_TOLOWER(EOF) == EOF));
+
+	printf("toupper(EOF) = 0x%x %s\n", (unsigned int) toupper(EOF), CORRECTP(toupper(EOF) == EOF));
+	printf("na_toupper(EOF) = 0x%x %s\n", (unsigned int) na_toupper(EOF), CORRECTP(na_toupper(EOF) == EOF));
+	printf("my_toupper(EOF) = 0x%x %s\n", (unsigned int) my_toupper(EOF), CORRECTP(my_toupper(EOF) == EOF));
+	printf("MY_TOUPPER(EOF) = 0x%x %s\n", (unsigned int) MY_TOUPPER(EOF), CORRECTP(MY_TOUPPER(EOF) == EOF));
+	printf("IL_TOUPPER(EOF) = 0x%x %s\n", (unsigned int) IL_TOUPPER(EOF), CORRECTP(IL_TOUPPER(EOF) == EOF));
 	putchar('\n');
 
 
