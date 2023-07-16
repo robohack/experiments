@@ -436,7 +436,7 @@ difftval(struct timeval tstart, struct timeval tend)
 
 void print_rusage(const char *, struct rusage);
 
-#define PRINT_IF(var)	(var) ?  printf("%s%s = %ld\n", pref, STRINGIFY_SYMBOL(var), var) : 0
+#define PRINT_IF(var)	(var) ?  printf("%s%s = %ld\n", pref, STRINGIFY_SYMBOL(var), (long) var) : 0
 
 void
 print_rusage(const char *pref,
@@ -571,7 +571,7 @@ main(int argc,
 	                                    difftval(tru_s.ru_stime, ru_e.ru_stime)));
 
 	walltm_e = microtime();
-	printf("total wall (uSec): %lld\n", (long long int) walltm_e - walltm_s);
+	printf("total wall (uSec): %lld\n", (long long int) (walltm_e - walltm_s));
 
 	printf("total wait (uSec): %lld\n", ((long long int) (walltm_e - walltm_s) -
 	                                     (((long long int) difftval(tru_s.ru_utime, ru_e.ru_utime) +
