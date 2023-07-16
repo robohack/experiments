@@ -12,12 +12,13 @@
  *
  *	https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66425
  *
- * Use __typeof__ and __extension__ to work around the problem, if the
+ * Use __typeof__ and __extension__ to work around the problem, IFF the
  * workaround is known to be needed.
  */
 
 #if defined(__GNUC__)
-# if 3 < __GNUC__ + (4 < __GNUC_MINOR__)
+# if (__GNUC__ > 3) ||							\
+	((__GNUC__ == 3) && (__GNUC_MINOR__ >= 4))
 #  define ignore_value(x)	(__extension__({__typeof__(x) __x = (x); (void) __x; }))
 # endif
 #endif
@@ -43,7 +44,7 @@ int bar(int)  __attribute__((warn_unused_result));
 
 static inline void
 ignoreit()		/* no parameter list allows any type parameter, but... */
-{			/* warning: function declaration isn't a prototype */
+{			/* EXPECTED: warning: function declaration isn't a prototype */
 }
 
 /* splint clean... */
@@ -68,7 +69,7 @@ int
 main()
 {
 	int isused;
-	int notused;
+	int notused;			/* EXPECTED:  warning: variable 'notused' set but not used */
 	int lignored __attribute__((unused));
 
 	bar(3); /* EXPECTED: warning: ignoring return value of 'bar', declared with attribute warn_unused_result */
