@@ -122,10 +122,14 @@ NOGCCERROR ?= 1
 
 # I do not usually use any system-supplied "WARNS" level.
 #
-# On recent NetBSD a high enough setting includes "-Wundef", which then
-# complains about numerous issues in system headers!
-#
 WARNS ?= 0
+
+#
+# Set ${CWARNFLAGS} based on the detected compiler and its version.
+#
+# Note we do depend on the mk-files (notably <bsd.sys.mk>) to add ${CWARNFLAGS}
+# to ${CFLAGS}, but so far this is universally portable.
+#
 
 # -Winline
 #
@@ -213,10 +217,10 @@ CWARNFLAGS += -Wdeclaration-after-statement
 # -Wformat is included in -Wall, but not "-Wformat-nonliteral -Wformat-security"
 # but -Wformat-y2k is stupid
 CWARNFLAGS += -Wformat=2 -Wno-format-y2k
-# note: will only have effect if '-fstrict-aliasing' is enabled, but we never
-# enable that option!
+# note: will only have effect if '-fstrict-aliasing' is enabled, but normally we
+# do the opposite and disable that option
 # xxx maybe only in >= 3.3?
-#CWARNFLAGS += -Wstrict-aliasing=2
+CWARNFLAGS += -Wstrict-aliasing=2
 .endif
 
 .if (defined(__GNUC__) && \
@@ -229,9 +233,9 @@ CWARNFLAGS += -Wformat=2 -Wno-format-y2k
 CWARNFLAGS += -Wtraditional-conversion
 . endif
 CWARNFLAGS += -Wunreachable-code
-# XXX this only works if we don't turn off -fstrict-overflow _and_ we have -O2
-# or greater (see below)
-#CWARNFLAGS += -Wstrict-overflow=5
+# note: this only works if we don't turn off -fstrict-overflow (which we
+# normally do) _and_ we have -O2 or greater (see below)
+CWARNFLAGS += -Wstrict-overflow=5
 .endif
 
 # maybe this is right? (it's always enabled in more recent GCC's)
@@ -291,13 +295,6 @@ CWARNFLAGS += -fsanitize=address
 . endif
 # -fsanitize must also be provided to the linker (for hidden runtime libraries)
 LDFLAGS += ${CWARNFLAGS:M-fsanitize=*}
-.endif
-
-.if defined(__GNUC__) || defined(__clang__)
-# WARNING: C99 (and C11) allow compilers to perform optimizations based on the
-# "strict aliasing" rules which _will_ change the behaviour of previously
-# correct C90 and earlier code!
-CFLAGS += -fno-strict-aliasing
 .endif
 
 .if defined(__GNUC__) && !defined(__clang__)
@@ -380,15 +377,18 @@ LDFLAGS += -Wl,--unresolved-symbols=report-all
 . include <bsd.prog.mk>
 .endif
 
-.if empty(CFLAGS:M*${DBG}*)
+.if !empty(DBG) && empty(CFLAGS:M*${DBG}*)
 CFLAGS += ${DBG}
 .endif
-.if empty(CFLAGS:M*${OPTIM}*)
+.if !empty(OPTIM) && empty(CFLAGS:M*${OPTIM}*)
 CFLAGS += ${OPTIM}
 .endif
-
+.if empty(CFLAGS:M*-std=${CSTD}*)
 CFLAGS += -std=${CSTD}
+.endif
+.if !empty(CPPFLAGS) && empty(CFLAGS:M*${CPPFLAGS}*)
 CFLAGS += ${CPPFLAGS}
+.endif
 
 .if (defined(__GNUC__) && ${__GNUC__} >= 1) || \
 	(defined(__clang__) && ${__clang__} >= 1)
@@ -403,15 +403,15 @@ CFLAGS +=	-pipe
 # "strict" aliasing, overflow, and enums rules which _will_ change the behaviour
 # of previously correct C90 and earlier code!
 CFLAGS += -fno-strict-aliasing
+.endif
 
-. if (defined(__GNUC__) && \
+.if (defined(__GNUC__) && \
 	${__GNUC__} >= 4 && ${__GNUC_MINOR__} >= 2) && \
 	empty(CFLAGS:M*-fno-strict-overflow*)
 # WARNING:  Prevent the optimizer from assuming that the program
 # follows the strict signed overflow semantics permitted for the
 # language.
 CFLAGS += -fno-strict-overflow
-. endif
 .endif
 
 # XXX in GCC -fstrict-enums apparently only applies to C++
@@ -448,7 +448,7 @@ CFLAGS +=	-fstack-protector-all
 # the worst cases of allowing the optimizer to abuse "undefined behaviour" in
 # counter-productive ways (bugs should be bugs!):
 #
-#	-fwrapv -fno-strict-overflow -fno-delete-null-pointer-checks -fno-aggressive-loop-optimizations
+#	-fwrapv -fno-delete-null-pointer-checks -fno-aggressive-loop-optimizations
 #
 # XXX the problem is we don't have a firm list of which optimizations are "total
 # license" optimizations that abuse "undefined behaviour"
