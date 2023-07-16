@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 
+
 int main(void);
 
 static char *
@@ -178,6 +179,9 @@ main()
 {
 	bool failed = false;
 
+#if defined(_LARGEFILE_SOURCE)
+	puts("ah ha!  _LARGEFILE_SOURCE is defined by default!");
+#endif
 	failed |= test_in_symlink_to_dir();
 	failed |= test_dangling_symlink_matching();
 
