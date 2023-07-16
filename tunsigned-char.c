@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -49,7 +50,6 @@ typedef int ch_t;		/* the only correct solution: leave it alone! */
  *
  * See: https://graphics.stanford.edu/~seander/bithacks.html#FixedSignExtend
  */
-#include <limits.h>
 struct {
 	signed int x:CHAR_BIT;
 } s;
@@ -64,6 +64,10 @@ main(void)
 	int i = 0;
 	ch_t ch;
 	unsigned char array[SZ + 1];
+
+	if (CHAR_MIN < 0) {
+		printf("NOTE:  plain 'char' is signed by default!\n\n");
+	}
 
 	/*
 	 * getchar(3) returns a char value, or EOF, thus it is declared as
