@@ -477,6 +477,10 @@ print_rusage(const char *pref,
 long long unsigned int result;
 #endif
 
+#if !defined(__GNUC__) || (defined(__GNUC__) && defined(__STRICT_ANSI__))
+# define typeof	__typeof__
+#endif
+
 int main(int, char *[]);
 
 int
