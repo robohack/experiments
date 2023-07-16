@@ -93,15 +93,20 @@ typedef enum bool_e { false = 0U, true = !false } bool;
 #endif /* !HAVE_STDBOOL_H  */
 
 
-/* disable this to see poorly rounded values at max output precision */
+/*
+ * N.B.:  disable this to see un-rounded values at max output precision,
+ * i.e. the precision necessary for binary -> decimal -> binary conversion.
+ * (when enabled it preserves for decimal -> binary -> decimal conversions)
+ */
 #define PRINT_ROUND_TRIP_SAFE		/* defined */
 
 /*
  *  XXX HMMMM... Should PRINT_ROUND_TRIP_SAFE inform *_OUT_DEC_DIG too?
  *
- *  (probably not since we fake DBL_DECIMAL_DIG with DBL_OUT_DEC_DIG -- if we
- *  were to adjust it then we would need to define DBL_DECIMAL_DIG properly, and
- *  ideally with a compile-time integral expression)
+ *  (probably not since we replace the not-always-available DBL_DECIMAL_DIG with
+ *  DBL_OUT_DEC_DIG -- if we were to adjust it then we would need to define
+ *  DBL_DECIMAL_DIG properly, and ideally with a compile-time integral
+ *  expression)
  */
 
 #ifndef DECIMAL_DIG			/* added in C11 */
@@ -458,6 +463,7 @@ long double fabsl(long double n);	/* not as well tested */
 #define round2long(x) (((x) < (double)LONG_MIN-0.5 || (x) > (double)LONG_MAX+0.5) ? abort(),0 : ((x)>=0?(long)((x)+0.5):(long)((x)-0.5)))
 #define round2max(x) (((x) < (double)INTMAX_MIN-0.5 || (x) > (double)INTMAX_MAX+0.5) ? abort(),0 : ((x)>=0?(intmax_t)((x)+0.5):(intmax_t)((x)-0.5)))
 
+#if 0
 /* labels for the tests, used as an array index */
 typedef enum {
 	Putc, ReWrite, FastWrite, Getc, FastRead, Lseek, TestCount
@@ -471,7 +477,7 @@ static double delta[(int) TestCount][2] = {
 	{9.9, 10.10},
 	{11.11, 12.12},
 };
-
+#endif
 
 int main(void);
 
@@ -486,8 +492,10 @@ main()
 
 	uname(&utsname);
 
+#if 0
 	delta[(int) Putc][0] = 100000.1;
 	delta[(int) Putc][1] = 2.2;
+#endif
 
 	report(utsname.machine);
 
@@ -772,6 +780,7 @@ print_u128(__uint128_t u128)
  * the following:
  *
  * 	http://www.exploringbinary.com/the-answer-is-one-unless-you-use-floating-point/
+ *
  */
 static void
 report(char *machine)
@@ -827,11 +836,17 @@ report(char *machine)
 	printf("literals: 1.0l / 10.0l * 10.0l = %#.*Lg\n", LDBL_DIG, 1.0l / 10.0l * 10.0l);
 	putchar('\n');
 
+	/*
+	 * Demonstrate some of the folleys of doing floating point calculations
+	 * and then testing for exact equiavlence of the expected decimal value:
+	 */
 	if (0.70 + 0.20 + 0.10 != 1.00) {
-		puts("WTF!  (0.70 + 0.20 + 0.10) is not exactly one point zero!");
+		puts("WTF!  (0.70 + 0.20 + 0.10) is not binary equivalent to 1.0 !");
+		/* but at least using DBL_DIG it displays as 1.0!!! */
 		printf("0.70 + 0.20 + 0.10 =    %#.*g\n\n", DBL_DIG, 0.70 + 0.20 + 0.10);
 	}
 	dtmp = 0.70 + 0.20 + 0.10;
+	/* but we can make it round to 1.0 */
 	dtmp = round(dtmp * 100.00) / 100.00;
 	if (dtmp != 1.00) {
 		/* xxx normally this works, and some compilers (e.g. gcc-4.1.3) even say
@@ -840,13 +855,14 @@ report(char *machine)
 	}
 
 	if (1.0 - 0.9 - 0.1 != 0.0) {
-		puts("WTF!  (1.0 - 0.9 - 0.1) is not exactly zero point zero!");
+		puts("WTF!  (1.0 - 0.9 - 0.1) is not binary equivalent to 0.0, nor does it display as 0.0!!!");
+		/* xxx and it doesn't even display as 0.0!!! */
 		printf("1.0 - 0.9 - 0.1 =    %#.*g\n\n", DBL_DIG, 1.0 - 0.9 - 0.1);
 	}
 	dtmp = 1.0 - 0.9 - 0.1;
 	dtmp = round(dtmp * 100.00) / 100.00;
-	if (dtmp != 1.00) {
-		/* xxx 0.0 != -0.0 */
+	if (dtmp != 0.00) {
+		/* normally this works, unless maybe 0.0 != -0.0 */
 		printf("WTF!  round to 0.00 =    %#.*g\n\n", DBL_DIG, dtmp);
 	}
 
@@ -917,6 +933,11 @@ report(char *machine)
 
 	putchar('\n');
 
+	/* this should always be OK */
+	if (0.0 + 0.9 + 0.1 != 1.0) {
+		puts("WTF!  (0.0 + 0.9 + 0.1) is not binary equivalent to 1.0!");
+		printf("0.0 + 0.9 + 0.1 =    %#.*g\n\n", DBL_DIG, 0.0 + 0.9 + 0.1);
+	}
 	ftmp = 0.0;
 	ftmpta = (float) 0.9;
 	ftmptb = (float) 0.1;
@@ -937,11 +958,14 @@ report(char *machine)
 
 	putchar('\n');
 
+	/* but now let's try with an inexactly representable decimal value again */
 	dtmp = 0.0;
 	dtmpta = 0.1;
 	dtmptb = 0.11;
 	dtmp = dtmp + dtmpta + dtmptb;
-	printf("double:   0.0 + 0.1 + 0.11 =     %#.*g [%%#.%dg]\n", DBL_DIG, dtmp, DBL_DIG);
+	puts("NOTE:  Expected output at max precision for d->b->d:");
+	printf("double:   0.0 + 0.1 + 0.11 =     %#.*g [%%#.%dg, i.e. using DBL_DIG]\n", DBL_DIG, dtmp, DBL_DIG);
+	puts("NOTE:  Safe output (default precision):");
 	printf("double:   0.0 + 0.1 + 0.11 =     %#g [%%#g]\n", dtmp);
 	printf("double:   0.0 + 0.1 + 0.11 =     %g [%%g]\n", dtmp);
 	printf("double:   0.0 + 0.1 + 0.11 =     %f [%%f]\n", dtmp);
@@ -949,28 +973,40 @@ report(char *machine)
 	printf("double:   0.0 + 0.1 + 0.11 =     %a [%%a]\n", dtmp);
 	/* xxx this prints "wrong" like python et al as here we are printing too
 	 * many digits to round away the inexact calculation! */
-	printf("double:   0.0 + 0.1 + 0.11 =     %1.*e [%%1.16e]\n", 16, dtmp);
-	printf("double:   0.0 + 0.1 + 0.11 =     %1.*e [%%1.15e]\n", 16 - 1, dtmp); /* aka DBL_DIG */
-	printf("double:   0.0 + 0.1 + 0.11 =     %#.*g [%%#.16g]\n", 16, dtmp); /* aka DBL_OUT_DEC_DIG */
+	puts("NOTE:  One too many digits, showing incorrect value:");
+	printf("double:   0.0 + 0.1 + 0.11 =     %1.*e [%%1.16e, i.e. using DBL_OUT_DEC_DIG]\n", 16, dtmp);
+	puts("NOTE:  Safe output again, max precision for %1.*e and %#.*g:");
+	printf("double:   0.0 + 0.1 + 0.11 =     %1.*e [%%1.15e, i.e. using DBL_DIG]\n", 16 - 1, dtmp); /* aka DBL_DIG */
+	printf("double:   0.0 + 0.1 + 0.11 =     %#.*g [%%#.16g, i.e. using DBL_OUT_DEC_DIG]\n", 16, dtmp); /* aka DBL_OUT_DEC_DIG */
 	/* xxx this prints "wrong" like python et al as here we are printing too
 	 * many digits to round away the inexact calculation! */
-	printf("double:   0.0 + 0.1 + 0.11 =     %#.*g [%%#.17g]\n", 17, dtmp); /* xxx DBL_DECIMAL_DIG */
-	printf("double:   0.0 + 0.1 + 0.11 =     %#.*g [%%.%dg]\n", DBL_OUT_DEC_DIG, dtmp, DBL_OUT_DEC_DIG); /* xxx 16, DBL_DECIMAL_DIG-1 */
+	puts("NOTE:  Too many digits, showing incorrect value, but OK for b->d->b:");
+	printf("double:   0.0 + 0.1 + 0.11 =     %#.*g [%%#.17g, i.e. using DBL_DECIMAL_DIG]\n", 17, dtmp); /* xxx DBL_DECIMAL_DIG */
+	puts("NOTE:  Expected output again:");
+	printf("double:   0.0 + 0.1 + 0.11 =     %#.*g [%%.%dg, i.e. using DBL_OUT_DEC_DIG]\n", DBL_OUT_DEC_DIG, dtmp, DBL_OUT_DEC_DIG); /* xxx 16, DBL_DECIMAL_DIG-1 */
 	/* xxx this also prints "wrong" of course */
-	printf("double:   0.0 + 0.1 + 0.11 =     %.*f [%%.17f]\n", 17, dtmp); /* xxx DBL_DECIMAL_DIG */
-	printf("double:   0.0 + 0.1 + 0.11 =     %.*f [%%.%df]\n", DBL_OUT_DEC_DIG, dtmp, DBL_OUT_DEC_DIG); /* xxx 16, DBL_DECIMAL_DIG-1 */
+	puts("NOTE:  Too many digits for %f, showing incorrect value, but OK for b->d->b:");
+	printf("double:   0.0 + 0.1 + 0.11 =     %.*f [%%.17f, i.e. using DBL_DECIMAL_DIG]\n", 17, dtmp); /* xxx DBL_DECIMAL_DIG */
+	puts("NOTE:  Expectec output again:");
+	printf("double:   0.0 + 0.1 + 0.11 =     %.*f [%%.%df, i.e. using DBL_OUT_DEC_DIG]\n", DBL_OUT_DEC_DIG, dtmp, DBL_OUT_DEC_DIG); /* xxx 16, DBL_DECIMAL_DIG-1 */
 
 	putchar('\n');
 
+#if 0
 	/* hmmm.... I do not remember what this was supposed to be about */
 	printf("an int = %5d\n\n", (int) (((double) (off_t) 20480000) / (delta[(int) Putc][1] * 1024)));
 
-#if 0
 	dtmpta = delta[(int) Putc][0];
 	dtmptb = delta[(int) Putc][1];
+#else
+	dtmpta = 100000.1;
+	dtmptb = 2.2;
 #endif
+
 	dtmptb *= 100.0;
 	dtmp = dtmpta / dtmptb;
+
+	/* rounding and truncation.... */
 
 	printf("dtmpta .0 = %4.1f\n", dtmpta);
 	printf("dtmptb .0 = %4.1f\n", dtmptb);
@@ -1014,7 +1050,7 @@ report(char *machine)
 	printf("1.4 * 165 = %.015f (%%.015f)\n", dtmp);
 	printf("1.4 * 165 = %.015f round( * 100) / 100\n", round(dtmp * 100) / 100);
 	printf("1.4 * 165 = %.015f ceil( * 100) / 100\n", ceil(dtmp * 100) / 100);
-	printf("1.4 * 165 = %.015f floor( * 100) / 100\n", floor(dtmp * 100) / 100);
+	printf("1.4 * 165 = %.015f floor( * 100) / 100\n", floor(dtmp * 100) / 100); /* wrong again */
 	printf("1.4 * 165 = %.02f (%%.02f)\n", dtmp);
 	/*
 	 * n.b.:  Some proper ways to calculate the printf("%f") "precision",
@@ -1078,7 +1114,7 @@ report(char *machine)
 	       dtmp,
 	       DBL_OUT_DEC_DIG + 1 - lrint(floor(log10(ceil(fabs(dtmp))))),
 	       DBL_OUT_DEC_DIG + 1,
-	       floor(log10(ceil(fabs(dtmp)))));
+	       floor(log10(ceil(fabs(dtmp))))); /* wrong again */
 
 	/*
 	 * Normally one might use the built-in human-friendly formatting with
@@ -1115,33 +1151,42 @@ report(char *machine)
 	 * Further explanation:
 	 *
 	 *	DECIMAL_DIG is the number of decimal digits you need when
-	 *	converting from the largest floating point type to a decimal
-	 *	string and back to ensure that you get back the same binary
-	 *	value.
+	 *	converting from the largest (widest) floating point type to a
+	 *	decimal string and back to ensure that you get back the same
+	 *	binary value.
 	 *
-	 *	This is the "long double -> decimal -> long double" round-trip.
+	 *	This is for the "long double -> decimal -> long double" round-trip.
 	 *
-	 * (so for "double" this would be DBL_DECIMAL_DIG)
+	 * (so for a binary "double" this would be DBL_DECIMAL_DIG)
 	 *
 	 * XXX except of course that doesn't round correctly to produce accurate
-	 * results in decimal!  See examples elsewhere herein, such as "1.4 *
-	 * 165", thus the use of DBL_DIG+1 with "%.*g".
+	 * results in a decimal presentation!  See examples elsewhere herein,
+	 * such as "1.4 * 165", thus the use of DBL_DIG with "%.*g", or
+	 * DBL_DIG-1 with %1.*e.
 	 *
 	 *	[[L]DBL|FLT]_DIG is the number of decimal digits that will be
 	 *	reliably preserved when converting from decimal to [long] double
 	 *	(or float) and back (to decimal).
 	 *
-	 *	This is the "decimal -> binary floating -> decimal" round-trip.
+	 *	This is for the "decimal -> binary floating -> decimal" round-trip.
+	 *
+	 * For printf("%e") the precision (.*) is the number of digits after the
+	 * decimal point, so for normal scientific notation with "%1.*e" we can
+	 * specify at most the number of significant digits - 1 for the leading
+	 * digit, i.e. (DBL_DIG-1) for a "double".
+	 *
+	 * For printf("%g") the precision (.*) is the total number of
+	 * significant digits to be printed, so at most DBL_DIG for a "double".
 	 *
 	 * [[above paraphrased quotes from:  <https://stackoverflow.com/a/39707541/816536>]]
 	 *
 	 * XXX Note that because of the rounding necessary to get correctly
-	 * rounded results (1.4 * 165), the decimal values printed for DBL_MAX
-	 * and DBL_MIN (etc.) cannot be converted back to binary -- the rounded
-	 * value is outside the representable limit!  For pure serialization and
-	 * re-reading of binary floating point values one would have to print
-	 * *DECIMAL_DIG significant digits, only doing rounding to *_DIG (or
-	 * *_OUT_DEC_DIG) significant for presentation.
+	 * rounded presentable results (1.4 * 165), the decimal values printed
+	 * for DBL_MAX and DBL_MIN (etc.) cannot be converted back to binary --
+	 * the rounded value is outside the representable limit!  For pure
+	 * serialization and re-reading of binary floating point values one
+	 * would have to print *DECIMAL_DIG significant digits, only doing
+	 * rounding to *_DIG (or *_OUT_DEC_DIG) significant for presentation.
 	 *
 	 * XXX ToDo XXX work out a valid rounding for *_MIN and *_MAX values
 	 * such that they can still be printed with DBL_DIG _and_ survive
@@ -1153,51 +1198,70 @@ report(char *machine)
 	 * doing the decimal-binary-decimal round-trip.
 	 */
 	putchar('\n');
-	printf("1.4 * 165 = %1.*e (%%1.%lde aka DBL_DIG - 1)\n",
-	       DBL_DIG - 1, dtmp, DBL_DIG - 1);
-	printf("1.4 * 165 = %1.*e (%%1.%lde aka DBL_DIG or DBL_OUT_DEC_DIG - 1)\n",
+	printf("1.4 * 165 = %1.*e (%%1.%de aka DBL_DIG[%d] - 1)\n",
+	       DBL_DIG - 1, dtmp, DBL_DIG - 1, DBL_DIG);
+	printf("1.4 * 165 = %1.*e (%%1.%de aka DBL_DIG or DBL_OUT_DEC_DIG - 1)\n",
 	       DBL_DIG, dtmp, DBL_DIG);
-	printf("1.4 * 165 = %1.*e (%%1.%lde aka DBL_DIG + 1)\n",
-	       DBL_DIG + 1, dtmp, DBL_DIG + 1);
+	printf("1.4 * 165 = %1.*e (%%1.%de aka DBL_DIG + 1)\n",
+	       DBL_DIG + 1, dtmp, DBL_DIG + 1); /* wrong again */
 
 	putchar('\n');
-	printf("1.4 * 165 = %.*g (%%.%ldg aka DBL_DIG)\n",
+	printf("1.4 * 165 = %.*g (%%.%dg aka DBL_DIG)\n",
 	       DBL_DIG, dtmp, DBL_DIG);
-	printf("1.4 * 165 = %.*g (%%.%ldg aka DBL_DIG + 1 or DBL_OUT_DEC_DIG)\n",
+	printf("1.4 * 165 = %.*g (%%.%dg aka DBL_DIG + 1 or DBL_OUT_DEC_DIG)\n",
 	       DBL_DIG + 1, dtmp, DBL_DIG + 1);
-	printf("1.4 * 165 = %.*g (%%.%ldg aka DBL_DECIMAL_DIG)\n",
-	       DBL_OUT_DEC_DIG + 1, dtmp, DBL_OUT_DEC_DIG + 1);
+	printf("1.4 * 165 = %.*g (%%.%dg aka DBL_DECIMAL_DIG)\n",
+	       DBL_OUT_DEC_DIG + 1, dtmp, DBL_OUT_DEC_DIG + 1); /* wrong again */
 
 	putchar('\n');
 
 	/*
 	 * this is an example of how it goes wrong for values with a magnitude
-	 * greater than 1.0eDBL_DIG and less than 10eDBL_DIG
+	 * greater than 1.0eDBL_DIG
+	 *
+	 * xxx and of course there is no way to fix this using printf() alone
+	 * for %f as the "precision" is always just "the number of digits to
+	 * appear after the decimal-point"
 	 *
 	 * see print_decimal() for how to deal with this
 	 */
-	puts("This shows too many significant digits:");
-	printf("DBL_MAX = %.*f (%%.%df)\n",
-	       DBL_OUT_DEC_DIG + 1 - (int) lrint(floor(log10(ceil(fabs(DBL_MAX))))),
-	       DBL_MAX,
-	       DBL_OUT_DEC_DIG + 1 - (int) lrint(floor(log10(ceil(fabs(DBL_MAX))))));
+	puts("These show incorrect rounding and too many significant (non-zero) digits:");
+	dtmp = 0.70 + 0.20 + 0.10;
+	dtmp *= pow(10, 20.0);
+	printf(" %f (%%f) !=\n 100000000000000000000\n", dtmp);
+	dtmp = 1.4 * 165;
+	dtmp *= pow(10, 20.0);
+	printf(" %f (%%f) !=\n 23100000000000000000000\n", dtmp);
+	dtmp = 1234567890123456789.0;
+	printf(" %f (%%f) !=\n 1234567890123456789.0\n", dtmp);
+	dtmp = 12345678901234567890123456789.0;
+	printf(" %f (%%f) !=\n 12345678901234567890123456789.0\n", dtmp);
+	printf("DBL_MAX = %f (%%f)\n", DBL_MAX);
+
+	putchar('\n');
 
 	/*
-	 * For numbers with a magnitude smaller than 1.0 requires adding the
-	 * number of leading zeros after the decimal and before the first
-	 * non-zero digit to DBL_DECIMAL_DIG.  For a number like
-	 * OneSeventh/1000000.0, one would need DBL_DECIMAL_DIG + 6 to see all
-	 * the significant digits.
+	 * For numbers with a magnitude smaller than 1.0 we must add the number
+	 * of leading zeros after the decimal and before the first non-zero
+	 * digit to DBL_DECIMAL_DIG.  For a number like OneSeventh/1000000.0,
+	 * one would need DBL_DECIMAL_DIG + 6 to see all the significant digits.
 	 *
 	 * In this example all we see are the first few insignificant zeros.
 	 *
-	 * see print_decimal() for how to deal with this
+	 * see print_decimal() for the general solution
 	 */
-	puts("This doesn't shows enough (or even any) significant digits:");
-	printf("DBL_MIN = %.*f (%%.%df)\n",
-	       DBL_OUT_DEC_DIG + 1 - (int) lrint(floor(log10(ceil(fabs(DBL_MIN))))),
+	puts("This never shows enough (or even any) of the significant digits:");
+	printf(" DBL_MIN = % f (%% f)\n", DBL_MIN);
+	printf("-DBL_MIN = % f (%% f)\n", -DBL_MIN);
+	puts("However if we add in the number of leading zeros it is OK:");
+	printf(" DBL_MIN = % .*f (%% .%df)\n",
+	       DBL_DIG - 1 + abs((int) lrint(floor(log10(fabs(DBL_MIN))))),
 	       DBL_MIN,
-	       DBL_OUT_DEC_DIG + 1 - (int) lrint(floor(log10(ceil(fabs(DBL_MIN))))));
+	       DBL_DIG - 1 + abs((int) lrint(floor(log10(fabs(DBL_MIN))))));
+	printf("-DBL_MIN = % .*f (%% .%df)\n",
+	       DBL_DIG - 1 + abs((int) lrint(floor(log10(fabs(-DBL_MIN))))),
+	       -DBL_MIN,
+	       DBL_DIG - 1 + abs((int) lrint(floor(log10(fabs(-DBL_MIN))))));
 
 	putchar('\n');
 
@@ -1474,14 +1538,12 @@ print_decimal(double);
  * Note:  As presented this demo code prints a whole line including information
  * about how the form was arrived with, as well as in certain cases a couple of
  * interesting details about the number, such as the number of decimal places,
- * and possibley the magnitude of the value and the number of significant
- * digits.
+ * and possibly the magnitude of the value and the number of significant digits.
  */
 void
 print_decimal(double d)
 {
 	size_t sigdig;
-	int dplaces;
 	double flintmax;
 
 	/*
@@ -1507,7 +1569,7 @@ print_decimal(double d)
 # endif
 #else  /* not PRINT_ROUND_TRIP_SAFE */
 # ifdef DBL_DECIMAL_DIG
-	sigdig = DBL_DECIMAL_DIG - 1;
+	sigdig = DBL_DECIMAL_DIG - 1;	/* aka my "DBL_OUT_DEC_DIG" */
 # else
 	sigdig = (size_t) lrint(ceil(DBL_MANT_DIG * log10((double) FLT_RADIX)));
 # endif
@@ -1517,9 +1579,15 @@ print_decimal(double d)
 #endif
 	flintmax = pow((double) FLT_RADIX, (double) DBL_MANT_DIG); /* xxx use uipow() */
 	if (d == 0.0) {
-		printf("z = %.*s\n", (int) sigdig + 1, "0.000000000000000000000"); /* 21 */
+		/* fake a "zero" with the right number of significant digits */
+		printf("z =  %.*s [%d decimal places]\n",
+		       (int) sigdig + 1,
+		       "0.000000000000000000000", /* 21 decimal places, assuming double is 64 bits or less */
+		       (int) sigdig - 1);
 	} else if (fabs(d) >= 0.1 &&
 	           fabs(d) <= flintmax) {
+		int dplaces;
+
 		dplaces = (int) (sigdig - (size_t) lrint(floor(log10(ceil(fabs(d))))) + 1);
 		if (dplaces < 0) {
 			/* XXX this is likely never less than -1 */
@@ -1528,13 +1596,14 @@ print_decimal(double d)
 			 *
 			 * This should also be printed with sprintf() and edited...
 			 */
-			printf("R = %.0f [%d too many significant digits!!!, zero decimal places]\n", d, abs(dplaces));
+			printf("R = % .0f [%d too many significant digits!!!, zero decimal places]\n", d, abs(dplaces));
 		} else if (dplaces == 0) {
 			/*
 			 * The decimal fraction here is not significant and
-			 * should always be zero  (XXX I've never seen this)
+			 * should always be zero (XXX I've never seen this -- it
+			 * should probably only occur for d==0.0 ???)
 			 */
-			printf("R = %.0f [zero decimal places]\n", d);
+			printf("R = % .0f [zero decimal places]\n", d);
 		} else {
 			if (fabs(d) == 1.0) {
 				/*
@@ -1544,22 +1613,23 @@ print_decimal(double d)
 				 * count as a significant digit.
 				 */
 #if 0
-				printf("ceil(1.0) = %f, log10(ceil(1.0)) = %f, floor(log10(ceil(1.0)))+1 = %f\n",
+				printf("ceil(1.0) = %f, log10(ceil(1.0)) = %f, floor(log10(ceil(1.0)))+1 = %f, dplaces--\n",
 				       ceil(fabs(d)), log10(ceil(fabs(d))), floor(log10(ceil(fabs(d))))+1);
 #endif
 				dplaces--;
 			}
 			/* this is really the "useful" range of %f */
-			printf("r = %.*f [%d decimal places]\n", dplaces, d, dplaces);
+			printf("r = % .*f [%d decimal places]\n", dplaces, d, dplaces);
 		}
 	} else {
 		if (fabs(d) < 1.0) {
 			int lz;
+			int dplaces;
 
 			lz = abs((int) lrint(floor(log10(fabs(d)))));
 			/* i.e. add # of leading zeros to the precision */
 			dplaces = (int) sigdig - 1 + lz;
-			printf("f = %.*f [%d decimal places, %d leading zeros]\n", dplaces, d, dplaces, lz);
+			printf("f = % .*f [%d decimal places, %d leading zeros]\n", dplaces, d, dplaces, lz);
 #if 0
 			printf("lz = %d, sigdig = %ju, dplaces = %d, dbl = %g\n", lz, (uintmax_t) sigdig, dplaces, d);
 #endif
@@ -1576,10 +1646,10 @@ print_decimal(double d)
 			 * round the least significant digit.
 			 */
 			df = malloc((size_t) 1);
-			n = (size_t) snprintf(df, (size_t) 1, "%.1f", d);
+			n = (size_t) snprintf(df, (size_t) 1, "% .1f", d);
 			n++;		/* for the NUL */
 			df = realloc(df, n);
-			(void) snprintf(df, n, "%.1f", d);
+			(void) snprintf(df, n, "% .1f", d);
 			if ((n - 2) > sigdig) {
 				/*
 				 * XXX rounding the integer part here is "hard"
@@ -1594,7 +1664,7 @@ print_decimal(double d)
 						 * xxx fixing this is left as
 						 * an exercise to the reader!
 						 */
-						printf("F = *** failed to round integer part at the least significant digit!!! ***\n");
+						printf("F =  *** failed to round integer part at the least significant digit!!! ***\n");
 						free(df);
 						return;
 					} else {
@@ -1627,21 +1697,21 @@ print_drep(double d)
 {
 #ifdef PRINT_ROUND_TRIP_SAFE
 	/*
-	 * for printf("%e") the precision (.*) is the number of digits after the
+	 * For printf("%e") the precision (.*) is the number of digits after the
 	 * decimal point, so at most the number of significant digits - 1 for
 	 * the leading digit, i.e. (DBL_DIG-1) for a "double".
 	 */
-	printf("e = %1.*e [%d decimal places]\n", DBL_DIG - 1, d, DBL_DIG - 1);
+	printf("e = % 1.*e [%d decimal places for d->b->d]\n", DBL_DIG - 1, d, DBL_DIG - 1);
 	/*
-	 * for printf("%g") the precision (.*) is the total number of
+	 * For printf("%g") the precision (.*) is the total number of
 	 * significant digits to be printed, so at most DBL_DIG for a "double"
 	 */
-	printf("g = %#.*g [%d significant digits]\n", DBL_DIG, d, DBL_DIG);
+	printf("g = % #.*g [%d significant digits for d->b->d]\n", DBL_DIG, d, DBL_DIG);
 #else
-	printf("e = %1.*e [%d decimal places]\n", DBL_DIG, d, DBL_DIG);
-	printf("g = %#.*g [%d significant digits]\n", DBL_OUT_DEC_DIG, d, DBL_OUT_DEC_DIG); /* aka (DBL_DECIMAL_DIG) */
+	printf("e = % 1.*e [%d decimal places for b->d->b]\n", DBL_DIG, d, DBL_DIG);
+	printf("g = % #.*g [%d significant digits for b->d->b]\n", DBL_OUT_DEC_DIG, d, DBL_OUT_DEC_DIG); /* aka (DBL_DECIMAL_DIG) */
 #endif
-	printf("a = %a\n", d);
+	printf("a = % a\n", d);
 	print_decimal(d);
 	print_double_internals(d);
 
@@ -1734,12 +1804,6 @@ representations()
 	double dq;
 	float fq;
 
-#ifndef PRINT_ROUND_TRIP_SAFE
-	puts("WARNING!!!");
-	puts("Output at min/max precision may not be rounded sufficiently for round trip conv.");
-	puts("WARNING!!!");
-	putchar('\n');
-#endif
 
 	/*  */ {
 		volatile double x = 2597.525;
@@ -1749,15 +1813,18 @@ representations()
 		       "%.2f\n",	/* 5000.52 -- i.e. rounds to nearest even */
 		       x, y);
 	}
+	putchar('\n');
 	printf("foo(1E308) = %.*g\n", DBL_DIG, foo(1E308)); /* xxx may be different with/(out) optimization */
 	printf("56789.012345 / 1111111111 = %.*g\n", DBL_DIG, quot_d(56789.012345, 1111111111.0));
 	putchar('\n');
+
 	printf("0.99 * 0.99 = %.50f (%%.50f)\n", mult_d(0.99, 0.99));
-	printf("0.99 * 0.99 = %.*f (rounded with %%.%df [max precision])\n", DBL_OUT_DEC_DIG + 1, mult_d(0.99, 0.99), DBL_OUT_DEC_DIG + 1); /* xxx DBL_DECIMAL_DIG */
+	printf("0.99 * 0.99 = %.*f (rounded with %%.%df [max precision for b->d->b round-trip precision])\n", DBL_OUT_DEC_DIG + 1, mult_d(0.99, 0.99), DBL_OUT_DEC_DIG + 1); /* xxx DBL_DECIMAL_DIG */
 	printf("0.99 * 0.99 = %.*f (rounded with %%.%df [best precision])\n", DBL_OUT_DEC_DIG, mult_d(0.99, 0.99), DBL_OUT_DEC_DIG);
-	printf("0.99 * 0.99 = %.*f (rounded with %%.%df [round-trip precision])\n", DBL_DIG, mult_d(0.99, 0.99), DBL_DIG);
+	printf("0.99 * 0.99 = %.*f (rounded with %%.%df [d->b->d round-trip precision])\n", DBL_DIG, mult_d(0.99, 0.99), DBL_DIG);
 	printf("0.99 * 0.99 = %.04f (rounded with %%.04f)\n", mult_d(0.99, 0.99));
 	putchar('\n');
+
 	printf("1.40 (%19.*g) * 165. = %1.*g (%%.%dg [DBL_DECIMAL_DIG])\n", DBL_OUT_DEC_DIG + 1, 1.5 - 0.10, DBL_OUT_DEC_DIG + 1, mult_d(1.5 - 0.10, 165.0),  DBL_OUT_DEC_DIG + 1); /* xxx DBL_DECIMAL_DIG */
 	printf("1.40 (%19.16f) * 165. = %.16f (rounded with %%.16f)\n", 1.50 - 0.10, mult_d(1.50 - 0.10, 165.0));
 	printf("1.40 (%19.15f) * 165. = %.15f (rounded with %%.15f)\n", 1.50 - 0.10, mult_d(1.50 - 0.10, 165.0));
@@ -1871,7 +1938,7 @@ representations()
 	     );
 
 	printf("maximum integer in a float by ipow():\n");
-	dq = ipow(FLT_RADIX, FLT_MANT_DIG);
+	dq = ipow(FLT_RADIX, FLT_MANT_DIG); /* xxx may change value */
 	print_drep(dq);
 
 	printf("maximum integer in a float by shifting:\n");
@@ -1879,7 +1946,7 @@ representations()
 	print_drep(dq);
 
 	printf("maximum integer in a double by ipow():\n");
-	dq = ipow(FLT_RADIX, DBL_MANT_DIG);
+	dq = ipow(FLT_RADIX, DBL_MANT_DIG); /* xxx may change value */
 	print_drep(dq);
 
 	printf("maximum integer in a double by shifting:\n");
@@ -1896,17 +1963,25 @@ representations()
 	print_drep(dq);
 
 	printf("double overflowed (infinity, > DBL_MAX):\n");
-	dq = ipow(FLT_RADIX, DBL_MANT_DIG);
+	dq = ipow(FLT_RADIX, DBL_MANT_DIG); /* xxx may change value */
 	dq = dq * pow(10.0, 400.0);	/* inf */
 	print_drep(dq);
 
 	printf("double not quite overflowed (< DBL_MAX):\n");
-	dq = ipow(FLT_RADIX, DBL_MANT_DIG);/* AKA maximum integer in a double */
+	dq = ipow(FLT_RADIX, DBL_MANT_DIG);/* AKA maximum integer in a double *//* xxx may change value */
 	dq = dq * pow(10.0, 308.0 - DBL_OUT_DEC_DIG); /* < DBL_MAX */
 	print_drep(dq);
 
-	printf("1 << 32, aka 2^32:\n");
+	printf("1 << 32, aka 2^32 [0x%llx]:\n", 1LLU << 32);
 	dq = 1LLU << 32;
+	print_drep(dq);
+
+	printf("1 << 8 [0x%llx]:\n", 1LLU << 8);
+	dq = 1LLU << 8;
+	print_drep(dq);
+
+	printf("just 0:\n");
+	dq = 0;
 	print_drep(dq);
 
 	printf("memset(0x00):\n");
@@ -2011,6 +2086,10 @@ representations()
 	dq += 0.11;
 	print_drep(dq);
 
+	printf("just 0.21 (compare to above!):\n");
+	dq = 0.21;
+	print_drep(dq);
+
 	printf("just 1.4:\n");
 	dq = 1.4;
 	print_drep(dq);
@@ -2030,10 +2109,6 @@ representations()
 
 	printf("1 << 32 + 48692 + 3.278:\n");
 	dq += 3.278;
-	print_drep(dq);
-
-	printf("just 0:\n");
-	dq = 0;
 	print_drep(dq);
 
 	printf("0 + 3.278:\n");
@@ -2106,6 +2181,14 @@ representations()
 	dq /= 1000000000000.0;
 	print_drep(dq);
 
+	dq = 1.4 * 165;
+	dq *= pow(10, 20.0);
+	print_drep(dq);
+
+	printf("just 999999999999999 (15 9s):\n");
+	dq = 999999999999999LLU;
+	print_drep(dq);
+
 	printf("just 999999999999999 (15 9s):\n");
 	dq = 999999999999999LLU;
 	print_drep(dq);
@@ -2115,7 +2198,7 @@ representations()
 	print_drep(dq);
 
 	printf("XXX: rounds up!  just 9999999999999999 (16 9s):\n");
-	dq = 9999999999999999LLU;		/* warning: conversion from 'long int' to 'double' changes value from '9999999999999999' to '1.0e+16' [-Wfloat-conversion] */
+	dq = 9999999999999999LLU;	/* warning: conversion from 'long int' to 'double' changes value from '9999999999999999' to '1.0e+16' [-Wfloat-conversion] */
 	print_drep(dq);
 
 	printf("just 10000000000000000 (16 0s):\n");
@@ -2123,7 +2206,7 @@ representations()
 	print_drep(dq);
 
 	printf("XXX: rounds up!  just 99999999999999999 (17 9s):\n");
-	dq = 99999999999999999LLU;		/* warning: conversion from 'long int' to 'double' changes value from '99999999999999999' to '1.0e+17' [-Wfloat-conversion] */
+	dq = 99999999999999999LLU;	/* warning: conversion from 'long int' to 'double' changes value from '99999999999999999' to '1.0e+17' [-Wfloat-conversion] */
 	print_drep(dq);
 
 	printf("just 100000000000000000 (17 0s):\n");
@@ -2144,6 +2227,38 @@ representations()
 
 	printf("just 10000000000000000000 (19 0s):\n");
 	dq = 10000000000000000000LLU;
+	print_drep(dq);
+
+	printf("XXX: rounds down!  just -9999999999999999 (16 9s):\n");
+	dq = -9999999999999999LL;	/* warning: conversion from 'long int' to 'double' changes value from '9999999999999999' to '1.0e+16' [-Wfloat-conversion] */
+	print_drep(dq);
+
+	printf("just -10000000000000000 (16 0s):\n");
+	dq = -10000000000000000LL;
+	print_drep(dq);
+
+	printf("XXX: rounds down!  just -99999999999999999 (17 9s):\n");
+	dq = -99999999999999999LL;	/* warning: conversion from 'long int' to 'double' changes value from '99999999999999999' to '1.0e+17' [-Wfloat-conversion] */
+	print_drep(dq);
+
+	printf("just -100000000000000000 (17 0s):\n");
+	dq = -100000000000000000LL;
+	print_drep(dq);
+
+	printf("XXX: rounds down!  just -999999999999999999 (18 9s):\n");
+	dq = -999999999999999999LL;	/* warning: conversion from 'long int' to 'double' changes value from '999999999999999999' to '1.0e+18' [-Wfloat-conversion] */
+	print_drep(dq);
+
+	printf("just -1000000000000000000 (18 0s):\n");
+	dq = -1000000000000000000LL;
+	print_drep(dq);
+
+	printf("XXX: rounds down!  just -9999999999999999999U (19 9s):\n");
+	dq = -9999999999999999999LL;	/* warning: conversion from 'long unsigned int' to 'double' changes value from '9999999999999999999' to '1.0e+19' [-Wfloat-conversion] */
+	print_drep(dq);
+
+	printf("just -10000000000000000000 (19 0s):\n");
+	dq = -10000000000000000000LL;
 	print_drep(dq);
 
 	return;
@@ -2304,7 +2419,7 @@ precision()
 	printf("    calculated using base-2 shifts:\n"
 	       "       = %*ju\n",
 	       ldbl_log10, (uintmax_t) (1LLU << FLT_MANT_DIG));
-	tf = ti = (1LLU << FLT_MANT_DIG);
+	tf = ti = (1LLU << FLT_MANT_DIG); /* xxx may change value */
 	tf += 1.0f;
 	ti += 1;
 	if ((long long int) tf != (long long int) ti) {
@@ -2312,14 +2427,14 @@ precision()
 		       (float) (1LLU << FLT_MANT_DIG),
 		       (uintmax_t) (1LLU << FLT_MANT_DIG));
 	}
-	tf = ti = (1LLU << FLT_MANT_DIG);
+	tf = ti = (1LLU << FLT_MANT_DIG); /* xxx may change value */
 	ti -= 2;
 	tf -= 2.0f;
 	for (ui = 0; ui <= 4; ui++, ti++) {
 		/* the addition must be done all at once, not incrementally */
 		tf = (1LLU << FLT_MANT_DIG);
 		tf -= (float) 2.0;
-		tf += ui * 1.0;
+		tf += ui * 1.0;		/* xxx may change value */
 		printf("ti + %u = %*jd,  tf + %u = %*.10f\n",
 		       ui, ldbl_log10, ti,
 		       ui, ldbl_log10 + 10, tf);
@@ -2336,7 +2451,7 @@ precision()
 	printf("    calculated using base-2 shifts:\n"
 	       "       = %*ju\n",
 	       ldbl_log10, (uintmax_t) (1LLU << DBL_MANT_DIG));
-	td = tui = (1LLU << DBL_MANT_DIG);
+	td = tui = (1LLU << DBL_MANT_DIG); /* xxx may change value */
 	td += 1.0;
 	tui += 1;
 	if ((uintmax_t) td != tui) {
@@ -2344,7 +2459,7 @@ precision()
 		       (double) (1LLU << DBL_MANT_DIG),
 		       (uintmax_t) (1LLU << DBL_MANT_DIG));
 	}
-	td = tui = (1LLU << DBL_MANT_DIG);
+	td = tui = (1LLU << DBL_MANT_DIG); /* xxx may change value */
 	tui -= 2;
 	td -= 2.0;
 	for (ui = 0; ui <= 4; ui++, tui++) {
@@ -2383,7 +2498,7 @@ precision()
 	       "        = ");
 	print_u128((__uint128_t) 1 << LDBL_MANT_DIG);
 	putchar('\n');
-	tld = tlui = ((__uint128_t) 1 << LDBL_MANT_DIG);
+	tld = tlui = ((__uint128_t) 1 << LDBL_MANT_DIG); /* xxx may change value */
 	tld += 1.0L;
 	tlui += 1;
 	if ((__uint128_t) tld != tlui) {
@@ -2392,7 +2507,7 @@ precision()
 		print_u128((__uint128_t) 1 << LDBL_MANT_DIG);
 		printf(" + 1 !!!\n");
 	}
-	tld = tlui = ((__uint128_t) 1 << LDBL_MANT_DIG);
+	tld = tlui = ((__uint128_t) 1 << LDBL_MANT_DIG); /* xxx may change value */
 	/*
 	 * XXX Hmmmm....  GCC-4.1.3 20080704 on NetBSD-5 is broken --
 	 * the subtraction here fails to do anything
@@ -2478,7 +2593,8 @@ precision()
 	putchar('\n');
 
 	/*
-	 * Min decimal digits for binary-decimal-binary round-trip
+	 * *_DECIMAL_DIG:  Minimum decimal digits for binary->decimal->binary
+	 * round-trip conversion.
 	 *
 	 * I.e. the minimum number of decimal digits required for a binary
 	 * value of 'b' bits to round-trip, i.e. the inverse of the
@@ -2507,7 +2623,7 @@ precision()
 		printf("WARNING:  should be  = %ld\n", lrint(ceil(FLT_MANT_DIG * log10((double) FLT_RADIX)) + 1));
 	}
 #else
-	printf("NOTE:  FLT_DECIMAL_DIG should be  = %ld\n", lrint(ceil(FLT_MANT_DIG * log10((double) FLT_RADIX)) + 1));
+	printf("NOTE:  FLT_DECIMAL_DIG should be  = %2ld\n", lrint(ceil(FLT_MANT_DIG * log10((double) FLT_RADIX)) + 1));
 #endif
 #ifdef DBL_DECIMAL_DIG
 	printf("DBL_DECIMAL_DIG  = %d\n", DBL_DECIMAL_DIG);
@@ -2515,7 +2631,7 @@ precision()
 		printf("WARNING:  should be  = %ld\n", lrint(ceil(DBL_MANT_DIG * log10((double) FLT_RADIX)) + 1));
 	}
 #else
-	printf("NOTE:  DBL_DECIMAL_DIG should be  = %ld\n", lrint(ceil(DBL_MANT_DIG * log10((double) FLT_RADIX)) + 1));
+	printf("NOTE:  DBL_DECIMAL_DIG should be  = %2ld\n", lrint(ceil(DBL_MANT_DIG * log10((double) FLT_RADIX)) + 1));
 #endif
 #ifdef LDBL_DECIMAL_DIG
 	printf("LDBL_DECIMAL_DIG = %d\n", LDBL_DECIMAL_DIG);
@@ -2523,16 +2639,16 @@ precision()
 		printf("WARNING:  should be  = %ld\n", lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX)) + 1));
 	}
 #else
-	printf("NOTE:  LDBL_DECIMAL_DIG should be  = %ld\n", lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX)) + 1));
+	printf("NOTE:  LDBL_DECIMAL_DIG should be = %ld\n", lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX)) + 1));
 #endif
-#ifdef DECIMAL_DIG
+#ifdef DECIMAL_DIG		/* xxx this may have come from __DECIMAL_DIG__ */
 	/* xxx assuming "long double" is supported... */
 	printf("DECIMAL_DIG          = %d\n", DECIMAL_DIG);
 	if (lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX)) + 1) != DECIMAL_DIG) {
 		printf("WARNING:  should be  = %ld\n", lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX)) + 1));
 	}
 #else
-	printf("NOTE:  DECIMAL_DIG should be  = %ld\n", lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX)) + 1));
+	printf("NOTE:  DECIMAL_DIG should be  = %2ld\n", lrint(ceil(LDBL_MANT_DIG * log10((double) FLT_RADIX)) + 1));
 #endif
 	putchar('\n');
 
