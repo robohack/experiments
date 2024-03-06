@@ -95,9 +95,20 @@ __clang_patchlevel__ !=	echo __clang_patchlevel__ | $(CC) -E - | sed '/\#/d;s/__
 . endif
 .endif
 
-.if ((defined(_HOST_OSNAME) && (${_HOST_OSNAME} == "Darwin")) || \
+# borrowed from Simin G.'s Mk files.
+.if !defined(_HOST_OSNAME)
+# use .MAKE.OS if available
+_HOST_OSNAME := ${.MAKE.OS:U${uname -s:L:sh}}
+.endif
+TARGET_OSNAME?= ${_HOST_OSNAME}
+
+# Note:  TARGET_OSNAME is from Crufty's Mk files (host-target.mk, own.mk), and
+# OS is from pkgsrc bootstrap-mk.  .FreeBSD is a trick shared by FreeBSD and old
+# MacOS bsdmake.
+#
+.if ((defined(TARGET_OSNAME) && (${TARGET_OSNAME} == "Darwin")) || \
 	(defined(OS) && (${OS} == "Darwin")) || \
-	(defined(.FreeBSD) && (${.FreeBSD} == "false")))
+	(defined(.FreeBSD) && (empty(.FreeBSD) || (${.FreeBSD} == "false"))))
 #
 # NOTE: Mac OS X does not use GNU ld, but....
 #
@@ -347,7 +358,7 @@ OPTIM ?= -O2
 #
 LDSTATIC ?= -static
 
-.if (defined(_HOST_OSNAME) && (${_HOST_OSNAME} == "Darwin")) || defined(.FreeBSD)
+.if (defined(TARGET_OSNAME) && (${TARGET_OSNAME} == "Darwin")) || defined(.FreeBSD)
 # for both FreeBSD and Mac OS X....
 NO_SHARED = YES
 .else
@@ -490,9 +501,9 @@ LDFLAGS += ${_CCLINKFLAGS}
 
 PATTERNS ?=	Makefile CStandard.c g*.c t*.awk t*.[ch] t*.c++ t*.sh t*.clisp t*.mk t*.go go.mod go.sum
 
-.if ((defined(_HOST_OSNAME) && (${_HOST_OSNAME} == "Darwin")) || \
+.if ((defined(TARGET_OSNAME) && (${TARGET_OSNAME} == "Darwin")) || \
 	(defined(OS) && (${OS} == "Darwin")) || \
-	(defined(.FreeBSD) && (${.FreeBSD} == "false")))
+	(defined(.FreeBSD) && (empty(.FreeBSD) || (${.FreeBSD} == "false"))))
 #
 # xxx does Clang make .dSYM directories on FreeBSD too???
 #
