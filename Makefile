@@ -304,6 +304,16 @@ CWARNFLAGS += -fsanitize=address
 .   endif
 .  endif
 . endif
+# XXX unknown when this started....
+#. if ${__clang_major__} >= 16
+#
+# $ cc -Werror -Wimplicit-int-conversion stdio.h
+# stdio.h:465:23: error: implicit conversion loses integer precision: 'int' to 'unsigned char' [-Werror,-Wimplicit-int-conversion]
+#                 return (*_p->_p++ = _c);
+#                                   ~ ^~
+#
+CWARNFLAGS += -Wno-implicit-int-conversion
+#. endif
 # -fsanitize must also be provided to the linker (for hidden runtime libraries)
 LDFLAGS += ${CWARNFLAGS:M-fsanitize=*}
 .endif
