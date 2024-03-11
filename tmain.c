@@ -28,6 +28,11 @@ goodbye(void)
 	printf("%s: Goodbye cruel world!\n", argv0);
 }
 
+/*
+ * Having to declare one's own prototype for main() may seem weird, but there
+ * are at least these three possible valid ways to define it, so only the code
+ * defining the particular variety can also declar the matching prototype.
+ */
 #if defined(full_main)
 int main(int, char *[], char *[]);	/* a prototype for main() must exist */
 #else
