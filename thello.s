@@ -3,7 +3,12 @@
 	#
 	# this example was mostly stolen from:  https://polprog.net/blog/netbsdasmprog/
 	#
+	# See also:  https://github.com/ibara/echo
+	#
 .section	.text
+
+	# N.B.:  note the inclusion of /usr/lib/sysident.o in the link loader
+	# command.
 
 	# Finding the true name of the default "ENTRY" symbol in the
 	# documentation is basically impossible.
@@ -67,7 +72,11 @@ hello_len:
 	.byte . - hello_str
 
 #
+# XXX N.B.:  `asm-mode' does not handle `asm-comment-char' very well.  It must be
+#	set *before* asm-mode is invoked, which cannot be done with Local Variables!
+#
 # Local Variables:
+# asm-comment-char: ?\#
 # eval: (make-local-variable 'compile-command)
 # compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn " ; " "as -o " fn ".o " fn ".s && ld -Bstatic -o "fn " /usr/lib/sysident.o " fn ".o && ./" fn))
 # End:
