@@ -17,12 +17,16 @@ _start:
 	## The kernel expects the syscall number in rax
 	## and the first parameter in rdi
 	mov $0, %rdi 		# exit status (0), the first parameter, goes in rdi
-	movl $1, %eax 		# SYS_exit (see also <sys/syscall.h>) goes in rax
+	mov $1, %rax 		# SYS_exit (see also <sys/syscall.h>) goes in rax
 	int $0x80		# aka amd64 "syscall"
 
 #
+# XXX N.B.:  `asm-mode' does not handle `asm-comment-char' very well.  It must be
+#	set *before* asm-mode is invoked, which cannot be done with Local Variables!
+#
 # Local Variables:
+# asm-comment-char: ?\#
 # eval: (make-local-variable 'compile-command)
-# compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn " ; " "as -o " fn ".o " fn ".s && ld -Bstatic -o "fn " " fn ".o"))
+# compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn " ; " "as -o " fn ".o " fn ".s && ld -Bstatic -o "fn " " fn ".o && ./" fn))
 # End:
 #
