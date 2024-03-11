@@ -325,15 +325,42 @@ fibSq2(unsigned int n)
 #define STRINGIFY_SYMBOL(s)	STRINGIFY_MACRO(s)
 #define STRINGIFY_MACRO(s)	#s
 
-/*
- * microtime() - return number of microseconds since some epoch
- *
- * the particular epoch is irrelevant -- we just use the difference between two
- * of these samples taken sufficiently far appart enough that the resolution is
- * also relatively unimportant, though better than 1 second is expected....
- */
-static u_quad_t microtime(void);
-static void check_clock_res(void);
+/* XXX see also timevalsub() */
+suseconds_t difftval(struct timeval, struct timeval);
+suseconds_t
+difftval(struct timeval tstart, struct timeval tend)
+{
+	tend.tv_sec -= tstart.tv_sec;
+	tend.tv_usec -= tstart.tv_usec;
+
+	/*
+	 * be extremely careful that any over/under "impossible" tv_usec
+	 * values from the above subtractions or earlier are ironed out and it
+	 * is always left in range.
+	 *
+	 * XXX instead of a loop we could/should use '/' and '%', if this is
+	 * right:
+	 *
+	 *	if (tend.tv_usec < 0) {
+	 *	 	tv_sec -= (abs(tv_usec) / 1000000) + 1;
+	 *	 	tv_usec = 1000000 - (abs(tv_usec) % 1000000);
+	 *	}
+	 *	if (tend.tv_usec >= 1000000) {
+	 *	 	tv_sec += tv_usec / 1000000;
+	 *	 	tv_usec = tv_usec % 1000000;
+	 *	}
+	 */
+	while (tend.tv_usec < 0) {
+		tend.tv_sec--;
+		tend.tv_usec += 1000000;
+	}
+	while (tend.tv_usec >= 1000000) {
+		tend.tv_sec++;
+		tend.tv_usec -= 1000000;
+	}
+
+	return (suseconds_t) ((tend.tv_sec * 1000000) + tend.tv_usec);
+}
 
 /*
  * Timing anomalies
@@ -342,8 +369,8 @@ static void check_clock_res(void);
  * wall-clock time it took to run the process, including the time to do the
  * vfork() and execvp(), ignore some signals, and call wait4().
  *
- * However currently on NetBSD because of the bogus way 4BSD has aproximately
- * always divied up time between user time and system tiem we can see
+ * However currently on NetBSD because of the bogus way 4BSD has approximately
+ * always divied up time between user time and system time we can see
  * getrusage() report a total of system plus user time of as much as 0.06
  * seconds longer than gettimeofay() says it took for the whole thing!  E.g.:
  *
@@ -354,24 +381,302 @@ static void check_clock_res(void);
  *
  * Furthermore gettimeofday() can wander, e.g. due to NTP, or worse.
  *
- * So, we use clock_gettime(CLOCK_MONOTONIC, tspec) instead (if possible)!  It
- * is defined by POSIX 1b (IEEE Std 1003.1b-1993).
+ * Use the POSIX.1b-1993 clock_gettime(CLOCK_MONOTONIC, tspec) instead if possible!
+ *
+ * WARNING:  apparently the Linux folks mis-read the POSIX.1b specifications
+ * and/or didn't understand the definition of a monotonically increasing time
+ * clock, and their CLOCK_MONOTONIC clock is affected by system time
+ * adjustments, so you have to use their invented non-standard
+ * CLOCK_MONOTONIC_RAW clock to get a real monotonic time clock.  Note too that
+ * some sources claim CLOCK_MONOTONIC_RAW sometiems produces garbage results,
+ * and is also significantly more expensive to call [1].
+ *
+ * On the other hand note that CLOCK_MONOTONIC is only subject to incremental
+ * corrections, not sudden jumps, so CLOCK_MONOTONIC_RAW would be relevant
+ * mainly to cases where more accurate time is wanted over very short intervals,
+ * and CLOCK_MONOTONIC would be preferable for longer-term timers measured in
+ * minutes, hours or days.  Of couse we _are_ measuring short intervals here.
+ *
+ * XXX the rest of this is informational -- we really only want CLOCK_MONOTONIC
+ * here, though CLOCK_PROCESS_CPUTIME_ID would be more accurate on multitasking
+ * systems.
+ *
+ * POSIX.1b-1999 now says there's a CPT option taken from ISO C:
+ *
+ *	If _POSIX_CPUTIME is defined, implementations shall support clock ID
+ *	values obtained by invoking clock_getcpuclockid(), which represent the
+ *	CPU-time clock of a given process.  Implementations shall also support
+ *	the special clockid_t value CLOCK_PROCESS_CPUTIME_ID, which represents
+ *	the CPU-time clock of the calling process when invoking one of the
+ *	clock_*() or timer_*() functions.  For these clock IDs, the values
+ *	returned by clock_gettime() and specified by clock_settime() represent
+ *	the amount of execution time of the process associated with the clock.
+ *	Changing the value of a CPU-time clock via clock_settime() shall have
+ *	no effect on the behavior of the sporadic server scheduling policy.
+ *
+ * (and similar for CLOCK_THREAD_CPUTIME_ID)
+ *
+ * FreeBSD has these, and also has something similar called CLOCK_PROF, which
+ * presumably accounts for all non-idle (non-wait-io) CPU time.
+ *
+ * The Linux manual warns:
+ *
+ *	The CLOCK_PROCESS_CPUTIME_ID and CLOCK_THREAD_CPUTIME_ID clocks are
+ *	realized on many platforms using timers from the CPUs (TSC on i386,
+ *	AR.ITC on Itanium). These registers may differ between CPUs and as a
+ *	consequence these clocks may return bogus results if a process is
+ *	migrated to another CPU.
+ *
+ *	If the CPUs in an SMP system have different clock sources then there is
+ *	no way to maintain a correlation between the timer registers since each
+ *	CPU will run at a slightly different frequency. If that is the case
+ *	then clock_getcpuclockid(0) will return ENOENT to signify this
+ *	condition. The two clocks will then only be useful if it can be ensured
+ *	that a process stays on a certain CPU.
+ *
+ *	The processors in an SMP system do not start all at exactly the same
+ *	time and therefore the timer registers are typically running at an
+ *	offset. Some architectures include code that attempts to limit these
+ *	offsets on bootup. However, the code cannot guarantee to accurately
+ *	tune the offsets. Glibc contains no provisions to deal with these
+ *	offsets (unlike the Linux Kernel). Typically these offsets are small
+ *	and therefore the effects may be negligible in most cases.
+ *
+ * The Linux (er, glibc) manual is not clear on whether the CPU TSC registers
+ * are saved and restored on each context switch either and there are reports
+ * that at least some kernel versions will count the time spent in sleep(3),
+ * for example.
+ *
+ * Apparently Android made it even worse, according to this comment on StkOvf:
+ *
+ *	For Android users, using CLOCK_MONOTONIC may be problematic since the
+ *	app may get suspended, along with the clock.  For that, Android added
+ *	the ANDROID_ALARM_ELAPSED_REALTIME timer that is accessible through
+ *	ioctl().  [[ Itay Bianco ]]
+ *
+ * Darwin/MacOS makes things even worse by repeating the Linux mistakes and then
+ * also introduces the better performing but less accurate
+ * CLOCK_MONOTONIC_RAW_APPROX:
+ *
+ *	like CLOCK_MONOTONIC_RAW, but reads a value cached by the system at
+ *	context switch.  This can be read faster, but at a loss of accuracy as
+ *	it may return values that are milliseconds old.
+ *
+ * Note that FreeBSD has similar CLOCK_*_FAST, e.g. CLOCK_MONOTONIC_FAST, to
+ * improve performance but with the limitation of reducing accuracy to "one
+ * timer tick".
+ *
+ * Apparently Linux also fails to adjust CLOCK_MONOTONIC by not necessarily
+ * incrementing it while the system is asleep (suspended).  They apparently
+ * invented CLOCK_BOOTTIME to work around this sillyness.
+ *
+ * Note: suseconds_t is for signed values of times in microseconds, and it was
+ * first added to POSIX 1003.1 in System Interfaces and Headers, Issue 5
+ * published in 1997.  It must be no greater in size than a long int.  Note too
+ * that POSIX is a bit finicky in specifying that suseconds_t only needs to
+ * hold integers in the range of [0, 1000000] implicitly limiting it to just
+ * one second intervals.  However we will abuse it slightly and assume it is at
+ * least 32-bits and so can give us at least 35 second intervals, which should
+ * be long enough for all our tests?
+ *
+ * [1] see also:  http://btorpey.github.io/blog/2014/02/18/clock-sources-in-linux/
  */
 
-#ifdef CLOCK_MONOTONIC
+#ifdef __APPLE__
+# define BEST_CLOCK_ID			CLOCK_MONOTONIC
+# define BEST_CLOCK_ID_NAME		__STRING(CLOCK_MONOTONIC)
+#endif
 
-static u_quad_t
-microtime()
+#if !defined(BEST_CLOCK_ID)
+# if defined(CLOCK_MONOTONIC)
+#  define BEST_CLOCK_ID			CLOCK_MONOTONIC
+#  define BEST_CLOCK_ID_NAME		__STRING(CLOCK_MONOTONIC)
+# endif
+#endif
+/*
+ * Note in the above: neither ___STRING(), nor __STRING() can work on
+ * BEST_CLOCK_ID to show the intermediate macro's name -- it's all or nothing
+ * on expansion of a nested macro definition.
+ */
+
+/*
+ * microtime() - return number of microseconds since some epoch
+ *
+ * the particular epoch is irrelevant -- we just use the difference between two
+ * of these samples taken sufficiently far appart enough that the resolution is
+ * also relatively unimportant, though better than 1 second is expected....
+ */
+suseconds_t microtime(void);
+static void check_clock_res(void);
+
+#if defined(BEST_CLOCK_ID)
+
+
+# ifdef __APPLE__
+#  ifdef __MAC_OS_X_VERSION_MIN_REQUIRED
+#    if __MAC_OS_X_VERSION_MIN_REQUIRED < 101200
+
+/*
+ * XXX this is for Darwin / Mac OS X prior to Mac OSX 10.12, which did not
+ * implement the POSIX (IEEE Std 1003.1b-1993) clock_gettime() API.
+ *
+ * macOS 10.12 offers CLOCK_MONOTONIC_RAW with the same claims as Linux, but
+ * perhaps it is only for Linux compatability and not really necessary.
+ *
+ * macOS 10.12 also offers CLOCK_MONOTONIC_RAW_APPROX which is apparently
+ * implemented using COMMPAGE, so may also be up to milliseconds old.
+ *
+ * See also:  https://stackoverflow.com/a/21352348/816536
+ * and:  https://developer.apple.com/library/content/qa/qa1398/_index.html
+ */
+
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <mach/mach.h>
+#include <mach/clock.h>
+#include <mach/mach_time.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sched.h>
+
+typedef enum {
+	CLOCK_REALTIME,
+	CLOCK_MONOTONIC,
+	CLOCK_PROCESS_CPUTIME_ID,
+	CLOCK_THREAD_CPUTIME_ID
+} clockid_t;
+
+static mach_timebase_info_data_t __clock_gettime_inf;
+
+int clock_gettime(clockid_t, struct timespec *);
+int
+clock_gettime(clockid_t clk_id,
+              struct timespec *tp)
+{
+	kern_return_t	ret;
+	clock_serv_t	clk;
+	clock_id_t	clk_serv_id;
+	mach_timespec_t	tm;
+	uint64_t	start, end, delta, nano;
+	int		retval = -1;
+
+	switch (clk_id) {
+	case CLOCK_REALTIME:
+	case CLOCK_MONOTONIC:
+		/* XXX these are both the same! */
+		/* XXX this is apparently very slow too */
+		clk_serv_id = clk_id == CLOCK_REALTIME ? REALTIME_CLOCK : SYSTEM_CLOCK;
+		if ((ret = host_get_clock_service(mach_host_self(), clk_serv_id, &clk)) == KERN_SUCCESS) {
+			if ((ret = clock_get_time(clk, &tm)) == KERN_SUCCESS) {
+				tp->tv_sec  = tm.tv_sec;
+				tp->tv_nsec = tm.tv_nsec;
+				retval = 0;
+			}
+		}
+		if (KERN_SUCCESS != ret) {
+			errno = EINVAL;
+			retval = -1;
+		}
+		break;
+	case CLOCK_PROCESS_CPUTIME_ID:
+		/*
+		 * XXX this is an _extremely_ bad hack, but there you go....
+		 *
+		 * this measures elapsed time in ticks
+		 */
+		start = mach_absolute_time();
+		if (clk_id == CLOCK_PROCESS_CPUTIME_ID) {
+			getpid();
+		} else {
+			sched_yield();
+		}
+		end = mach_absolute_time();
+		delta = end - start;
+		if (__clock_gettime_inf.denom == 0) {
+			mach_timebase_info(&__clock_gettime_inf);
+		}
+		nano = delta * __clock_gettime_inf.numer / __clock_gettime_inf.denom;
+		tp->tv_sec = (time_t) (nano * (uint64_t) 1e-9);
+		tp->tv_nsec = (long) (nano - (uint64_t) (tp->tv_sec * (time_t) 1e9));
+		retval = 0;
+		break;
+	case CLOCK_THREAD_CPUTIME_ID:
+	default:
+		errno = EINVAL;
+		retval = -1;
+	}
+
+	return retval;
+}
+
+int clock_getres(clockid_t, struct timespec *);
+int
+clock_getres(clockid_t clk_id,
+             struct timespec *tp)
+{
+	kern_return_t	ret;
+	clock_serv_t	clk;
+	clock_id_t	clk_serv_id;
+	natural_t	attribute[4];
+	int		retval = -1;
+
+	tp->tv_sec = 0;
+	tp->tv_nsec = 1;
+
+	switch (clk_id) {
+        case CLOCK_REALTIME:
+        case CLOCK_MONOTONIC:
+		/* XXX these are both the same! */
+		clk_serv_id = clk_id == CLOCK_REALTIME ? REALTIME_CLOCK : SYSTEM_CLOCK;
+		if ((ret = host_get_clock_service(mach_host_self(), clk_serv_id, &clk)) == KERN_SUCCESS) {
+			mach_msg_type_number_t count;
+
+			count = sizeof(attribute)/sizeof(natural_t);
+			if ((ret = clock_get_attributes(clk, CLOCK_GET_TIME_RES, (clock_attr_t) attribute, &count )) == KERN_SUCCESS) {
+				tp->tv_sec  = 0;
+				tp->tv_nsec = attribute[0];
+				retval = 0;
+			}
+		}
+		if (KERN_SUCCESS != ret) {
+			errno = EINVAL;
+			retval = -1;
+		}
+		break;
+	case CLOCK_PROCESS_CPUTIME_ID:
+		if (__clock_gettime_inf.denom == 0) {
+			mach_timebase_info(&__clock_gettime_inf);
+		}
+		tp->tv_sec = 0;
+		tp->tv_nsec = __clock_gettime_inf.numer / __clock_gettime_inf.denom;
+		retval = 0;
+		break;
+	case CLOCK_THREAD_CPUTIME_ID:
+	default:
+		errno = EINVAL;
+		retval = -1;
+	}
+
+	return retval;
+}
+
+#   endif
+#  endif
+
+# endif /* __APPLE__ */
+
+suseconds_t
+microtime(void)
 {
 	struct timespec tsnow;
 
 	(void) clock_gettime(CLOCK_MONOTONIC, &tsnow);
 
-	return (u_quad_t) ((tsnow.tv_sec * 1000000) + (tsnow.tv_nsec / 1000));
+	return (suseconds_t) ((tsnow.tv_sec * 1000000) + (tsnow.tv_nsec / 1000));
 }
 
 static void
-check_clock_res()
+check_clock_res(void)
 {
 	struct timespec res;
 
@@ -379,60 +684,43 @@ check_clock_res()
 	if (clock_getres(CLOCK_MONOTONIC, &res) == -1) {
 		err(EXIT_FAILURE, "clock_getres(CLOCK_MONOTONIC)");
 	}
-	warnx("using CLOCK_MONOTONIC timer with resolution: %ld s, %ld ns", (long) res.tv_sec, res.tv_nsec);
+	warnx("using %s timer with resolution: %ld s, %ld ns", BEST_CLOCK_ID_NAME, res.tv_sec, res.tv_nsec);
 }
 
-#else /* !CLOCK_MONOTONIC */
+#else /* ! BEST_CLOCK_ID */
 
 /*
- * XXX this is currently for Darwin/Mac OS X, which does not implement the
- * POSIX (IEEE Std 1003.1b-1993) clock_gettime() API
+ * XXX N.B.:  apparently on linux times(NULL) is fast and returns a clock_t
+ * value of CLK_TKS since the epoch, but it is probably implemented using
+ * gettimeofday() anyway... (note: times() is POSIX-1003.1-1990)
  *
  * Note that on OS X the gettimeofday() function is implemented in libc as a
  * wrapper to either the _commpage_gettimeofday() function, if available, or
  * the normal system call.  If using the COMMPAGE helper then gettimeofday()
  * simply returns the value stored in the COMMPAGE and thus can execute without
  * a context switch.
+ *
+ * On BSD times() is just implemented using getrusage() and gettimeofday().
  */
 
-static u_quad_t
-microtime()
+suseconds_t
+microtime(void)
 {
 	struct timeval tvnow;
 
 	(void) gettimeofday(&tvnow, (void *) NULL);
 
-	return (u_quad_t) ((tvnow.tv_sec * 1000000) + tvnow.tv_usec);
+	return (suseconds_t) ((tvnow.tv_sec * 1000000) + tvnow.tv_usec);
 }
+
 static void
-check_clock_res()
+check_clock_res(void)
 {
+	warnx("using gettimeofday() timer with unkown resolution");
 	return;
 }
 
-#endif /* CLOCK_MONOTONIC */
-
-
-/* XXX see also timevalsub() */
-long int difftval(struct timeval, struct timeval);
-
-long int
-difftval(struct timeval tstart, struct timeval tend)
-{
-	tend.tv_sec -= tstart.tv_sec;
-	tend.tv_usec -= tstart.tv_usec;
-
-	while (tend.tv_usec < 0) {
-		tend.tv_sec--;
-		tend.tv_usec += 1000000;
-	}
-	while (tend.tv_usec >= 1000000) {
-		tend.tv_sec++;
-		tend.tv_usec -= 1000000;
-	}
-
-	return (long int) ((tend.tv_sec * 1000000) + tend.tv_usec);
-}
+#endif /* BEST_CLOCK_ID */
 
 void print_rusage(const char *, struct rusage);
 
@@ -543,10 +831,10 @@ main(int argc,
 			printf("%s(%u) -> %llu\n", STRINGIFY_SYMBOL(Fibonacci), n, (long long unsigned int) result);
 
 			putchar('\n');
-			printf("  user CPU (uSec): %ld\n", difftval(ru_s.ru_utime, ru_e.ru_utime));
-			printf("system CPU (uSec): %ld\n", difftval(ru_s.ru_stime, ru_e.ru_stime));
-			printf(" total CPU (uSec): %ld\n", (difftval(ru_s.ru_utime, ru_e.ru_utime) +
-			                                    difftval(ru_s.ru_stime, ru_e.ru_stime)));
+			printf("  user CPU (uSec): %ld\n", (long int) difftval(ru_s.ru_utime, ru_e.ru_utime));
+			printf("system CPU (uSec): %ld\n", (long int) difftval(ru_s.ru_stime, ru_e.ru_stime));
+			printf(" total CPU (uSec): %ld\n", (long int) (difftval(ru_s.ru_utime, ru_e.ru_utime) +
+								       difftval(ru_s.ru_stime, ru_e.ru_stime)));
 			printf(" wall time (uSec): %lld\n", (long long int) (incrtm_e - incrtm_s));
 			printf(" wait time (uSec): %lld\n", ((long long int) (incrtm_e - incrtm_s) -
 			                                     (long long int) ((difftval(ru_s.ru_utime, ru_e.ru_utime) +
@@ -565,10 +853,10 @@ main(int argc,
 	print_rusage("total ", ru_e);
 	putchar('\n');
 
-	printf("  user CPU (uSec): %ld\n", difftval(tru_s.ru_utime, ru_e.ru_utime));
-	printf("system CPU (uSec): %ld\n", difftval(tru_s.ru_stime, ru_e.ru_stime));
-	printf(" total CPU (uSec): %ld\n", (difftval(tru_s.ru_utime, ru_e.ru_utime) +
-	                                    difftval(tru_s.ru_stime, ru_e.ru_stime)));
+	printf("  user CPU (uSec): %ld\n", (long int) difftval(tru_s.ru_utime, ru_e.ru_utime));
+	printf("system CPU (uSec): %ld\n", (long int) difftval(tru_s.ru_stime, ru_e.ru_stime));
+	printf(" total CPU (uSec): %ld\n", (long int) (difftval(tru_s.ru_utime, ru_e.ru_utime) +
+						       difftval(tru_s.ru_stime, ru_e.ru_stime)));
 
 	walltm_e = microtime();
 	printf("total wall (uSec): %lld\n", (long long int) (walltm_e - walltm_s));
