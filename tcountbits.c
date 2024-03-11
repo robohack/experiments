@@ -86,7 +86,7 @@ bitcount2(unsigned long val)
 	unsigned int bc = 0;
 
 	while (val) {
-		bc += (val & 01);
+		bc += (unsigned int) (val & 01);
 		val >>= 1;
 	}
 
@@ -180,7 +180,7 @@ countbits_dense(unsigned long val)
 		n = n - ((n >> 1) & ~((T) 0) / 3);				\
 		n = (n & ~((T) 0) / 15 * 3) + ((n >> 2) & ~((T) 0) / 15 * 3);	\
 		n = (n + (n >> 4)) & ~((T) 0) / 255 * 15;			\
-		c = (n * (~((T) 0) / 255)) >> (sizeof(T) - 1) * CHAR_BIT;	\
+		c = (unsigned int) ((n * (~((T) 0) / 255)) >> ((sizeof(T) - 1) * CHAR_BIT)); \
 	}									\
 
 
@@ -413,7 +413,7 @@ mit_bitcount(unsigned long val)
 	tmp = val - ((val >> 1) & 033333333333UL)
 	          - ((val >> 2) & 011111111111UL);
 
-	return ((tmp + (tmp >> 3)) & 030707070707UL) % 63; /* 63 = 077 = 0x3F */
+	return (unsigned int) (((tmp + (tmp >> 3)) & 030707070707UL) % 63UL); /* 63 = 077 = 0x3F */
 }
 
 
@@ -434,7 +434,7 @@ _initBitCountTable8(void)
 
 	for (i = 1; i < (1 << CHAR_BIT); i++) {
 #if 1
-		_bitCountTable8[i] = _bitCountTable8[i >> 1] + (i & 1);
+		_bitCountTable8[i] = (unsigned char) (_bitCountTable8[i >> 1] + (i & 1));
 #else
 		_bitCountTable8[i] = (unsigned char) defaultBitCount(i);
 #endif
@@ -483,10 +483,10 @@ table_8_BitCount2(unsigned long val)
 	}
 #endif
 
-	return _bitCountTable8[val                   & UCHAR_MAX] +
-	       _bitCountTable8[(val >> CHAR_BIT)     & UCHAR_MAX] +
-	       _bitCountTable8[(val >> CHAR_BIT * 2) & UCHAR_MAX] +
-	       _bitCountTable8[(val >> CHAR_BIT * 3) & UCHAR_MAX];
+	return (unsigned int) (_bitCountTable8[val                   & UCHAR_MAX] +
+			       _bitCountTable8[(val >> CHAR_BIT)     & UCHAR_MAX] +
+			       _bitCountTable8[(val >> CHAR_BIT * 2) & UCHAR_MAX] +
+			       _bitCountTable8[(val >> CHAR_BIT * 3) & UCHAR_MAX]);
 }
 
 static unsigned char _bitCountTable16[(1U << 16) +1];
@@ -504,7 +504,7 @@ _initBitCountTable16(void)
 
 	for (i = 1; i <= (1U << 16); i++) {
 #if 1
-		_bitCountTable16[i] = _bitCountTable16[i >> 1] + (i & 1);
+		_bitCountTable16[i] = (unsigned char) (_bitCountTable16[i >> 1] + (i & 1));
 #else
 		_bitCountTable16[i] = (unsigned char) defaultBitCount(i);
 #endif
@@ -553,8 +553,8 @@ table_16_BitCount2(unsigned long val)
 	}
 #endif
 
-	return _bitCountTable16[val         & UINT16_MAX] +
-	       _bitCountTable16[(val >> 16) & UINT16_MAX];
+	return (unsigned int) (_bitCountTable16[val         & UINT16_MAX] +
+			       _bitCountTable16[(val >> 16) & UINT16_MAX]);
 }
 
 
@@ -1154,7 +1154,7 @@ typedef unsigned int srandom_seed_t;
 
 #define MAX_STRLEN_OCTAL(t)	((int) ((sizeof(t) * CHAR_BIT / 3) + 2))
 
-char *argv0 = "progname";
+const char *argv0 = "progname";
 static void usage(unsigned int)	__dead;
 
 int main(int, char *[]);
@@ -1188,7 +1188,7 @@ main(int argc,
 	while ((ch = getopt(argc, argv, ":hi:rs:t")) != -1) {
 		switch (ch) {
 		case 'i':
-			iter = (unsigned int) e_opt_strtol() * 1000000UL;
+			iter = (unsigned int) e_opt_strtol() * 1000000U;
 			break;
 
 		case 'r':
