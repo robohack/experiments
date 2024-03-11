@@ -1237,25 +1237,25 @@ main(int argc,
 		verify_bitcounts(v/2+1);
 #endif
 		COUNT_BITS(unsigned long, v/2+1, c)
-		printf("%#-*lo (v/2+1)   = %d, %d, %d, %d, %d\n", MAX_STRLEN_OCTAL(typeof(v)),
+		printf("%#-*lo (v/2+1)   = %d, %d, %d, %d, %d\n", MAX_STRLEN_OCTAL(__typeof__(v)),
 		       v/2+1, countbits_sparse(v/2+1), countbits_dense(v/2+1), bitcount2(v/2+1), count_bits(v/2+1), c);
 #if 0
 		verify_bitcounts(v-2);
 #endif
 		COUNT_BITS(unsigned long, v-2, c)
-		printf("%#-*lo (v-2)     = %d, %d, %d, %d, %d\n", MAX_STRLEN_OCTAL(typeof(v)),
+		printf("%#-*lo (v-2)     = %d, %d, %d, %d, %d\n", MAX_STRLEN_OCTAL(__typeof__(v)),
 		       v-2, countbits_sparse(v-2), countbits_dense(v-2), bitcount2(v-2), count_bits(v-2), c);
 #if 0
 		verify_bitcounts(v-1);
 #endif
 		COUNT_BITS(unsigned long, v-1, c)
-		printf("%#-*lo (v-1)     = %d, %d, %d, %d, %d\n", MAX_STRLEN_OCTAL(typeof(v)),
+		printf("%#-*lo (v-1)     = %d, %d, %d, %d, %d\n", MAX_STRLEN_OCTAL(__typeof__(v)),
 		       v-1, countbits_sparse(v-1), countbits_dense(v-1), bitcount2(v-1), count_bits(v-1), c);
 #if 0
 		verify_bitcounts(v);
 #endif
 		COUNT_BITS(unsigned long, v, c)
-		printf("%#-*lo (%2d bits) = %d, %d, %d, %d, %d\n", MAX_STRLEN_OCTAL(typeof(v)),
+		printf("%#-*lo (%2d bits) = %d, %d, %d, %d, %d\n", MAX_STRLEN_OCTAL(__typeof__(v)),
 		       v, (int) i, countbits_sparse(v), countbits_dense(v), bitcount2(v), count_bits(v), c);
 		puts("--------");
 	}
