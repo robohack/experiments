@@ -424,7 +424,7 @@ static bool _lookupTable8_Initialized = false;
 
 static void _initBitCountTable8(void);
 static void
-_initBitCountTable8()
+_initBitCountTable8(void)
 {
 	unsigned long i;
 
@@ -494,7 +494,7 @@ static bool _lookupTable16_Initialized = false;
 
 static void _initBitCountTable16(void);
 static void
-_initBitCountTable16()
+_initBitCountTable16(void)
 {
 	unsigned long i;
 
@@ -949,7 +949,7 @@ clock_getres(clockid_t clk_id,
 # endif /* __APPLE__ */
 
 suseconds_t
-microtime()
+microtime(void)
 {
 	struct timespec tsnow;
 
@@ -969,7 +969,7 @@ microtime()
  */
 
 suseconds_t
-microtime()
+microtime(void)
 {
 	struct timeval tvnow;
 
@@ -1019,7 +1019,7 @@ extern int optreset;
 long int e_opt_strtol(void);
 
 long int
-e_opt_strtol()
+e_opt_strtol(void)
 {
 	long int ltmp;
 	char *ep;
@@ -1068,7 +1068,7 @@ e_opt_strtol()
 long long int e_opt_strtoll(void);
 
 long long int
-e_opt_strtoll()
+e_opt_strtoll(void)
 {
 	long long int lltmp;
 	char *ep;
