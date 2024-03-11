@@ -1120,16 +1120,17 @@ e_opt_strtoll(void)
 /*
  * XXX not all systems have the same type for srandom(3)'s parameter!
  */
-#if defined(__APPLE__) /* && __DARWIN_UNIX03 */
+#if defined(__APPLE__) && !__DARWIN_UNIX03
 /*
- * srandom() comes from 4.2BSD, but for some stupid reason Apple changed the API
- * in what they call UNIX03, which also conflates LP64 with _DARWIN_C_SOURCE,
- * _XOPEN_SOURCE, and _POSIX_C_SOURCE.  The manual page says the "legacy" API
- * was "void srandom(unsigned long)"
+ * srandom() comes from 4.2BSD where its parameter was the standard "unsigned",
+ * but for some stupid reason Apple changed the API in what they call UNIX03,
+ * which also conflates LP64 with _DARWIN_C_SOURCE, _XOPEN_SOURCE, and
+ * _POSIX_C_SOURCE.  The manual page says the "legacy" API was "void
+ * srandom(unsigned long)"
  */
-typedef unsigned int srandom_seed_t;
-#else
 typedef unsigned long srandom_seed_t;
+#else
+typedef unsigned int srandom_seed_t;
 #endif
 
 #define MAX_STRLEN_OCTAL(t)	((int) ((sizeof(t) * CHAR_BIT / 3) + 2))
