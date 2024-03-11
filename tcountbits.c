@@ -639,15 +639,6 @@ difftval(struct timeval tstart, struct timeval tend)
 	return (suseconds_t) ((tend.tv_sec * 1000000) + tend.tv_usec);
 }
 
-suseconds_t microtime(void);
-
-/*
- * microtime() - return number of microseconds since some epoch
- *
- * the particular epoch is irrelevant -- we just use the difference between two
- * of these samples taken sufficiently far appart enough that the resolution is
- * also relatively unimportant, though better than 1 second is expected....
- */
 /*
  * Timing anomalies
  *
@@ -785,6 +776,16 @@ suseconds_t microtime(void);
  * on expansion of a nested macro definition.
  */
 
+/*
+ * microtime() - return number of microseconds since some epoch
+ *
+ * the particular epoch is irrelevant -- we just use the difference between two
+ * of these samples taken sufficiently far appart enough that the resolution is
+ * also relatively unimportant, though better than 1 second is expected....
+ */
+suseconds_t microtime(void);
+static void check_clock_res(void);
+
 #if defined(BEST_CLOCK_ID)
 
 
@@ -793,15 +794,8 @@ suseconds_t microtime(void);
 #    if __MAC_OS_X_VERSION_MIN_REQUIRED < 101200
 
 /*
- * XXX this is currently for Darwin / Mac OS X, which did not implement the
- * POSIX (IEEE Std 1003.1b-1993) clock_gettime() API until Mac OSX 10.12.
- *
- * Note that on OS X the gettimeofday() function is implemented in libc as a
- * wrapper to either the _commpage_gettimeofday() function, if available, or the
- * normal system call.  If using the COMMPAGE helper then gettimeofday() simply
- * returns the value stored in the COMMPAGE and thus can execute without a
- * context switch.  This cached timestamp can be up to milliseconds old as it is
- * only updated at context switch time.
+ * XXX this is for Darwin / Mac OS X prior to Mac OSX 10.12, which did not
+ * implement the POSIX (IEEE Std 1003.1b-1993) clock_gettime() API.
  *
  * macOS 10.12 offers CLOCK_MONOTONIC_RAW with the same claims as Linux, but
  * perhaps it is only for Linux compatability and not really necessary.
@@ -964,6 +958,12 @@ microtime(void)
  * XXX N.B.:  apparently on linux times(NULL) is fast and returns a clock_t
  * value of CLK_TKS since the epoch, but it is probably implemented using
  * gettimeofday() anyway... (note: times() is POSIX-1003.1-1990)
+ *
+ * Note that on OS X the gettimeofday() function is implemented in libc as a
+ * wrapper to either the _commpage_gettimeofday() function, if available, or
+ * the normal system call.  If using the COMMPAGE helper then gettimeofday()
+ * simply returns the value stored in the COMMPAGE and thus can execute without
+ * a context switch.
  *
  * On BSD times() is just implemented using getrusage() and gettimeofday().
  */
