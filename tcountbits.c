@@ -952,7 +952,19 @@ microtime(void)
 	return (suseconds_t) ((tsnow.tv_sec * 1000000) + (tsnow.tv_nsec / 1000));
 }
 
-#else /* !BEST_CLOCK_ID */
+static void
+check_clock_res(void)
+{
+	struct timespec res;
+
+	/* XXX "#ifdef CLOCK_PROCESS_CPUTIME_ID"??? */
+	if (clock_getres(CLOCK_MONOTONIC, &res) == -1) {
+		err(EXIT_FAILURE, "clock_getres(CLOCK_MONOTONIC)");
+	}
+	warnx("using %s timer with resolution: %ld s, %ld ns", BEST_CLOCK_ID_NAME, res.tv_sec, res.tv_nsec);
+}
+
+#else /* ! BEST_CLOCK_ID */
 
 /*
  * XXX N.B.:  apparently on linux times(NULL) is fast and returns a clock_t
@@ -978,11 +990,18 @@ microtime(void)
 	return (suseconds_t) ((tvnow.tv_sec * 1000000) + tvnow.tv_usec);
 }
 
+static void
+check_clock_res(void)
+{
+	warnx("using gettimeofday() timer with unkown resolution");
+	return;
+}
+
 #endif /* BEST_CLOCK_ID */
 
-void show_time(char *, unsigned int, suseconds_t, suseconds_t, suseconds_t);
+void show_time(const char *, unsigned int, suseconds_t, suseconds_t, suseconds_t);
 void
-show_time(char *fname,
+show_time(const char *fname,
           unsigned int iter,
           suseconds_t us_u,
           suseconds_t us_s,
@@ -1152,9 +1171,6 @@ main(int argc,
 	volatile unsigned int c;
 	struct rusage rus;
 	struct rusage ruf;
-#ifdef BEST_CLOCK_ID
-	struct timespec res;
-#endif
 	suseconds_t nulltime_u;
 	suseconds_t nulltime_s;
 	suseconds_t nulltime_w;
@@ -1244,12 +1260,7 @@ main(int argc,
 		puts("--------");
 	}
 
-#ifdef BEST_CLOCK_ID
-	if (clock_getres(BEST_CLOCK_ID, &res) == -1) {
-		err(EXIT_FAILURE, "clock_getres(%s)", BEST_CLOCK_ID_NAME);
-	}
-	warnx("using %s timer with resolution: %ld s, %ld ns", BEST_CLOCK_ID_NAME, res.tv_sec, res.tv_nsec);
-#endif
+	check_clock_res();
 
 	_initBitCountTable8();
 	_initBitCountTable16();
