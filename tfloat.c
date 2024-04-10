@@ -463,6 +463,11 @@ long double fabsl(long double n);	/* not as well tested */
 #define round2long(x) (((x) < (double)LONG_MIN-0.5 || (x) > (double)LONG_MAX+0.5) ? abort(),0 : ((x)>=0?(long)((x)+0.5):(long)((x)-0.5)))
 #define round2max(x) (((x) < (double)INTMAX_MIN-0.5 || (x) > (double)INTMAX_MAX+0.5) ? abort(),0 : ((x)>=0?(intmax_t)((x)+0.5):(intmax_t)((x)-0.5)))
 
+/* FYI */
+#define CEILING_POS(X)	((X-(int)(X)) > 0 ? (int)(X+1) : (int)(X))
+#define CEILING_NEG(X)	((X-(int)(X)) < 0 ? (int)(X-1) : (int)(X))
+#define CEILING(X)	(((X) > 0) ? CEILING_POS(X) : CEILING_NEG(X))
+
 #if 0
 /* labels for the tests, used as an array index */
 typedef enum {
@@ -646,39 +651,42 @@ ipow(int base,
 	}
 	/* choose from alternate implementations: */
 #if 0
-	intmax_t result = 1;
+	/* brute force */ {
+		intmax_t result = 1;
 
-	/* brute force */
-	for (result = base; expon > 1; expon--) {
-		result = result * base;
+		for (result = base; expon > 1; expon--) {
+			result = result * base;
+		}
+
+		return result;
 	}
-
-	return result;
 #elif 0
-	intmax_t temp;
+	/* recursive exponentiation by squaring... */ {
+		intmax_t temp;
 
-	/* recursive exponentiation by squaring... */
+		temp = ipow(base, expon / 2);
 
-	temp = ipow(base, expon / 2);
-
-	if (expon % 2 == 0)
-		return temp * temp;
-	else
-		return (base * temp * temp);
+		if (expon % 2 == 0) {
+			return temp * temp;
+		} else {
+			return (base * temp * temp);
+		}
+	}
 #elif 0
-	/* recursive exponentiation by squaring... */
+	/* recursive exponentiation by squaring... */ {
 
-	if (expon % 2 == 1) {
-		return base * ipow(base, expon - 1);
-	} else {
-		return isq(ipow(base, expon / 2));
+		if (expon % 2 == 1) {
+			return base * ipow(base, expon - 1);
+		} else {
+			return isq(ipow(base, expon / 2));
+		}
 	}
 #else
-	/*  */ {
+	/* Exponentiation by squaring... */ {
 		intmax_t bbase = base;
 		intmax_t result = 1;
 
-		/* Exponentiation by squaring... */
+
 		while (expon) {
 			if (expon & 1)
 				result *= bbase;
@@ -987,7 +995,7 @@ report(char *machine)
 	/* xxx this also prints "wrong" of course */
 	puts("NOTE:  Too many digits for %f, showing incorrect value, but OK for b->d->b:");
 	printf("double:   0.0 + 0.1 + 0.11 =     %.*f [%%.17f, i.e. using DBL_DECIMAL_DIG]\n", 17, dtmp); /* xxx DBL_DECIMAL_DIG */
-	puts("NOTE:  Expectec output again:");
+	puts("NOTE:  Expected output again:");
 	printf("double:   0.0 + 0.1 + 0.11 =     %.*f [%%.%df, i.e. using DBL_OUT_DEC_DIG]\n", DBL_OUT_DEC_DIG, dtmp, DBL_OUT_DEC_DIG); /* xxx 16, DBL_DECIMAL_DIG-1 */
 
 	putchar('\n');
