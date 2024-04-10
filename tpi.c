@@ -1,9 +1,31 @@
-#ifdef OBFUSCATED
-int n=10000,b,c=5600,d,e,f[5602],g;main(){for(;b-c;)f[b++]=n/5;for(;d=0,g=c*2;c-=14,printf("%.4d",e+d/n),e=d%n)for(b=c;d+=f[b]*n,f[b]=d%--g,d/=g--,--b;d*=b);}
-#else
-
 #include <stdio.h>
 #include <stdlib.h>
+#include <float.h>
+
+/*
+ * PiValue() calculates pi to long double accuracy.  It’s good to the last bit
+ * if the float radix of your C implementation is 2.
+ */
+static long double
+PiValue(void)
+{
+	long double theSum, lastSum;
+	long double indexA, indexB;
+	long double theProd;
+
+	indexA = 0.0L;
+	indexB = 1.0L;
+	theSum = theProd = 2.0L;
+	do {
+		lastSum = theSum;
+		indexB += 2.0L;
+		theProd /= indexB;
+		theProd *= ++indexA;
+		theSum += theProd;
+	} while (theSum != lastSum);
+
+	return theSum;
+}
 
 /*
  * prints 1600 digits of (Pi * 10^1599)
@@ -11,9 +33,11 @@ int n=10000,b,c=5600,d,e,f[5602],g;main(){for(;b-c;)f[b++]=n/5;for(;d=0,g=c*2;c-
  * equiv. to:  echo 'scale=1599; 4*a(1)' | bc -l
  */
 
-int main(void);
-int
-main()
+#ifdef OBFUSCATED
+int n=10000,b,c=5600,d,e,f[5602],g;pi1600(){for(;b-c;)f[b++]=n/5;for(;d=0,g=c*2;c-=14,printf("%.4d",e+d/n),e=d%n)for(b=c;d+=f[b]*n,f[b]=d%--g,d/=g--,--b;d*=b);}
+#else
+static void
+pi1600(void)
 {
 	int n = 10000;
 	int b;
@@ -46,10 +70,20 @@ main()
 		e = d % n;
 	}
 	printf("\n");
+}
+
+int main(void);
+int
+main(void)
+{
+	printf("PiLongDouble = %#.*Lg\n", DBL_DIG, PiValue());
+
+#if 0
+	pi1600();
+#endif
 
 	exit(0);
 }
-
 #endif
 
 /*
