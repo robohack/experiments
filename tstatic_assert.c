@@ -27,7 +27,7 @@
 #ifndef static_assert			/* XXX must always be a macro in C11 */
 
 /*
- * A macro that can check static expressions which can be used wherever the
+ * A macro that can check static expressions which can then be used wherever the
  * expression is a valid integer constant expression, but it is not a
  * preprocessor constant expression (i.e. cannot be used in preprocessor tests).
  *
@@ -147,7 +147,10 @@ main()
 		fputc(c, stdout);
 	}
 	if (ferror(stdin)) {
-		perror("stdin");
+		perror("stdin error");
+		exit(1);
+	} else if (!feof(stdin)) {
+		perror("stdin !EOF");
 		exit(1);
 	}
 	/*
