@@ -118,6 +118,6 @@ main(int argc, char *argv[])
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " " fn " && echo -n 'hello world!' | ./" fn " world reader"))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm -f " fn "; " (default-value 'compile-command) " " fn " && echo -n 'hello world!' | ./" fn " world reader"))
  * End:
  */

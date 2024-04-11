@@ -229,6 +229,6 @@ cpu0: features3 0x1<LAHF>
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " " fn " && time ./" fn " && rm " fn " && " (default-value 'compile-command) " CPPFLAGS=-DUSE_BY_HAND " fn " && time ./" fn))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm -f " fn "; " (default-value 'compile-command) " " fn " && time ./" fn " && rm " fn " && " (default-value 'compile-command) " CPPFLAGS=-DUSE_BY_HAND " fn " && time ./" fn))
  * End:
  */

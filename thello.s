@@ -78,6 +78,6 @@ hello_len:
 # Local Variables:
 # asm-comment-char: ?\#
 # eval: (make-local-variable 'compile-command)
-# compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn " ; " "as -o " fn ".o " fn ".s && ld -Bstatic -o "fn " /usr/lib/sysident.o " fn ".o && ./" fn))
+# compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm -f " fn " ; " "as -o " fn ".o " fn ".s && ld -Bstatic -o "fn " /usr/lib/sysident.o " fn ".o && ./" fn))
 # End:
 #

@@ -304,6 +304,6 @@ main(int argc,
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " LDLIBS=-lm " fn " && ./" fn " 1 5 1999 456.789 9771059213.0000435 29596902.000591 2825869.46"))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm -f " fn "; " (default-value 'compile-command) " LDLIBS=-lm " fn " && ./" fn " 1 5 1999 456.789 9771059213.0000435 29596902.000591 2825869.46"))
  * End:
  */

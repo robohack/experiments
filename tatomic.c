@@ -89,6 +89,6 @@ main()
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm " fn "; " (default-value 'compile-command) " OPTIM='-O3' CPPFLAGS='-DUSE_VOLATILE' LDLIBS=tatomic-sigusr.c " fn " && echo 'send SIGUSR1 while running'"))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm -f " fn "; " (default-value 'compile-command) " OPTIM='-O3' CPPFLAGS='-DUSE_VOLATILE' LDLIBS=tatomic-sigusr.c " fn " && echo 'send SIGUSR1 while running'"))
  * End:
  */
