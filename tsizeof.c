@@ -130,27 +130,88 @@ typedef uint64_t tick_t;
  *
  * It's an impossible situation.  Don't _ever_ use these as parameter types!
  */
-bool fubar_bool(bool);
+bool fubar_bool(int, bool, int, unsigned int);
 
 bool
-fubar_bool(bool fb)
+fubar_bool(int c,
+	   bool fb,
+	   int i,
+	   unsigned int ui)
 {
+	if (fb != (bool) i) {
+		printf("fubar_bool: %d, int conversion failed for %d != %d\n", c, (int) fb, i);
+	}
+	if (fb != (bool) ui) {
+		printf("fubar_bool: %d, unsigned int conversion failed for %u != %u\n", c, (unsigned int) fb, ui);
+	}
 	return fb;
 }
 
-char fubar_char(char);
+char fubar_char(int, char, int, unsigned int);
 
 char
-fubar_char(char fc)
+fubar_char(int c,
+	   char fc,
+	   int i,
+	   unsigned int ui)
 {
+	if (fc != i) {
+		printf("fubar_char: %d, int conversion failed for %d != %d\n", c, (int) fc, i);
+	}
+	if (fc != ui) {
+		printf("fubar_char: %d, unsigned int conversion failed for %u != %u\n", c, (unsigned int) fc, ui);
+	}
 	return fc;
 }
 
-unsigned char fubar_uchar(unsigned char);
+unsigned char fubar_uchar(int, unsigned char, int, unsigned int);
 
 unsigned char
-fubar_uchar(unsigned char fc)
+fubar_uchar(int c,
+	    unsigned char fc,
+	    int i,
+	    unsigned int ui)
 {
+	if (fc != i) {
+		printf("fubar_uchar: %d, int conversion failed for %d != %d\n", c, (int) fc, i);
+	}
+	if (fc != ui) {
+		printf("fubar_uchar: %d, unsigned int conversion failed for %u != %u\n", c, (unsigned int) fc, ui);
+	}
+	return fc;
+}
+
+short fubar_short(int, short, int, unsigned int);
+
+short
+fubar_short(int c,
+	    short fc,
+	    int i,
+	    unsigned int ui)
+{
+	if (fc != i) {
+		printf("fubar_short: %d, int conversion failed for %d != %d\n", c, (int) fc, i);
+	}
+	if (fc != ui) {
+		printf("fubar_short: %d, unsigned int conversion failed for %u != %u\n", c, (unsigned int) fc, ui);
+	}
+	return fc;
+}
+
+unsigned short fubar_ushort(int, unsigned short, int, unsigned int);
+
+unsigned short
+fubar_ushort(int c,
+	     unsigned short fc,
+	     int i,
+	     unsigned int ui)
+{
+	if (fc != i) {
+		printf("fubar_ushort: %d, int conversion failed for %d != %d\n", c, (int) fc, i);
+	}
+	if (fc != ui) {
+		printf("fubar_ushort: %d, unsigned int conversion failed for %u != %u\n", c, (unsigned int) fc, ui);
+	}
 	return fc;
 }
 
@@ -170,14 +231,6 @@ fubar_uchar(unsigned char fc)
 char
 fubar_char_noproto(fc)			/* warning: function declaration isn't a prototype */
 	char fc;			/* N.B.:  hidden de-promotion!!! */
-{
-	return fc;
-}
-
-short fubar_short(short);
-
-short
-fubar_short(short fc)
 {
 	return fc;
 }
@@ -260,9 +313,12 @@ main()
 	signed char	sc;
 	char	vc = L'1';
 	char	rc;
+	unsigned char	ruc;
 
 	short	vs = 1;
 	short	rs;
+	unsigned short	vus = 1;
+	unsigned short	rus;
 
 	int	vi = 1;
 	int	ri;
@@ -275,12 +331,9 @@ main()
 	ri = vs;
 	ri = vi;
 
-	rb = vb;
-	rc = vc;
-	rs = vs;
-	ri = vi;
-
 	(void) ri;	/* avoid "warning: variable 'ri' set but not used" */
+	(void) rus;
+	(void) ruc;
 
 	char_bits = 0;
 	bits = 1;
@@ -300,18 +353,21 @@ main()
 #endif
 
 	uc = 256;			/* warning: large integer implicitly truncated to unsigned type */
+	/* warning: unsigned conversion from 'int' to 'unsigned char' changes value from '256' to '0' [-Woverflow] */
 	if (uc) {
 		printf("Oh OH!  uc=256 is true!!!\n");
 	} else {
 		printf("uc=256 is %u!!!\n", (unsigned int) uc);
 	}
-	sc = 256;			/* warning: overflow in implicit constant conversio */
+	sc = 256;			/* warning: overflow in implicit constant conversion */
+	/* warning: overflow in conversion from 'int' to 'signed char' changes value from '256' to '0' [-Woverflow] */
 	if (sc) {
 		printf("Oh OH!  sc=256 is true!!!\n");
 	} else {
 		printf("sc=256 is %u!!!\n", (unsigned int) sc);
 	}
-	sc = 257;			/* warning: overflow in implicit constant conversio */
+	sc = 257;			/* warning: overflow in implicit constant conversion */
+	/* warning: overflow in conversion from 'int' to 'signed char' changes value from '257' to '1' [-Woverflow] */
 	if (!sc) {
 		printf("Oh OH!  sc=257 is NOT true!!!\n");
 	} else {
@@ -323,12 +379,12 @@ main()
 	printf("sizeof 'x' = %u.\n", (unsigned int) sizeof('x'));
 #if (__STDC__ - 0) != 0
 	printf("sizeof L'x' = %u.\n", (unsigned int) sizeof(L'x'));
-#elif (__STDC_VERSION__ - 0) >= 2011121L
+#elif defined(__STDC_VERSION__) (__STDC_VERSION__ - 0) >= 2011121L
 	printf("sizeof u'x' = %u.\n", (unsigned int) sizeof(u'x'));
 	printf("sizeof U'x' = %u.\n", (unsigned int) sizeof(U'x'));
 #endif
 	printf("sizeof bool = %u.\n", (unsigned int) sizeof(bool));
-#if (__STDC_VERSION__ - 0) >= 199901L
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ - 0) >= 199901L
 	printf("sizeof _Bool = %u.\n", (unsigned int) sizeof(_Bool));
 #else
 	/* both GCC and Clang offer _Bool even with -std=c89 (but newer versions offer a warning with -pedantic) */
@@ -349,7 +405,9 @@ main()
 	printf("sizeof long = %u.\n", (unsigned int) sizeof(long));
 	printf("sizeof 1LL = %u.\n", (unsigned int) sizeof(1LL));
 	printf("sizeof long long = %u.\n", (unsigned int) sizeof(long long));
+#if defined(__NetBSD__)
 	printf("sizeof longlong_t = %u.\n", (unsigned int) sizeof(longlong_t));
+#endif
 	printf("sizeof intmax_t = %u.\n", (unsigned int) sizeof(intmax_t));
 
 	printf("sizeof uint8_t = %u.\n", (unsigned int) sizeof(uint8_t));
@@ -394,26 +452,48 @@ main()
 	 * integer conversions" before being used as an argument
 	 */
 
-	rb = fubar_bool(vb);		/* usually "different width" */
-	rb = fubar_bool((bool) vb);	/* usually "different width" */
-	rb = fubar_bool(true);		/* usually "different width" */
-	rb = fubar_bool((bool) true);	/* usually "different width" */
-	rb = fubar_bool('0');		/* usually "different width" */
-	rb = fubar_bool((bool) '0');	/* usually "different width" */
+	rb = fubar_bool(1, vb, vb, vb);
+	rb = fubar_bool(2, (bool) vb, (bool) vb, (bool) vb);
+	rb = fubar_bool(3, true, true, true);
+	rb = fubar_bool(4, (bool) true, (bool) true, (bool) true);
+	rb = fubar_bool(5, -1, -1, -1);
+	rb = fubar_bool(6, '0', '0', '0');
+	rb = fubar_bool(7, L'0', L'0', L'0');
+	rb = fubar_bool(8, (bool) '0', (bool) '0', (bool) '0');
+	rb = fubar_bool(9, '\0', '\0', '\0');
+	rb = fubar_bool(10, -99, -99, -99);
 
-	rc = fubar_char(vc);		/* "different width" */
-	rc = fubar_char(true);		/* "different width" */
-	rc = fubar_char((char) true);	/* "different width" */
-	rc = fubar_char('0');		/* "different width" */
-	rc = fubar_char(L'0');		/* "different width" */
-	rc = fubar_char((char) '0');	/* "different width" */
+	rc = fubar_char(1, vc, vc, vc);
+	rc = fubar_char(2, true, true, true);
+	rc = fubar_char(3, (char) true, (char) true, (char) true);
+	rc = fubar_char(4, EOF, EOF, EOF);
+	rc = fubar_char(5, '0', '0', '0');
+	rc = fubar_char(6, L'0', L'0', L'0');
+	rc = fubar_char(7, (char) '0', (char) '0', (char) '0');
 
-	uc = fubar_uchar((unsigned char) vc);	/* "different width" */
-	uc = fubar_uchar(true);		/* "different width" */
-	uc = fubar_uchar((unsigned char) true);	/* "different width" */
-	uc = fubar_uchar('0');		/* "different width" */
-	uc = fubar_uchar(L'0');		/* "different width" */
-	uc = fubar_uchar((unsigned char) '0');	/* "different width" */
+	ruc = fubar_uchar(1, (unsigned char) vc, (unsigned char) vc, (unsigned char) vc);
+	ruc = fubar_uchar(2, true, true, true);
+	ruc = fubar_uchar(3, (unsigned char) true, (unsigned char) true, (unsigned char) true);
+	ruc = fubar_uchar(4, EOF, EOF, EOF); /* xxx passing EOF to uchar truncates it to 255! */
+	ruc = fubar_uchar(5, '0', '0', '0');
+	ruc = fubar_uchar(6, L'0', L'0', L'0');
+	ruc = fubar_uchar(7, (unsigned char) '0', (unsigned char) '0', (unsigned char) '0');
+
+	rs = fubar_short(1, vs, vs, vs);
+	rs = fubar_short(2, true, true, true);
+	rs = fubar_short(3, (short) true, (short) true, (short) true);
+	rs = fubar_short(4, '0', '0', '0');
+	rs = fubar_short(5, L'0', L'0', L'0');
+	rs = fubar_short(6, (short) '0', (short) '0', (short) '0');
+
+	rus = fubar_ushort(1, vus, vus, vus);
+	rus = fubar_ushort(2, (unsigned short) vs, (unsigned short) vs, (unsigned short) vs);
+	rus = fubar_ushort(3, true, true, true);
+	rus = fubar_ushort(4, (unsigned short) true, (unsigned short) true, (unsigned short) true);
+	rus = fubar_ushort(5, -1, -1, -1); /* xxx passing -1 to ushort truncates it to 65536! */
+	rus = fubar_ushort(6, '0', '0', '0');
+	rus = fubar_ushort(7, L'0', L'0', L'0');
+	rus = fubar_ushort(8, (unsigned short) '0', (unsigned short) '0', (unsigned short) '0');
 
 	/* no warnings for these!  Yay! */
 	rc = fubar_char_noproto(vc);
@@ -422,10 +502,6 @@ main()
 	rc = fubar_char_noproto('0');
 	rc = fubar_char_noproto(L'0');
 	rc = fubar_char_noproto((char) '0');
-
-	rs = fubar_short(vs);			/* "different width" */
-	rs = fubar_short(1);			/* "different width" */
-	rs = fubar_short((short) 1);		/* "different width" */
 
 	/* no warnings for these!  Yay! */
 	rs = fubar_short_noproto(vs);
