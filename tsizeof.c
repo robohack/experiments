@@ -390,6 +390,7 @@ main()
 	/* both GCC and Clang offer _Bool even with -std=c89 (but newer versions offer a warning with -pedantic) */
 	printf("sizeof _Bool = %u.\n", (unsigned int) sizeof(_Bool));
 #endif
+	printf("true = %ju, false = %ju, !false = %ju\n", (uintmax_t) true, (uintmax_t) false, (uintmax_t) (! false));
 	printf("sizeof char = %u.\n", (unsigned int) sizeof(char));
 	printf("sizeof unsigned char = %u.\n", (unsigned int) sizeof(unsigned char));
 	printf("sizeof signed char = %u.\n", (unsigned int) sizeof(signed char));
