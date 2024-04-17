@@ -763,6 +763,7 @@ safe_base10_strlen(uintmax_t max_val)
 }
 #endif
 
+#ifdef __SIZEOF_INT128__
 static int
 print_u128(__uint128_t u128)
 {
@@ -781,6 +782,7 @@ print_u128(__uint128_t u128)
 	}
 	return rc;
 }
+#endif
 
 
 /*
@@ -813,6 +815,9 @@ report(char *machine)
 	}
 
 	printf("%s: sizeof intmax = %u.\n", machine, (unsigned int) sizeof(intmax_t));
+#ifdef __SIZEOF_INT128__
+	printf("%s: sizeof __int128_t = %u.\n", machine, (unsigned int) sizeof(__int128_t));
+#endif
 	printf("%s: sizeof long double = %u.\n", machine, (unsigned int) sizeof(long double));
 	printf("%s: sizeof double = %u.\n", machine, (unsigned int) sizeof(double));
 	printf("%s: sizeof float = %u.\n", machine, (unsigned int) sizeof(float));
@@ -2488,7 +2493,8 @@ precision()
 		
 	}
 
-	/* ifdef __SIZEOF_INT128__ */ {
+#ifdef __SIZEOF_INT128__
+	{
 		
 	__uint128_t tlui;
 
@@ -2547,6 +2553,7 @@ precision()
 	putchar('\n');
 		
 	}
+#endif	/* __SIZEOF_INT128__ */
 
 	printf("FLT_DIG              = %2d\n", FLT_DIG);
 	if (ilog10(uipow(FLT_RADIX, FLT_MANT_DIG - 1)) != FLT_DIG) {
