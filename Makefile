@@ -48,20 +48,6 @@
 . include <bsd.own.mk>
 .endif
 
-# this will only have effect on some BSDs, not Darwin/OSX/macOS, nor FreeBSD,
-# and it is added to LDFLAGS by the system mk-files (sys.mk in general, but also
-# <bsd.prog.mk> sometimes.  Note that some of the sanitizers don't work when
-# static-linked.
-#
-LDSTATIC ?= -static
-# but this will work....
-.if (defined(TARGET_OSNAME) && (${TARGET_OSNAME} == "Darwin")) || defined(.FreeBSD)
-# for both FreeBSD and Mac OS X....
-NO_SHARED = YES
-.else
-NOSHARED = YES
-.endif
-
 # experiments should be pedantic!
 #
 .if !defined(PEDANTIC) || ${PEDANTIC} != "no"
@@ -69,6 +55,32 @@ CWARNFLAGS += -pedantic
 .endif
 
 .include "Makefile.compiler"
+
+.if defined(_HOST_OSNAME)
+TARGET_OSNAME?= ${_HOST_OSNAME}
+.endif
+
+# this will only have effect on some BSDs, not Darwin/OSX/macOS, nor FreeBSD,
+# and it is added to LDFLAGS by the system mk-files (sys.mk in general, but also
+# <bsd.prog.mk> sometimes.  Note that some of the sanitizers don't work when
+# static-linked.
+#
+.if ((defined(TARGET_OSNAME) && (${TARGET_OSNAME} == "Darwin")) || \
+	(defined(OS) && (${OS} == "Darwin")) || \
+	(defined(.FreeBSD) && (empty(.FreeBSD) || (${.FreeBSD} == "false"))))
+#
+# NOTE: Mac OS X does not support static linking
+#
+.else
+LDSTATIC ?= -static
+.endif
+# but this will work....
+.if (defined(TARGET_OSNAME) && (${TARGET_OSNAME} == "Darwin")) || defined(.FreeBSD)
+# for both FreeBSD and Mac OS X....
+NO_SHARED = YES
+.else
+NOSHARED = YES
+.endif
 
 # This is so we can use <bsd.prog.mk> without any manual page.  Note though that
 # PROG is never defined -- this Makefile is intended to build a single program
