@@ -123,7 +123,7 @@
 
 #endif /* !(_BIT_FIELDS_LTOH || _BIT_FIELDS_HTOL) */
 
-#if 1 /* !(defined(_BIT_FIELDS_LTOH) || defined(_BIT_FIELDS_HTOL)) */
+#if 1 /* !(defined(_BIT_FIELDS_LTOH) || defined(_BIT_FIELDS_HTOL)) */ /* endian hacks */
 /*
  * If that didn't work then try using platform-specific compile-time endian
  * discovery is a last-ditch effort.  This will likely only work on hosted
@@ -257,6 +257,7 @@
 
 # endif /* !(__LITTLE_ENDIAN__) || __BIG_ENDIAN__) */
 
+/* XXX just make some assumptions */
 # if defined(__LITTLE_ENDIAN__)
 #  define _BIT_FIELDS_LTOH
 # elif defined(__BIG_ENDIAN__)
@@ -272,7 +273,7 @@
 /*
  * now a simple mnemonic name to represent the first bit's position....
  *
- * It must use the same ordinal numbering scheme as ffs(3),a nd this allows an
+ * It must use the same ordinal numbering scheme as ffs(3), and this allows an
  * undefined value to be represented by 0.
  */
 enum {
@@ -392,7 +393,14 @@ main()
 		break;
 	}
 
-	/* and just for comparison, print the bytes in the integer 'l' */
+	/*
+	 * and now for comparison, print the bytes in the integer 'l' via *p
+	 *
+	 * remember, from the global scope:
+	 *
+	 * static volatile uint32_t l = 0x01020304UL;
+	 * volatile uint8_t *p = (volatile uint8_t *) &l;
+	 */
 	printf("l = 0x%8.8x\n", l);
 	for (i = 0; i < (int) sizeof(l); i++) {
 		printf("l[%i] = 0x%02x%s", i, *p++, i == sizeof(l)-1 ? "\n" : ", ");
