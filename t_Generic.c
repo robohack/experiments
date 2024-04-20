@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L
+# error "_Generic is not supported until ISO C11"
+#endif
+
 /* messing with C11 _Generic() */
 
 /* see also:  http://www.robertgamble.net/2012/01/c11-generic-selections.html */
@@ -39,8 +43,20 @@ main()
 	signed char sc __unused = 's';
 	unsigned char uc __unused = 'u';
 	const char *cs __unused = "foobarnone";
+#if defined(__STDC_VERSION__)  && __STDC_VERSION__ >= 202311L
+	nullptr_t	np = nullptr;
+#endif
 
-	printf(fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt,
+	printf(
+#if defined(__STDC_VERSION__)  && __STDC_VERSION__ >= 202311L
+		fmt fmt
+#endif
+		fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt fmt
+		fmt fmt fmt fmt fmt,
+#if defined(__STDC_VERSION__)  && __STDC_VERSION__ > 202000L
+                "nullptr_t", typename(np),
+                  "nullptr", typename(nullptr),
+#endif
                    "size_t", typename(s),
                 "ptrdiff_t", typename(p),
                  "intmax_t", typename(i),
@@ -55,11 +71,12 @@ main()
                         "0", typename(0),
                      "NULL", typename(NULL),
                "0x7FFFFFFF", typename(0x7FFFFFFF), /* sign detection? */
-               "0xFFFFFFFF", typename(0xFFFFFFFF), /* sign detection?  */
+               "0xFFFFFFFF", typename(0xFFFFFFFF), /* sign detection? */
               "0x7FFFFFFFU", typename(0x7FFFFFFFU),
              "array of int", typename(ai),
            "pointer to int", typename(pi),
                      "true", typename(true), /* XXX the usual conversions give int! */
+                    "false", typename(false), /* XXX the usual conversions give int! */
                      "bool", typename(b)); /* !!! no "usual conversions"! */
 
 	exit(EXIT_SUCCESS);
