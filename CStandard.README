@@ -1,0 +1,94 @@
+source file  CStandard.c
+include file CStandard.h
+explanation  README       (this file)
+
+Which version of the C standard are we using?
+Print some information to stdout.
+
+Mind the indentation!
+
+We used the preprocessor operator "defined", but if the implementation is really
+old that might not be available.  In that case, rewrite the tests to use #ifdef
+and not to use #elif.  For example,
+  #if defined(foo)
+    part 1
+  #elif defined(bar)
+    part 2
+  #else
+    part 3
+  #endif
+becomes
+  #ifdef foo
+    part 1
+  #else
+    #ifdef bar
+      part 2
+    #else
+      part 3
+    #endif
+  #endif
+You would probably want to change the function header and prototype also, to go
+back to the original K&R style.  Just take out the second void.
+
+References:
+  C:ARM, Sec. 3.3.4, Predefined Macros; Sec. 10.1, Standard C Facilities.
+    This code is an expansion of an example given there.
+  C:ARM, Sec. 3.9, 10.2, C++ Compatibility.
+    These sections describe __cplusplus and its use.
+  man pages for Sun's C compiler and for GCC
+  The C Standard, C99, through Technical Corrigendum 3
+    Sec. 6.10.8, Predefined macro names
+      __STDC__ The integer constant 1, intended to indicate a conforming
+        implementation. [required]
+      __STDC_VERSION__ The integer constant 199901L. [required]
+          The only earlier defined value was 199409L.  The draft version of C1X
+          has not yet defined a new value.
+      __STDC_HOSTED__ The integer constant 1 if the implementation is a
+        hosted implementation or the integer constant 0 if it is not.
+        [required]
+      __STDC_MB_MIGHT_NEQ_WC__ The integer constant 1, intended to indicate
+        that, in the encoding for wchar_t, a member of the basic character
+        set need not have a code value equal to its value when used as the
+        lone character in an integer character constant. [required]
+          (See also, Sec. 7.17, Common definitions <stddef.h>, which states:
+          wchar_t is an integer type whose range of values can represent
+          distinct codes for all members of the largest extended character set
+          specified among the supported locales; the null character shall have
+          the code value zero. Each member of the basic character set shall
+          have a code value equal to its value when used as the lone character
+          in an integer character constant if an implementation does not define
+          __STDC_MB_MIGHT_NEQ_WC__.)
+          (Not in C:ARM, since this was added in TC 3. It's not clear what the
+          proper use of this macro would be if we don't know whether or not the
+          implementation claims to be standard but has not yet implemented TC 3.)
+      __STDC_IEC_559__ The integer constant 1, intended to indicate conformance
+        to the specifications in annex F (IEC 60559 floating-point arithmetic).
+        [optional]
+      __STDC_IEC_559_COMPLEX__ The integer constant 1, intended to indicate
+        adherence to the specifications in informative annex G (IEC 60559
+        compatible complex arithmetic). [optional]
+      __STDC_ISO_10646__ An integer constant of the form yyyymmL (for example,
+        199712L). If this symbol is defined, then every character in the Unicode
+        required set, when stored in an object of type wchar_t, has the same
+        value as the short identifier of that character. The Unicode required
+        set consists of all the characters that are defined by ISO/IEC 10646,
+        along with all amendments and technical corrigenda, as of the specified
+        year and month. [optional]
+    The macros
+      __STDC_CONSTANT_MACROS
+      __STDC_FORMAT_MACROS
+      __STDC_LIMIT_MACROS
+    are only relevant to C++ when using <inttypes.h> or <stdint.h>.
+    Other macro names beginning with __STDC_ are reserved.
+    The macro __cplusplus should not be defined when using Standard C.
+    Sec. 7.16, Boolean type and values, <stdbool.h>
+      The macro __bool_true_false_are_defined is defined when <stdbool.h> is used.
+  The C Standard, draft of C1X, as of March 1, 2009
+    The macros 
+      __STDC_UTF_16__
+      __STDC_UTF_32__
+    are proposed, and would be used with <uchar.h> for Unicode utilities.
+  The C Standard, draft of C1X, as of April 12, 2011
+    Lots more stuff.
+
+

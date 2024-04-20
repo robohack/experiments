@@ -1,3 +1,13 @@
+/*
+ * this originally comes from Don Heller <dheller@cse.psu.edu>:
+ *
+ * https://www.cse.psu.edu/~deh25/cmpsc311/Lectures/Standards/CStandard/CStandard.c
+ *
+ * See also:
+ *
+ * https://www.cse.psu.edu/~deh25/cmpsc311/Lectures/Standards/CStandard.html
+ */
+
 /* source file   CStandard.c  (this file)
  * include file  CStandard.h
  * explanation   README
@@ -8,9 +18,9 @@
  * Mind the indentation!
  *
  * The following are required in the C11 Standard (mandatory macros).
- *   __STDC__			C89	C99	C11
- *   __STDC_HOSTED__			C99	C11
- *   __STDC_VERSION__		(C94)	C99	C11
+ *   __STDC__			C89	C99	C11	C17	C23
+ *   __STDC_HOSTED__			C99	C11	C17	C23
+ *   __STDC_VERSION__		(C94)	C99	C11	C17	C23
  * The following are optional in the C11 Standard (environment macros).
  *   __STDC_ISO_10646__			C99	C11
  *   __STDC_MB_MIGHT_NEQ_WC__		C99	C11
@@ -33,7 +43,10 @@
  *   __TIME__			C89	C99	C11
  */
 
+#include <math.h>
 #include <stdio.h>
+
+#include "CStandard.h"
 
 void
 CStandard(void);
@@ -60,18 +73,35 @@ CStandard()
     #endif
 
     #if defined(__STDC_VERSION__)
-      #if (__STDC_VERSION__ >= 201112L)
+      #if (__STDC_VERSION__ > 202311L)
+        printf("This is newer than the last known latest ISO C version.\n");
+      #elif (__STDC_VERSION__ == 202311L)
+        printf("This is C23.\n");
+      #elif (__STDC_VERSION__ > 201710L)
+        printf("This is C17 (with some expected C23 extensions).\n");
+      #elif (__STDC_VERSION__ == 201710L)
+        printf("This is C17.\n");
+      #elif (__STDC_VERSION__ > 201112L)
+        printf("This is C11 (with some expected C17 extensions).\n");
+      #elif (__STDC_VERSION__ == 201112L)
         printf("This is C11.\n");
-      #elif (__STDC_VERSION__ >= 199901L)
+      #elif (__STDC_VERSION__ > 199901L)
+        printf("This is C99 (with some expected C11 extensions).\n");
+      #elif (__STDC_VERSION__ == 199901L)
         printf("This is C99.\n");
-      #elif (__STDC_VERSION__ >= 199409L)
-        printf("This is C89 with amendment 1.\n");
+      #elif (__STDC_VERSION__ > 199409L)
+        printf("This is C90 (with some expected C99 extensions).\n");
+      #elif (__STDC_VERSION__ == 199409L)
+        printf("This is C89/C90 with amendment 1, aka ISO/IEC 9899:1990/AMD1:1995, or C94/C95.\n");
       #else
-        printf("This is C89 without amendment 1.\n");
-        printf("  __STDC_VERSION__ = %ld\n", __STDC_VERSION__);
+        printf("This is C89 without amendment 1, but with __STDC_VERSION__, aka ISO/IEC 9899:1990, or ISO C90.\n");
       #endif
+        printf("  __STDC_VERSION__ = %ldL\n", __STDC_VERSION__);
     #else /* !defined(__STDC_VERSION__) */
       printf("This is C89.  __STDC_VERSION__ is not defined.\n");
+      #if !defined(HUGE_VAL)
+        printf("  HUGE_VAL is not defined, though it should be!.\n");
+      #endif
     #endif
 
   #else   /* !defined(__STDC__) */
@@ -90,7 +120,7 @@ CStandard()
       #endif
     #else
       printf("  __STDC_HOSTED__ is not defined.\n");
-      printf("    This should indicate hosted or freestanding implementation.\n");
+      printf("    This could indicate hosted or freestanding implementation.\n");
     #endif
   
     #if defined(__STDC_ISO_10646__)
@@ -136,6 +166,16 @@ CStandard()
     #else
       printf("  __STDC_IEC_559_COMPLEX__ is not defined.\n");
       printf("    The complex arithmetic implementation does not conform to Annex G (IEC 60559 standard).\n");
+    #endif
+
+    #if !defined(INFINITY)
+      printf("  INFINITY is not defined, though it should be!.\n");
+    #endif
+    #if !defined(HUGE_VALF)
+      printf("  HUGE_VALF is not defined, though it should be!.\n");
+    #endif
+    #if !defined(HUGE_VALL)
+      printf("  HUGE_VALL is not defined, though it should be!.\n");
     #endif
   #endif
 
@@ -237,6 +277,24 @@ CStandard()
 
   #endif
 
+  #if defined(__STDC__) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201710L)
+
+      /*
+       * ISO/IEC 9899:2018, a.k.a. C17/C18 (denote the year of completion and
+       * publication respectively), is the current revision of the C
+       * standard.
+       *
+       * C17 is same as C11, except that it bumps the __STDC_VERSION__
+       * predefined macro to 201710L, contains several defect reports, and
+       * deprecates some features.
+       */
+
+  #endif
+
+  #if defined(__STDC__) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202311L)
+      /* https://en.cppreference.com/w/c/23 */
+  #endif
+
   printf("\n");
 }
 
@@ -253,3 +311,12 @@ main()
 	exit(0);
 }
 #endif
+
+
+/* n.b.:  clang only knows -std=iso9899:199409 for ISO C95 */
+/*
+ * Local Variables:
+ * eval: (make-local-variable 'compile-command)
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm -f " fn "; " (default-value 'compile-command) " CPPFLAGS+='-DTEST' CSTD=c11 " fn " && ./" fn))
+ * End:
+ */
