@@ -71,6 +71,11 @@ main()
 	int isused;
 	int notused;			/* EXPECTED:  warning: variable 'notused' set but not used */
 	int lignored __attribute__((unused));
+	int voided;
+	int no_effect;
+
+	(void) voided;
+	no_effect; /* EXPECTED: warning: statement with no effect */
 
 	bar(3); /* EXPECTED: warning: ignoring return value of 'bar', declared with attribute warn_unused_result */
 
