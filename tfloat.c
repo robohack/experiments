@@ -54,7 +54,7 @@
 # define _ISOC9X_SOURCE	1
 #endif
 
-#if (defined(BSD) ||                                                    \
+#if (defined(BSD4_4) ||							\
      defined(__NetBSD__) ||                                             \
      defined(__FreeBSD__) ||                                            \
      defined(__OpenBSD__) ||                                            \
@@ -65,6 +65,16 @@
 # include <sys/cdefs.h>
 # include <sys/param.h>
 /* also <sys/types.h>??? */
+#endif
+#if ((defined(BSD4_4) &&						\
+      !defined(__APPLE__) &&						\
+      !defined(__FreeBSD__)) ||						\
+     defined(__NetBSD__) ||						\
+     defined(__OpenBSD__) ||                                            \
+     defined(__DragonFly__) ||	/* ??? */				\
+     defined(__linux__) ||	/* ??? */				\
+     defined(__ANDROID__))
+# include <machine/ieee.h>
 #endif
 #include <sys/utsname.h>
 
@@ -84,15 +94,26 @@
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>			/* xxx #if __STDC__??? */
+#include <stdlib.h>
 #include <string.h>
+
+/* XXX I wish apple would stop pretending so hard... */
+#if ((defined(BSD4_4) &&						\
+      !defined(__APPLE__)) ||						\
+     defined(__NetBSD__) ||                                             \
+     (defined(__FreeBSD__) &&						\
+      !defined(__APPLE__)) ||						\
+     defined(__OpenBSD__) ||                                            \
+     defined(__Darwin__) ||                                             \
+     defined(__DragonFly__))
+# include <ieeefp.h>
+#endif
 
 #ifdef HAVE_STDBOOL_H
 # include <stdbool.h>
 #else /* !HAVE_STDBOOL_H  */
 typedef enum bool_e { false = 0U, true = !false } bool;
 #endif /* !HAVE_STDBOOL_H  */
-
 
 /*
  * N.B.:  disable this to see un-rounded values at max output precision from
@@ -464,6 +485,7 @@ long double fabsl(long double n);	/* not as well tested */
 
 #endif /* endian hacks */
 
+/* xxx with the __ prefix these should probably be protected with #ifndef */
 #define	___STRING(x)	__STRING(x)
 #define	__STRING(x)	#x
 
@@ -482,6 +504,12 @@ int main(void);
 static void report(char *);
 static void representations(void);
 static void precision(void);
+
+static intmax_t ipow(int base,
+		     unsigned int expon);
+
+static uintmax_t uipow(unsigned int base,
+		       unsigned int expon);
 
 int
 main()
@@ -547,6 +575,8 @@ ilog2(uintmax_t v)
 #define step(x)	if (v >= ((uintmax_t) 1) << x)		\
 			b += x, v >>= x
 
+	/* xxx assume uintmax_t is not 128 bits... */
+
 	if (sizeof(uintmax_t) == 8)
 		step(32);
 	if (sizeof(uintmax_t) >= 4)
@@ -575,8 +605,22 @@ ceil_ilog10(uintmax_t v)
 		  10000000000000000000LLU };
 	unsigned int r;
 
+#if 0
+	printf("intlog2(%ju) = %d, msb() = %d\n", v, ilog2(v), msb(v));
+#endif
+	/*
+	 * Given the relationship "log10(v) = log2(v) / log2(10)", we can
+	 * transform this to be "log2(v) * (1 / log2(10))", the latter term of
+	 * which is approximately 1233/4096, i.e. (1233, followed by a right
+	 * shift of 12).
+	 */
 	r = ((unsigned int) ilog2(v) + 1) * 1233 >> 12;
 
+	/*
+	 * Finally, since the result is only an approximation that may be off by
+	 * one, the exact value is found by subtracting "v < PowersOf10[r]" from
+	 * the result.
+	 */
 	return (int) r + 1 - (v < PowersOf10[r]); /* "round" up to find ceil(r) */
 }
 
@@ -608,16 +652,19 @@ ilog10(uintmax_t v)
 		return ~0U;
 
 	/*
-	 * By the relationship "log10(v) = log2(v) / log2(10)", we need to
-	 * multiply "log2(v)" by "1 / log2(10)", which is approximately
-	 * 1233/4096, or (1233, followed by a right shift of 12).
-	 *
-	 * Finally, since the result is only an approximation that may be off
-	 * by one, the exact value is found by subtracting "v < PowersOf10[r]"
-	 * from the result.
+	 * Given the relationship "log10(v) = log2(v) / log2(10)", we can
+	 * transform this to be "log2(v) * (1 / log2(10))", the latter term of
+	 * which is approximately 1233/4096, i.e. (1233, followed by a right
+	 * shift of 12).
 	 */
 	r = ((msb(v) * 1233) >> 12) + 1;
 
+
+	/*
+	 * Finally, since the result is only an approximation that may be off by
+	 * one, the exact value is found by subtracting "v < PowersOf10[r]" from
+	 * the result.
+	 */
 	return r - (v < PowersOf10[r]);
 }
 
@@ -773,6 +820,11 @@ print_u128(__uint128_t u128)
 #endif
 
 
+/* xxx we should do something with these.... */
+#define flt_equals(a, b) (fabsf((a)-(b)) < FLT_EPSILON)
+#define dbl_equals(a, b) (fabs((a)-(b)) < DBL_EPSILON)
+#define ldbl_equals(a, b) (fabsl((a)-(b)) < LDBL_EPSILON)
+
 /*
  * For an excellent discussion of the limits of floating-point calculations see
  * the following:
@@ -841,14 +893,18 @@ report(char *machine)
 	 * Demonstrate some of the folleys of doing floating point calculations
 	 * and then testing for exact equiavlence of the expected decimal value:
 	 */
-	if (0.70 + 0.20 + 0.10 != 1.00) {
+	dtmp = 0.70 + 0.20 + 0.10;
+	if (dtmp != 1.00) {
 		puts("WTF: !!!  (0.70 + 0.20 + 0.10) is not binary equivalent to 1.0 !");
 		printf("0.70 + 0.20 + 0.10 =    %#.*g\n", my_DBL_DECIMAL_DIG, 0.70 + 0.20 + 0.10);
 		/* but at least using DBL_DIG it displays as 1.0!!! */
 		printf("0.70 + 0.20 + 0.10 =    %#.*g (ok when rounded)\n\n", DBL_DIG, 0.70 + 0.20 + 0.10);
 	}
 	dtmp = 0.70 + 0.20 + 0.10;
-	/* but we can make it round to 1.0 */
+	if (! dbl_equals(dtmp, 1.00)) {
+		printf("WTF: !!!  0.70 + 0.20 + 0.10 NOT within DBL_EPSILON of 1.00 =    %#.*g\n\n", my_DBL_DECIMAL_DIG, dtmp);
+	}
+	/* we can also make it round to 1.0 */
 	dtmp = round(dtmp * 100.00) / 100.00;
 	if (dtmp != 1.00) {
 		/* xxx normally this works, and some compilers (e.g. gcc-4.1.3) even say
@@ -856,13 +912,17 @@ report(char *machine)
 		printf("WTF: !!!  round to 1.00 =    %#.*g\n\n", my_DBL_DECIMAL_DIG, dtmp);
 	}
 
-	if (1.0 - 0.9 - 0.1 != 0.0) {
-		puts("WTF: !!!  (1.0 - 0.9 - 0.1) is not binary equivalent to 0.0");
+	dtmp = 1.0 - 0.9 - 0.1;
+	if (dtmp != 0.0) {
+		puts("WTF: !!!  literal (1.0 - 0.9 - 0.1) is not binary equivalent to 0.0");
 		printf("1.0 - 0.9 - 0.1 =    %#.*g\n", my_DBL_DECIMAL_DIG, 1.0 - 0.9 - 0.1);
 		/* xxx and it doesn't even display as 0.0 when rouned!!! */
 		printf("1.0 - 0.9 - 0.1 =    %#.*g  XXX not even zero when rounded!\n\n", DBL_DIG, 1.0 - 0.9 - 0.1);
 	}
 	dtmp = 1.0 - 0.9 - 0.1;
+	if (! dbl_equals(dtmp, 0.00)) {
+		printf("WTF: !!!  1.0 - 0.9 - 0.1 NOT within DBL_EPSILON of 0.0 =    %#.*g\n\n", my_DBL_DECIMAL_DIG, dtmp);
+	}
 	dtmp = round(dtmp * 100.00) / 100.00;
 	if (dtmp != 0.00) {
 		/* normally this works, unless maybe 0.0 != -0.0 */
@@ -937,7 +997,8 @@ report(char *machine)
 	putchar('\n');
 
 	/* this should always be OK */
-	if (0.0 + 0.9 + 0.1 != 1.0) {
+	dtmp = 0.0 + 0.9 + 0.1;
+	if (dtmp != 1.0) {
 		puts("WTF: !!!  (0.0 + 0.9 + 0.1) is not binary equivalent to 1.0!");
 		printf("0.0 + 0.9 + 0.1 =    %#.*g\n", my_DBL_DECIMAL_DIG, 0.0 + 0.9 + 0.1);
 		printf("0.0 + 0.9 + 0.1 =    %#.*g (i.e. OK when rounded)\n\n", DBL_DIG, 0.0 + 0.9 + 0.1);
@@ -1257,7 +1318,8 @@ report(char *machine)
 	 * For printf("%.*e") the precision (N in "%.Ne") is the number of
 	 * digits after the decimal point, so for normal scientific notation
 	 * with "%1.*e" we can specify at most the number of significant digits
-	 * minus one for the leading digit, i.e. (DBL_DIG-1) for a "double".
+	 * minus one for the leading digit, or rather the number of decimal
+	 * places, i.e. (DBL_DIG-1) for a "double".
 	 *
 	 * For printf("%.*g") the precision (.*) is the total number of
 	 * significant digits to be printed, so at most DBL_DIG for a "double".
@@ -1446,27 +1508,43 @@ give_me_one(double a)
 
 
 /*
- * definitions of internal representation for IEEE 754 binary 32-bit floating point
+ * definitions for the internal representation of IEEE 754 binary 32-bit
+ * floating point
  */
+#if (FLT_RADIX != 2) /* only FLT_RADIX is guaranteed to be a constant expr. */
+# error "ERROR: FLT_RADIX != 2 !!!"
+#endif
+#define calc_SNG_EXPBITS	(32 - FLT_MANT_DIG)
+#ifdef SNG_EXPBITS
+# define my_SNG_EXPBITS		SNG_EXPBITS
+#else
+# define my_SNG_EXPBITS		calc_SNG_EXPBITS
+#endif
+#define calc_SNG_FRACBITS	(FLT_MANT_DIG - 1)
+#ifdef SNG_FRACBITS
+# define my_SNG_FRACBITS	SNG_FRACBITS
+#else
+# define my_SNG_FRACBITS	calc_SNG_FRACBITS
+#endif
 typedef union ieee754_binary32_float_u {
 	uint32_t i;
 	float f;
 	struct ieee_float_internals {
 		/* Bitfields for exploration. */
 #ifdef _BIT_FIELDS_LTOH
-		uint32_t mantissa : (FLT_MANT_DIG - 1);
-		uint32_t exponent : (32 - FLT_MANT_DIG);
+		uint32_t mantissa : my_SNG_FRACBITS;
+		uint32_t exponent : my_SNG_EXPBITS;
 		uint32_t sign : 1;
 #else
 		uint32_t sign : 1;
-		uint32_t exponent : (32 - FLT_MANT_DIG);
-		uint32_t mantissa : (FLT_MANT_DIG - 1);
+		uint32_t exponent : my_SNG_EXPBITS;
+		uint32_t mantissa : my_SNG_FRACBITS;
 #endif
 	} fbits;
 } my_float_t;
 
 /*
- * Portable extraction of components...
+ * Portable extraction of components without a union bitfield overlay...
  */
 bool
 f_sign(my_float_t);
@@ -1474,6 +1552,14 @@ f_sign(my_float_t);
 bool
 f_sign(my_float_t f)
 {
+	/*
+	 * xxx could also use a mask of
+	 *
+	 * 	~(~0ULL >> ((sizeof(f.i) * CHAR_BIT) - 1))
+	 *
+	 * which the compiler should be able to turn into constant as it is a
+	 * constant expression....
+	 */
 	return (f.i >> 31) != 0;
 }
 
@@ -1483,7 +1569,8 @@ f_mantissa(my_float_t);
 int32_t
 f_mantissa(my_float_t f)
 {
-	return f.i & ((1 << (FLT_MANT_DIG - 1)) - 1);
+	/* turn off the sign and exponent bits, everything but the mantissa */
+	return f.i & (~0U >> (1 + my_SNG_EXPBITS));
 }
 
 int32_t
@@ -1492,14 +1579,18 @@ f_exponent(my_float_t);
 int32_t
 f_exponent(my_float_t f)
 {
-	return (f.i >> (FLT_MANT_DIG - 1)) & (~0U >> FLT_MANT_DIG);
+	/* turn off the sign bit and shift exponent over the mantissa */
+	return (f.i & (~0U >> 1)) >> my_SNG_FRACBITS;
 }
 
 void
 print_float_internals(float);
 
-#ifndef SNG_EXP_BIAS
-# define SNG_EXP_BIAS	(FLT_MAX_EXP - 1)
+#define calc_SNG_EXP_BIAS	(FLT_MAX_EXP - 1)
+#ifdef SNG_EXP_BIAS
+# define my_SNG_EXP_BIAS	SNG_EXP_BIAS
+#else
+# define my_SNG_EXP_BIAS	calc_SNG_EXP_BIAS
 #endif
 
 void
@@ -1515,7 +1606,7 @@ print_float_internals(float v)
 	       f.fbits.exponent,
 	       (uintmax_t) f.fbits.mantissa,
 	       floor(log10(fabs(v))),
-	       f.fbits.exponent, SNG_EXP_BIAS, f.fbits.exponent - SNG_EXP_BIAS,
+	       f.fbits.exponent, my_SNG_EXP_BIAS, f.fbits.exponent - my_SNG_EXP_BIAS,
 	       (uintmax_t) f.fbits.mantissa);
 	printf("base-2: %s\n", binary_fmt((uintmax_t) f.i, true));
 
@@ -1528,31 +1619,32 @@ re_encode_float(uint32_t ieee754_bin32);
 float
 re_encode_float(uint32_t ieee754_bin32)
 {
-#ifdef THE_HARD_WAY
-	int sign;
-	int exp;
-	int mant;
-	float f_exp;
-	float f_mant;
+	my_float_t fu;
 
-	if (ieee754_bin32 == 0) {
-		return 0;
+	fu.i = ieee754_bin32;
+
+	return fu.f;
+}
+
+
+/*
+ * fancy formatted output for IEEE 754 float
+ */
+void fancy_ieee754_float(float f);
+
+void fancy_ieee754_float(float f)
+{
+	my_float_t fu;
+	int i = sizeof(f) * CHAR_BIT;
+
+	fu.f = f;
+	putchar(' ');
+	while (i--) {
+		printf("%d ", (fu.i >> i) & 0x1);
 	}
-	sign = ieee754_bin32 & (1UL << 31) ? -1 : 1;				/* f_sign() */
-	exp =  (ieee754_bin32 >> (FLT_MANT_DIG - 1)) & (~0U >> FLT_MANT_DIG);	/* f_exp() */
-	mant = ieee754_bin32 & ((1 << (FLT_MANT_DIG - 1)) - 1);			/* f_mant() */
-
-	f_exp = fpow(2.0, exp - 127);
-	f_mant = (float) mant / (float) (1 << (FLT_MANT_DIG - 1)) + 1.0f;
-
-	return sign * f_exp * f_mant;
-#else
-	my_float_t f;
-
-	f.i = ieee754_bin32;
-
-	return f.f;
-#endif
+	putchar('\n');
+	printf("|-|- - - - - - - -|- - - - - - - - - - - - - - - - - - - - - - -|\n");
+	printf("|s|    exponet    |                  mantissa                   |\n\n");
 }
 
 
@@ -1567,38 +1659,77 @@ re_encode_float(uint32_t ieee754_bin32)
  *	#define	DBL_FRACLBITS	32
  *	#define	DBL_FRACBITS	(DBL_FRACHBITS + DBL_FRACLBITS)
  *
+ * NetBSD's "struct ieee_double" also uses two "unsigned int" fields, thus the
+ * separate "*HBITS" and "*LBITS" definitions.
+ *
  * XXX this uses uint64_t as a bitfield and this may not be portable, though
  * NetBSD also uses uint64_t in its definition of BINARY128 internals.
+ *
+ * XXX this also mixes unit32_t and uint64_t fractional bitfields in the same
+ * struct, and that may also not be portable.
  */
+#define calc_DBL_EXPBITS	(64 - DBL_MANT_DIG)
+#ifdef DBL_EXPBITS
+# define my_DBL_EXPBITS		DBL_EXPBITS
+#else
+# define my_DBL_EXPBITS		calc_DBL_EXPBITS
+#endif
+#define calc_DBL_FRACBITS	(DBL_MANT_DIG - 1)
+#ifdef DBL_FRACBITS
+# define my_DBL_FRACBITS	DBL_FRACBITS
+#else
+# define my_DBL_FRACBITS	calc_DBL_FRACBITS
+#endif
 typedef union ieee754_binary64_double_u {
 	int64_t i;
 	double d;
 	struct ieee_double_internals {
 		/* Bitfields for exploration. */
 #ifdef _BIT_FIELDS_LTOH
-		uint64_t mantissa : (DBL_MANT_DIG - 1);
-		uint32_t exponent : (64 - DBL_MANT_DIG);
+		uint64_t mantissa : my_DBL_FRACBITS;
+		uint32_t exponent : my_DBL_EXPBITS;
 		uint32_t sign : 1;
 #else
 		uint32_t sign : 1;
-		uint32_t exponent : (64 - DBL_MANT_DIG);
-		uint64_t mantissa : (DBL_MANT_DIG - 1);
+		uint32_t exponent : my_DBL_EXPBITS;
+		uint64_t mantissa : my_DBL_FRACBITS;
 #endif
 	} dbits;
 } my_double_t;
 
 
-static intmax_t
-ipow(int base,
-     unsigned int expon);
-
-static uintmax_t
-uipow(unsigned int base,
-      unsigned int expon);
-
-#ifndef DBL_EXP_BIAS
-# define DBL_EXP_BIAS	(DBL_MAX_EXP - 1)
+#define calc_DBL_EXP_BIAS	(DBL_MAX_EXP - 1)
+#ifdef DBL_EXP_BIAS
+# define my_DBL_EXP_BIAS	DBL_EXP_BIAS
+#else
+# define my_DBL_EXP_BIAS	calc_DBL_EXP_BIAS
 #endif
+
+/*
+ * fancy formatted output for IEEE 754 double
+ */
+void fancy_ieee754_double(double d);
+
+void fancy_ieee754_double(double d)
+{
+	my_double_t du;
+	int i = sizeof(d) * CHAR_BIT;
+
+	du.d = d;
+	putchar(' ');
+	while (i--) {
+		printf("%u", (u_int) ((du.i >> i) & 0x1));
+		switch (i) {
+		case DBL_MANT_DIG - 1:
+		case (sizeof(d) * CHAR_BIT) - 1:
+			putchar(' ');
+			break;
+		}
+	}
+	putchar('\n');
+	printf("|-|-----------|----------------------------------------------------|\n");
+	printf("|s| exponent  |                      mantissa                      |\n\n");
+}
 
 void
 print_double_internals(double);
@@ -1606,25 +1737,27 @@ print_double_internals(double);
 void
 print_double_internals(double v)
 {
-	my_double_t d;
+	my_double_t du;
 
-	d.d = v;
-	printf("hex: 0x%016jx, exp=0x%03x, mant=0x%014jx\n"
-	       "dec: %jud, exp = %ud - bias(%d) = %dd, mant = %jud\n"
+	du.d = v;
+
+	printf("hex: 0x%016jx, exp = 0x%03x, mant = 0x%014jx\n"
+	       "dec: exp = %ud - bias(%d) = %dd, mant = %jud\n"
 	       "sign=%u, log10() = % .3f\n",
 
-	       (uintmax_t) d.i,
-	       d.dbits.exponent,
-	       (uintmax_t) d.dbits.mantissa,
+	       (uintmax_t) du.i,
+	       du.dbits.exponent,
+	       (uintmax_t) du.dbits.mantissa,
 
-	       (uintmax_t) d.i,
-	       d.dbits.exponent, DBL_EXP_BIAS,
-	       d.dbits.exponent - DBL_EXP_BIAS,
-	       (uintmax_t) d.dbits.mantissa,
+	       du.dbits.exponent,
+	       my_DBL_EXP_BIAS,
+	       du.dbits.exponent - my_DBL_EXP_BIAS,
+	       (uintmax_t) du.dbits.mantissa,
 
-	       d.dbits.sign,
+	       du.dbits.sign,
 	       floor(log10(fabs(v))));
-	if (ilogb(v) != d.dbits.exponent - DBL_EXP_BIAS) {
+
+	if (ilogb(v) != du.dbits.exponent - my_DBL_EXP_BIAS) {
 		printf("ilogb(): %d", ilogb(v));
 		if (isinf(v) && ilogb(v) != INT_MAX) {
 			/* NetBSD gets this wrong!!! */
@@ -1635,10 +1768,18 @@ print_double_internals(double v)
 			putchar('\n');
 		}
 	}
-	printf("base-2: %s\n", binary_fmt((uintmax_t) d.i, true));
+	printf("base-2: %s\n", binary_fmt((uintmax_t) du.i, true));
+	fancy_ieee754_double(du.d);
 
 	return;
 }
+
+#define calc_LDBL_EXP_BIAS	(LDBL_MAX_EXP - 1)
+#ifdef LDBL_EXP_BIAS
+# define my_LDBL_EXP_BIAS	LDBL_EXP_BIAS
+#else
+# define my_LDBL_EXP_BIAS	calc_LDBL_EXP_BIAS
+#endif
 
 void
 print_decimal(double);
@@ -1908,7 +2049,7 @@ foo(double v)
 }
 
 static void
-representations()
+representations()			/* xxx clang is getting mouthy */
 {
 	long double ldq;
 	double dq;
@@ -2297,6 +2438,18 @@ representations()
 	dq *= pow(10.0, 20.0);
 	print_drep(dq);
 
+	printf("0.70 + 0.20 + 0.10:\n");
+	dq = 0.70 + 0.20 + 0.10;
+	print_drep(dq);
+
+	printf("1.0 - 0.9 - 0.1:\n");
+	dq = 1.0 - 0.9 - 0.1;
+	print_drep(dq);
+
+	printf("10.1 - 9.93:\n");
+	dq = 10.1 - 9.93;
+	print_drep(dq);
+
 	printf("just 999999999999999 (15 9s):\n");
 	dq = 999999999999999LLU;
 	print_drep(dq);
@@ -2379,7 +2532,7 @@ representations()
 
 
 static void
-precision()
+precision()				/* xxx clang is getting mouthy */
 {
 	unsigned int ldbl_log10;
 	unsigned int ui;
@@ -2500,12 +2653,12 @@ precision()
 	/*
 	 * so, we use this as the format width:  ceil(mant * log10(2))
 	 *
-	 * XXX hmmmm....:  ilog10(uipow(FLT_RADIX, LDBL_MANT_DIG - 1)) 
+	 * XXX hmmmm....:  ilog10(uipow(FLT_RADIX, LDBL_MANT_DIG - 1))
 	 */
 	ldbl_log10 = (unsigned int) calc_LDBL_DECIMAL_DIG;
-
+#if 0
 	printf("Note:  rounding to %d digits for 'long double' display...\n\n", ldbl_log10);
-
+#endif
 	/*
 	 * Calculate the absolute maximum magnitude integer that can be safely
 	 * stored in a floating point variable without losing precision.
@@ -2527,10 +2680,11 @@ precision()
 	tf += 1.0f;
 	ti += 1;
 	if ((long long int) tf != (long long int) ti) {
-		printf("NOTICE:              %.4f + 1.0 !=         %ju + 1 !!!\n",
+		printf("NOTICE:               %.4f + 1.0 !=          %ju + 1 !!!\n",
 		       (float) (1LLU << FLT_MANT_DIG),
 		       (uintmax_t) (1LLU << FLT_MANT_DIG));
 	}
+	putchar('\n');
 	tf = ti = (1LLU << FLT_MANT_DIG); /* xxx may change value */
 	ti -= 2;
 	tf -= 2.0f;
@@ -2559,10 +2713,11 @@ precision()
 	td += 1.0;
 	tui += 1;
 	if ((uintmax_t) td != tui) {
-		printf("NOTICE:      %.4f + 1.0 != %ju + 1 !!!\n",
+		printf("NOTICE:       %.4f + 1.0 !=  %ju + 1 !!!\n",
 		       (double) (1LLU << DBL_MANT_DIG),
 		       (uintmax_t) (1LLU << DBL_MANT_DIG));
 	}
+	putchar('\n');
 	td = tui = (1LLU << DBL_MANT_DIG); /* xxx may change value */
 	tui -= 2;
 	td -= 2.0;
@@ -2612,6 +2767,7 @@ precision()
 		print_u128((__uint128_t) 1 << LDBL_MANT_DIG);
 		printf(" + 1 !!!\n");
 	}
+	putchar('\n');
 	tld = tlui = ((__uint128_t) 1 << LDBL_MANT_DIG); /* xxx may change value */
 	/*
 	 * XXX Hmmmm....  GCC-4.1.3 20080704 on NetBSD-5 is broken --
@@ -2634,11 +2790,11 @@ precision()
 		print_u128(tlui);
 		printf(", tld + %u = %*.10Lf\n",
 		       ui, ldbl_log10 + 10, tld);
-#if 1
+#if 0
 		printf("tlui+ %u = ", ui);
 		print_u128(tlui);
 		printf(", tld + %u =%1.*Le\n",
-		       ui, DBL_DIG - 1, tld);
+		       ui, LDBL_DIG - 1, tld);
 #endif
 	}
 	putchar('\n');
@@ -2755,19 +2911,19 @@ precision()
 #ifdef FLT_DECIMAL_DIG
 	printf("FLT_DECIMAL_DIG  = %d\n", FLT_DECIMAL_DIG);
 	if (calc_FLT_DECIMAL_DIG != FLT_DECIMAL_DIG) {
-		printf("WARNING:  should be  = %ld\n", calc_FLT_DECIMAL_DIG);
+		printf("WARNING:  should be  = %d\n", calc_FLT_DECIMAL_DIG);
 	}
 #else
-	printf("NOTE:  FLT_DECIMAL_DIG should be  = %2d\n", calc_FLT_DECIMAL_DIG);
+	printf("NOTE:  FLT_DECIMAL_DIG should be  = %d\n", calc_FLT_DECIMAL_DIG);
 #endif
 
 #ifdef DBL_DECIMAL_DIG
 	printf("DBL_DECIMAL_DIG  = %d\n", DBL_DECIMAL_DIG);
 	if (calc_DBL_DECIMAL_DIG != DBL_DECIMAL_DIG) {
-		printf("WARNING:  should be  = %ld\n", calc_DBL_DECIMAL_DIG);
+		printf("WARNING:  should be  = %d\n", calc_DBL_DECIMAL_DIG);
 	}
 #else
-	printf("NOTE:  DBL_DECIMAL_DIG should be  = %2d\n", calc_DBL_DECIMAL_DIG);
+	printf("NOTE:  DBL_DECIMAL_DIG should be  = %d\n", calc_DBL_DECIMAL_DIG);
 #endif
 
 #ifdef LDBL_DECIMAL_DIG
@@ -2789,6 +2945,69 @@ precision()
 	printf("NOTE:  DECIMAL_DIG should be  = %2d\n", calc_LDBL_DECIMAL_DIG);
 #endif
 	putchar('\n');
+
+#ifdef SNG_EXP_BIAS
+	printf("SNG_EXP_BIAS =  %d\n", SNG_EXP_BIAS);
+	if (SNG_EXP_BIAS != calc_SNG_EXP_BIAS) {
+		printf("WARNING:  should be  =  %d\n", calc_SNG_EXP_BIAS);
+	}
+#else
+	printf("NOTE:  SNG_EXP_BIAS should be =  %d\n", my_SNG_EXP_BIAS);
+#endif
+#ifdef DBL_EXP_BIAS
+	printf("DBL_EXP_BIAS =  %d\n", DBL_EXP_BIAS);
+	if (DBL_EXP_BIAS != calc_DBL_EXP_BIAS) {
+		printf("WARNING:  should be  =  %d\n", calc_DBL_EXP_BIAS);
+	}
+#else
+	printf("NOTE:  DBL_EXP_BIAS should be =  %d\n", my_DBL_EXP_BIAS);
+#endif
+#ifdef LDBL_EXP_BIAS
+	printf("LDBL_EXP_BIAS = %d\n", LDBL_EXP_BIAS);
+	if (LDBL_EXP_BIAS != calc_LDBL_EXP_BIAS) {
+		printf("WARNING:  should be  = %d\n", calc_LDBL_EXP_BIAS);
+	}
+#else
+	printf("NOTE:  LDBL_EXP_BIAS should be = %d\n", my_LDBL_EXP_BIAS);
+#endif
+
+	putchar('\n');
+
+#ifdef SNG_EXPBITS
+	printf("SNG_EXPBITS  =  %d\n", SNG_EXPBITS);
+	if (SNG_EXPBITS != calc_SNG_EXPBITS) {
+		printf("WARNING:  should be  =  %d\n", calc_SNG_EXPBITS);
+	}
+#else
+	printf("NOTE:  SNG_EXPBITS should be =  %d\n", my_SNG_EXPBITS);
+#endif
+#ifdef SNG_FRACBITS
+	printf("SNG_FRACBITS =  %d\n", SNG_FRACBITS);
+	if (SNG_FRACBITS != calc_SNG_FRACBITS) {
+		printf("WARNING:  should be  =  %d\n", calc_SNG_FRACBITS);
+	}
+#else
+	printf("NOTE:  SNG_FRACBITS should be = %d\n", my_SNG_FRACBITS);
+#endif
+
+	putchar('\n');
+
+#ifdef DBL_EXPBITS
+	printf("DBL_EXPBITS  =  %d\n", DBL_EXPBITS);
+	if (DBL_EXPBITS != calc_DBL_EXPBITS) {
+		printf("WARNING:  should be  =  %d\n", calc_DBL_EXPBITS);
+	}
+#else
+	printf("NOTE:  DBL_EXPBITS should be =  %d\n", my_DBL_EXPBITS);
+#endif
+#ifdef DBL_FRACBITS
+	printf("DBL_FRACBITS =  %d\n", DBL_FRACBITS);
+	if (DBL_FRACBITS != calc_DBL_FRACBITS) {
+		printf("WARNING:  should be  =  %d\n", calc_DBL_FRACBITS);
+	}
+#else
+	printf("NOTE:  DBL_FRACBITS should be = %d\n", my_DBL_FRACBITS);
+#endif
 
 	putchar('\n');
 
