@@ -142,16 +142,77 @@ ordinal_suff(unsigned int num)
 
 int	main(void);
 
-static unsigned int
-msb(uintmax_t v)
+/*
+ * Most Significant 1 Bit (unrolled?):
+ *
+ * aka "log base 2"
+ *
+ * a "binary search" algorithm using shift and compare operations
+ *
+ * The "log base 2" of an integer is the same as the position of the highest bit
+ * (or most significant bit) set, the MSB.
+ *
+ * Note that this returns –1 if given the invalid input of 0.
+ */
+u_int ilog2msb(uintmax_t);
+
+u_int
+ilog2msb(uintmax_t v)
 {
-        unsigned int mb = 0;
+	u_int b = (u_int) -(v == 0);
 
-	while (v >>= 1) { /* unroll for more speed...  (see ilog2()) */
-		mb++;
-	}
+	/*
+	 * N.B.:  this gets "warning: left shift count >= width of type"; and
+	 * "warning: comparison of unsigned expression >= 0 is always true"; and
+	 * "warning: right shift count >= width of type"
+	 *
+	 * ... all for the highest step (normally step(64))
+	 *
+	 * XXX It's funny a smart enough compiler can't admit that it can reduce
+	 * (sizeof(blah) > 8) to a constant at compile time.  The warning should
+	 * be "constant expression is always false"!
+	 */
+#define step(x)	if (v >= ((uintmax_t) 1) << (x))			\
+			b += (x), v >>= (x)
 
-        return mb;
+#ifdef __SIZEOF_LONG_LONG__
+/*
+ * xxx assume intmax_t is long long, _and_ 128 bits!
+ */
+# if __SIZEOF_LONG_LONG__ > __SIZEOF_LONG__
+	if (sizeof(uintmax_t) > 8)
+		step(64);
+# endif
+#endif
+	if (sizeof(uintmax_t) >= 8)
+		step(32);
+	if (sizeof(uintmax_t) >= 4)
+		step(16);
+	if (sizeof(uintmax_t) >= 2)
+		step(8);
+	step(4);
+	step(2);
+	step(1);
+
+#undef step
+
+	return b;
+}
+
+unsigned int ilog2(uintmax_t);
+
+unsigned int
+ilog2(uintmax_t v)
+{
+#ifndef __has_builtin
+# define __has_builtin(x) 0  /* for compatibility */
+#endif
+
+#if __has_builtin(__builtin_clz)
+	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ __builtin_clzll(v);
+#else
+	return ilog2msb(v);
+#endif
 }
 
 static unsigned int
@@ -178,7 +239,7 @@ ilog10(uintmax_t v)
 	 * by one, the exact value is found by subtracting "v < PowersOf10[r]"
 	 * from the result.
 	 */
-	r = ((msb(v) * 1233) >> 12) + 1;
+	r = ((ilog2(v) * 1233) >> 12) + 1;
 
 	return r - (v < PowersOf10[r]);
 }
