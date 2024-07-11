@@ -563,20 +563,27 @@ binary_fmt(uintmax_t x,
 	return s;
 }
 
-int ilog2(uintmax_t);
-int
-ilog2(uintmax_t v)
+u_int ilog2msb(uintmax_t);
+u_int
+ilog2msb(uintmax_t v)
 {
-	int b = 0;
+	u_int b = 0;
 
-	if (!v)
-		return -1;
+	if (v == 0)
+		return ~0U;
 
 #define step(x)	if (v >= ((uintmax_t) 1) << x)		\
 			b += x, v >>= x
 
-	/* xxx assume uintmax_t is not 128 bits... */
-
+#ifdef __SIZEOF_LONG_LONG__
+/*
+ * xxx assume intmax_t is long long, _and_ 128 bits!
+ */
+# if __SIZEOF_LONG_LONG__ > __SIZEOF_LONG__
+	if (sizeof(uintmax_t) > 8)
+		step(64);
+# endif
+#endif
 	if (sizeof(uintmax_t) == 8)
 		step(32);
 	if (sizeof(uintmax_t) >= 4)
@@ -592,8 +599,29 @@ ilog2(uintmax_t v)
 	return b;
 }
 
-int ceil_ilog10(uintmax_t);
-int
+/*
+ * ilog2() - a wrapper to call builtin if possible...
+ */
+unsigned int ilog2(uintmax_t);
+
+#ifndef __has_builtin
+# define __has_builtin(x) 0  /* for compatibility */
+#endif
+
+unsigned int
+ilog2(uintmax_t v)
+{
+	if (v == 0) {
+		return ~0U;
+	}
+#if __has_builtin(__builtin_clz)
+	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ __builtin_clzll(v);
+#else
+	return ilog2msb(v);
+#endif
+}
+
+static int
 ceil_ilog10(uintmax_t v)
 {
 	static unsigned long long int const PowersOf10[] =
@@ -605,14 +633,13 @@ ceil_ilog10(uintmax_t v)
 		  10000000000000000000LLU };
 	unsigned int r;
 
-#if 0
-	printf("intlog2(%ju) = %d, msb() = %d\n", v, ilog2(v), msb(v));
-#endif
 	/*
 	 * Given the relationship "log10(v) = log2(v) / log2(10)", we can
 	 * transform this to be "log2(v) * (1 / log2(10))", the latter term of
 	 * which is approximately 1233/4096, i.e. (1233, followed by a right
 	 * shift of 12).
+	 *
+	 * Add one to ilog2 because it is actually the zero-based index of MSB.
 	 */
 	r = ((unsigned int) ilog2(v) + 1) * 1233 >> 12;
 
@@ -622,18 +649,6 @@ ceil_ilog10(uintmax_t v)
 	 * the result.
 	 */
 	return (int) r + 1 - (v < PowersOf10[r]); /* "round" up to find ceil(r) */
-}
-
-static unsigned int
-msb(uintmax_t v)
-{
-        unsigned int mb = 0;
-
-	while (v >>= 1) { /* unroll for more speed...  (see ilog2()) */
-		mb++;
-	}
-
-        return mb;
 }
 
 static unsigned int
@@ -648,16 +663,18 @@ ilog10(uintmax_t v)
 		  100000000000000000LLU, 1000000000000000000LLU,
 		  10000000000000000000LLU };
 
-	if (!v)
-		return ~0U;
+	if (v == 0) {
+		return 0;
+	}
 
 	/*
 	 * Given the relationship "log10(v) = log2(v) / log2(10)", we can
 	 * transform this to be "log2(v) * (1 / log2(10))", the latter term of
 	 * which is approximately 1233/4096, i.e. (1233, followed by a right
-	 * shift of 12).
+	 * shift of 12).  To do this with unsigned integer math we must
+	 * transform again to (log2(v) * 1233) >> 12.
 	 */
-	r = ((msb(v) * 1233) >> 12) + 1;
+	r = ((ilog2(v) * 1233) >> 12) + 1;
 
 
 	/*
@@ -1218,11 +1235,15 @@ report(char *machine)
 	 * than the example value (the ceiling)", minus one for the digit that
 	 * is normally to the left of the decimal point in scientific notation.
 	 *
-	 * Note that ceil(log10()) fails for exact powers of 10, so in some
-	 * hypothetical scenario if integer modulo plus a comparison with zero
-	 * is as fast as addition then the following would correct it (but
-	 * unless ceil() also somehow faster than floor(), it's a somewhat
-	 * pointless exercise):
+	 * N.B.:  using an IEEE 754 floating point implementation of log10(3f),
+	 * means that any integer value larger than 2^53 bits (signed, i.e. plus
+	 * a sign bit) (i.e. values with more than 15 base-10 digits, such as
+	 * 1000000000000001) may suffer rounding to a representable value and
+	 * thus may result in the "wrong" log10() result....
+	 *
+	 * Note that ceil(log10()) also fails for exact powers of 10 (and zero),
+	 * so in some hypothetical scenario if integer modulo plus a comparison
+	 * with zero is as fast as addition then the following would correct it:
 	 *
 	 *	a = fabs(dval);
 	 * 	x = ceil(log10(a));
@@ -1816,9 +1837,9 @@ print_decimal(double d)
 # else
 	/* xxx this is just to show orthogonally how to calculate this */
 #  if FLT_RADIX == 2
-	sigdig = ilog10(1LLU << (DBL_MANT_DIG - 1));
+	sigdig = ceil_ilog10(1LLU << (DBL_MANT_DIG - 1));
 #  else
-	sigdig = ilog10(uipow(FLT_RADIX, DBL_MANT_DIG - 1));
+	sigdig = ceil_ilog10(uipow(FLT_RADIX, DBL_MANT_DIG - 1));
 #  endif
 # endif
 #else  /* not PRINT_ROUND_TRIP_SAFE */
@@ -2827,7 +2848,7 @@ precision()				/* xxx clang is getting mouthy */
 
 	putchar('\n');
 
-	printf("ilog10(UINT64_MAX) = %d\n\n", ilog10(UINT64_MAX));
+	printf("ceil_ilog10(UINT64_MAX) = %d\n\n", ceil_ilog10(UINT64_MAX));
 
 	putchar('\n');
 
@@ -2872,10 +2893,15 @@ precision()				/* xxx clang is getting mouthy */
 		printf("WARNING:  should be  = %lld\n",
 		       llrint(floor(log10(pow((double) FLT_RADIX, (double) LDBL_MANT_DIG - 1)))));
 	}
-#ifdef HAVE_INT128_INTMAX
+#ifdef __SIZEOF_LONG_LONG__
+/*
+ * xxx assume intmax_t is long long, _and_ 128 bits!
+ */
+# if __SIZEOF_LONG_LONG__ > __SIZEOF_LONG__
 	if (ilog10((1LLU << (LDBL_MANT_DIG - 1)) - 1) != LDBL_DIG) {
 		printf("NOTICE: powers of 2  = %u\n", ilog10(((uintmax_t) 1 << (LDBL_MANT_DIG - 1)) - 1));
 	}
+# endif
 #endif
 	if (llrint(floor((double) (LDBL_MANT_DIG - 1) * log10((double) FLT_RADIX))) != LDBL_DIG) {
 		printf("WARNING:  Hmmmm....    %lld by alternate double\n",
