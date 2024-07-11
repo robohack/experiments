@@ -1,8 +1,6 @@
 /* http://web.archive.org/web/20190108211528/http://www.hackersdelight.org/hdcodetxt/ilog.c.txt */
-// Program for computing integer log functions.
-// Max line length is 57, to fit in hacker.book.
 #include <stdio.h>
-#include <stdlib.h>     // To define "exit", req'd by XLC.
+#include <stdlib.h>
 
 int nlz(unsigned x) {
    int n;
@@ -35,7 +33,7 @@ int ilog10b(unsigned x) {
 
    p = 1;
    for (i = -1; i <= 8; i++) {
-      if (x < p) return i;
+      if (x < (unsigned)p) return i;
       p = 10*p;
    }
    return i;
@@ -74,14 +72,17 @@ int ilog10d(unsigned x) {
    static unsigned table2[10] = {1, 10, 100, 1000, 10000,
       100000, 1000000, 10000000, 100000000, 1000000000};
 
+   if (x == 0) return -1;
    y = table1[nlz(x)];
-   if (x < table2[y]) y = y - 1;
+   if (x < table2[y]) {
+       y = y - 1;
+   }
    return y;
 }
 
 // Integer log base 10 from log base 2, double table lookup, branch free.
 int ilog10e(unsigned x) {
-   int y;
+   unsigned y;
    static unsigned char table1[33] = {10, 9, 9, 8, 8, 8,
       7, 7, 7, 6, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 3,
       2, 2, 2, 1, 1, 1, 0, 0, 0, 0};
@@ -89,9 +90,10 @@ int ilog10e(unsigned x) {
       100000, 1000000, 10000000, 100000000, 1000000000,
       0};
 
+   if (x == 0) return -1;
    y = table1[nlz(x)];
    y = y - ((x - table2[y]) >> 31);
-   return y;
+   return (int) y;
 }
 
 // Integer log base 10 from log base 2, one table lookup.
@@ -100,21 +102,25 @@ int ilog10f(unsigned x) {
    static unsigned table2[10] = {0, 9, 99, 999, 9999,
       99999, 999999, 9999999, 99999999, 999999999};
 
+   if (x == 0) return -1;
    y = (9*(31 - nlz(x))) >> 5;
-   if (x > table2[y+1]) y = y + 1;
+   if (x > table2[y+1]) {
+       y = y + 1;
+   }
    return y;
 }
 
 // Integer log base 10 from log base 2, one table lookup, branch free.
 int ilog10g(unsigned x) {
-   int y;
+   unsigned y;
    static unsigned table2[11] = {0, 9, 99, 999, 9999,
       99999, 999999, 9999999, 99999999, 999999999,
       0xFFFFFFFF};
 
-   y = (19*(31 - nlz(x))) >> 6;
+   if (x == 0) return -1;
+   y = (19*(31 - (unsigned) nlz(x))) >> 6;
    y = y + ((table2[y+1] - x) >> 31);
-   return y;
+   return (int) y;
 }
 
 int errors;
@@ -130,45 +136,47 @@ int main() {
       99,1, 100,2, 101,2, 999,2, 1000,3, 1001,3,
       9999,3, 10000,4, 10001,4, 99999,4, 100000,5, 100001,5,
       999999,5, 1000000,6, 1000001,6, 9999999,6, 10000000,7, 10000001,7,
-      99999999,7, 100000000,8, 100000001,8, 0xFFFFFFFE,9, 0xFFFFFFFF,9};
+      99999999,7, 100000000,8, 100000001,8, (int)0xFFFFFFFE,9, (int)0xFFFFFFFF,9};
 
    n = sizeof(test)/4;
 
    printf("ilog10a:\n");
    for (i = 0; i < n; i += 2) {
-      r = ilog10a(test[i]);
+      r = ilog10a((unsigned) test[i]);
       if (r != test[i+1]) error(test[i], r);}
 
    printf("ilog10b:\n");
    for (i = 0; i < n; i += 2) {
-      r = ilog10b(test[i]);
+      r = ilog10b((unsigned) test[i]);
       if (r != test[i+1]) error(test[i], r);}
 
    printf("ilog10c:\n");
    for (i = 0; i < n; i += 2) {
-      r = ilog10c(test[i]);
+      r = ilog10c((unsigned) test[i]);
       if (r != test[i+1]) error(test[i], r);}
 
    printf("ilog10d:\n");
    for (i = 0; i < n; i += 2) {
-      r = ilog10d(test[i]);
+      r = ilog10d((unsigned) test[i]);
       if (r != test[i+1]) error(test[i], r);}
 
    printf("ilog10e:\n");
    for (i = 0; i < n; i += 2) {
-      r = ilog10e(test[i]);
+      r = ilog10e((unsigned) test[i]);
       if (r != test[i+1]) error(test[i], r);}
 
    printf("ilog10f:\n");
    for (i = 0; i < n; i += 2) {
-      r = ilog10f(test[i]);
+      r = ilog10f((unsigned) test[i]);
       if (r != test[i+1]) error(test[i], r);}
 
    printf("ilog10g:\n");
    for (i = 0; i < n; i += 2) {
-      r = ilog10g(test[i]);
+      r = ilog10g((unsigned) test[i]);
       if (r != test[i+1]) error(test[i], r);}
 
    if (errors == 0)
       printf("Passed all %d cases.\n", n/3);
+
+   exit(0);
 }
