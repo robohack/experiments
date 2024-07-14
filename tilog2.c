@@ -16,6 +16,10 @@
 # endif
 #endif
 
+#ifndef __has_builtin
+# define __has_builtin(x) 0  /* for compatibility */
+#endif
+
 #ifndef HAVE_SYS_BITOPS_H
 /*
  * Find First Set functions
@@ -300,6 +304,9 @@ intlog2(uintmax_t v)
 {
 	unsigned int mb = 0;
 
+	if (v == 0) {
+		return ~0U;
+	}
 	while (v >>= 1) { /* unroll for more speed... */
 		mb++;
 	}
@@ -324,21 +331,34 @@ msb(uintmax_t v)
 {
 	int b = 0;
 
-	if (!v)
+	if (v == 0)
 		return -1;
 
 	/*
-	 * xxx this gets "warning: left shift count >= width of type"; and
-	 * "warning: comparison of unsigned expression >= 0 is always true"; and
+	 * N.B.:  if the highest step(64) is always included there are three or
+	 * four warnings:
+	 *
+	 * "warning: unsigned conversion from 'int' to 'u_int' {aka 'unsigned int'} changes value from '-1' to '4294967295"
+	 * "warning: left shift count >= width of type"
+	 * "warning: comparison of unsigned expression >= 0 is always true"
 	 * "warning: right shift count >= width of type"
 	 *
-	 * all for the highest step (normally step(64))
+	 * XXX It's funny a smart enough compiler can't admit that it can reduce
+	 * (sizeof(blah) > 8) to a constant at compile time.  The warning should
+	 * then be "constant expression is always false"!
 	 */
-#define step(x)	if (v >= ((uintmax_t) 1) << x)		\
-			b += x, v >>= x
+#define step(x)	if (v >= ((uintmax_t) 1) << (x))			\
+			b += (x), v >>= (x)
 
+#ifdef __SIZEOF_LONG_LONG__
+/*
+ * xxx assume intmax_t is long long, _and_ 128 bits!
+ */
+# if __SIZEOF_LONG_LONG__ > __SIZEOF_LONG__
 	if (sizeof(uintmax_t) > 8)
 		step(64);
+# endif
+#endif
 	if (sizeof(uintmax_t) >= 8)
 		step(32);
 	if (sizeof(uintmax_t) >= 4)
@@ -354,17 +374,20 @@ msb(uintmax_t v)
 	return b;
 }
 
-u_int msb_naive(uintmax_t);
-
 
 /*
  * Another variant of intlog2()
  */
+u_int msb_naive(uintmax_t);
+
 u_int
 msb_naive(uintmax_t x)
 {
 	u_int mb;
 
+	if (x == 0) {
+		return ~0U;
+	}
 	for (mb = 0; x; mb++) {
 		x >>= 1;
 	}
@@ -589,12 +612,8 @@ unsigned int fast_intlog2(uintmax_t);
 unsigned int
 fast_intlog2(uintmax_t v)
 {
-#ifndef __has_builtin
-# define __has_builtin(x) 0  /* for compatibility */
-#endif
-
 #if __has_builtin(__builtin_clz)
-	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ __builtin_clzll(v);
+	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ (unsigned int) __builtin_clzll(v);
 #else
 	return (unsigned int) msb(v);
 #endif
