@@ -512,7 +512,7 @@ static uintmax_t uipow(unsigned int base,
 		       unsigned int expon);
 
 int
-main()
+main()					/* xxx clang is getting mouthy */
 {
 	struct utsname utsname;
 
@@ -615,7 +615,7 @@ ilog2(uintmax_t v)
 		return ~0U;
 	}
 #if __has_builtin(__builtin_clz)
-	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ __builtin_clzll(v);
+	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ (unsigned int) __builtin_clzll(v);
 #else
 	return ilog2msb(v);
 #endif
@@ -1261,8 +1261,8 @@ report(char *machine)
 	 * DBL_MANT_DIG (always 2 for Standard C since float and double must be
 	 * binary32 and binary64 IEEE 754 formats respectively)
 	 *
-	 * and where DBL_MANT_DIG is the number of digits in the mantissa, and
-	 * the +1 is because this macro counts the implied binary digit of
+	 * and where DBL_MANT_DIG is the number of digits in the mantissa(*),
+	 * and the +1 is because this macro counts the implied binary digit of
 	 * precision in IEEE 754 binary floating point formats, but in fact we
 	 * have to round the precision down by one FLT_RADIX digit to account
 	 * for rounding errors inherent in representing decimal (base-10)
@@ -1531,6 +1531,76 @@ give_me_one(double a)
 /*
  * definitions for the internal representation of IEEE 754 binary 32-bit
  * floating point
+ *
+ * Note:  Apparently "Significand" is now the preferred term for the fraction
+ * part of a floating-point number.
+ *
+ * In mathematics a "mantissa" is defined as "The decimal part of a logarithm
+ * base 10, as distinguished from the integral part", and of course floating
+ * point numbers are not logarithms nor logarithmic in nature.
+ *
+ * However the Free On-line Dictionary of Computing defines "mantissa" as:
+ *
+ *   The part of a {floating point} number which, when multiplied by its {radix}
+ *   raised to the power of its {exponent}, gives its value.  The mantissa may
+ *   include the number's sign or this may be considered to be a separate part.
+ *
+ * It is said that "significands" (in scientific notation and floating point)
+ * are log-linear (if the number increases by a factor of 1.2, the significand
+ * increases by a factor of 1.2, unless an exponent threshold is crossed), while
+ * mantissas are logarithmic.
+ *
+ * Although the word "mantissa" does not appear in IEEE 754, since the manifest
+ * #defines for this part of the floating point format uses the abbreviation
+ * "MANT", we'll stick with "mantissa" in the coding arena.
+ *
+ * Besides, "significand" is only a "recent" word in most English dictionaries,
+ * and is not even in many computer spelling dictionaries.  The OED puts its
+ * earlies known use in the 1940's, and suggests it is a "borrowing from Latin,
+ * with an English element".  Furthermore the OED gives the following definition
+ * of "manitissa" for "computing":
+ *
+ *	the part of a floating-point number that represents the significant
+ *	digits of that number, and that is multiplied by the base raised to the
+ *	exponent to give the actual value of the number.
+ *
+ * Apparently Johann Carl Friedrich Gauss, presumably sometime before his death
+ * in 1855, suggested using "mantissa" for the fractional part of all decimals.
+ * https://mathshistory.st-andrews.ac.uk/Miller/mathword/m/
+ *
+ * In an early (1946? 1963?) description of floating point John von Neumann used
+ * the word mantissa (to describe the value after the decimal point) [[though in
+ * this writing von Neumann was actually aruging against implementation of
+ * floating point]]:
+ *
+ *	a so-called "floating decimal point".  This is a mechanism for
+ *	expressing each word as a characteristic and a mantissa
+ *  https://www.cs.princeton.edu/courses/archive/fall10/cos375/Burks.pdf
+ *
+ * The book "Scientific Computing: an Introductory Survey" indicates that
+ * mantissa and significand are synonyms and then goes on to use the term
+ * mantissa from that point.
+ *
+ * Kahan and Knuth discourage use of "mantissa", but they are both pedants to
+ * the extreme.
+ *
+ * Some further history of floating point in digital computing:
+ *
+ * The first digital computer (according to some), the Z3, built by Konrad Zuse
+ * in 1941 used floating point representation.  (decimal?)
+ *
+ * In 1949 the Bell Labs "Model V" electro-mechanical computer used decimal
+ * floating-point numbers.
+ *
+ * In 1950, the National Physical Laboratory, UK's "Pilot ACE" had binary
+ * floating-point (eventually), implemented in software.
+ *
+ * In 1954 the IBM 704 had single-precision floating-point numbers with a
+ * magnitude sign, an 8-bit excess-128 exponent, and a 27-bit fraction (no
+ * hidden bit).
+ *
+ * In 1963 the IBM 7094 introduced double-precision floating-point numbers with
+ * a magnitude sign, an eight-bit excess-128 exponent, and a 54-bit magnitude.
  */
 #if (FLT_RADIX != 2) /* only FLT_RADIX is guaranteed to be a constant expr. */
 # error "ERROR: FLT_RADIX != 2 !!!"
@@ -2261,6 +2331,25 @@ representations()			/* xxx clang is getting mouthy */
 	printf("memset(0xFF):\n");
 	memset(&dq, 0xff, sizeof(dq));
 	print_drep(dq);			/* nan */
+
+	printf("The smallest (de-normalised) number close to zero:\n");
+	{
+		my_double_t du;
+
+		/*
+		 * A stored exponent of zero means this is a de-normalised
+		 * number.  The mantissa has no implicit leading bit but can
+		 * have any number of bits set, and the mantissa is then scaled
+		 * the same as if the stored exponent was 1.  So the smallest
+		 * none-zero floating point number is indeed a stored exponent
+		 * of 0, and a stored mantissa of 1.
+		 *
+		 * https://cs.stackexchange.com/a/127234
+		 */
+		du.i = 1;
+		dq = du.d;
+	}
+	print_drep(dq);
 
 	printf("give_me_one(4.2):\n");
 	dq = give_me_one(4.2);
