@@ -3,7 +3,56 @@
 /* xxx and in fact we use lrint() so really require C99 */
 #endif
 
-#include <sys/types.h>
+#if (!defined(HAVE_SYS_CDEFS_H) &&                                      \
+     (defined(__linux__) ||						\
+      defined(BSD) ||							\
+      defined(__NetBSD__) ||                                            \
+      defined(__FreeBSD__) ||                                           \
+      defined(__OpenBSD__) ||                                           \
+      defined(__Darwin__) ||                                            \
+      defined(__DragonFly__) ||                                         \
+      defined(__APPLE__)))
+# define HAVE_SYS_CDEFS_H		/* defined */
+#endif
+
+#if defined(HAVE_SYS_CDEFS_H)
+# include <sys/cdefs.h>
+#endif
+
+#if (!defined(HAVE_SYS_PARAM_H) &&                                      \
+     (defined(BSD) ||                                                   \
+      defined(__NetBSD__) ||                                            \
+      defined(__FreeBSD__) ||                                           \
+      defined(__OpenBSD__) ||                                           \
+      defined(__Darwin__) ||                                            \
+      defined(__DragonFly__) ||                                         \
+      defined(__APPLE__)))
+# define HAVE_SYS_PARAM_H		/* defined */
+#endif
+
+#if defined(HAVE_SYS_PARAM_H)
+# include <sys/param.h>
+#endif
+
+/*
+ * also avoiding requiring external tests for <stdbool.h>
+ */
+#if (!defined(HAVE_STDBOOL_H) &&                                        \
+     ((defined(__STDC_VERSION__) &&                                     \
+       ((__STDC_VERSION__ - 0) >= 199901L)) ||                          \
+      defined(_ISOC99_SOURCE) ||                                        \
+      (defined(__NetBSD_Version__) &&                                   \
+       ((__NetBSD_Version__ - 0) >= 106000000)) ||                      \
+      (defined(__APPLE_CC__) && defined(__STDC__)) ||                   \
+      defined(__linux__)))
+# define HAVE_STDBOOL_H
+# define HAVE_SYS_TYPES_H
+#endif
+
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+
 #include <inttypes.h>
 #include <limits.h>
 #include <math.h>
@@ -11,8 +60,19 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#if !defined(UINT_MAX) || !defined(ULONG_MAX)
-# include "ERROR:  your system is too brain damaged to support!"
+#ifdef HAVE_STDBOOL_H
+# include <stdbool.h>
+#else /* !HAVE_STDBOOL_H  */
+typedef enum bool_e { false = 0U, true = !false } bool;
+#endif /* !HAVE_STDBOOL_H  */
+
+#if !defined(UINT_MAX) || !defined(ULONG_MAX) || !defined(ULLONG_MAX)
+# include "ERROR:  your system is too brain damaged, old, or small, to support!"
+#endif
+
+#ifndef __NetBSD__
+typedef	int64_t		longlong_t;
+typedef	uint64_t	u_longlong_t;
 #endif
 
 /*
@@ -260,7 +320,7 @@ ilog2(uintmax_t v)
 		return ~0U;
 	}
 #if __has_builtin(__builtin_clz)
-	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ __builtin_clzll(v);
+	return ((sizeof(uintmax_t) * CHAR_BIT) - 1) ^ (u_int) __builtin_clzll(v);
 #else
 	return ilog2msb(v);
 #endif
