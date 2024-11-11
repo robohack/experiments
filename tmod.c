@@ -1,5 +1,12 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+static bool
+is_odd(int n)
+{
+	return n % 2 != 0;
+}
 
 #if 0
 int main(int, char *[]);
@@ -14,6 +21,9 @@ main(int argv __unused, char *argc[] __unused)
 main()
 #endif
 {
+	if (is_odd(2)) {
+		exit(1);
+	}
 	printf("0 %% 100 = %d\n", 0 % 100);
 
 	exit(0);
