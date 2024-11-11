@@ -331,10 +331,31 @@ main()
 	if (MAX_INT(unsigned long long) != ULLONG_MAX) {
 		puts("WARNING:  MAX_INT(unsigned long long) != ULLONG_MAX !!!");
 	}
-#if defined(__SIZEOF_INT128__)
-	/* xxx hmmm.... */
+
+
+#ifdef __SIZEOF_INT128__
+#if 0	/* XXX MAXINT() && MAX_UINT() need wide literals to shift 128 bits! */
+	/* XXX and we need %w in printf() */
+	printf("MAX_INT(__uint128_t) = 0x%w128x, __UINT128_MAX__=  0x%w128x\n", /* xxx warning: unknown conversion type character 'w' in format */
+	       (__uint128_t) MAX_INT(__uint128_t),
+	       (__uint128_t)
+# ifdef __UINT128_MAX__
+	       __UINT128_MAX__
+# else
+	       0
+# endif
+	      );
+#else
+	printf("__SIZEOF_INT128__    = %d\n", __SIZEOF_INT128__);
+#endif
 #endif
 
+
+#ifdef __UINT128_MAX__
+	if (MAX_INT(__uint128_t) != __UINT128_MAX__) {
+		puts("WARNING:  MAX_INT(__uint128_t) != __UINT128_MAX__ !!!");
+	}
+#endif
 	/* testing */
 	printf("MAX_INT(quad_t)      = 0x%18llx\n",
 	       (unsigned long long) MAX_INT(quad_t));
@@ -431,6 +452,9 @@ main()
 	printf("MAXSINT(long long)   = %20lld, LLONG_MAX =  %20lld\n",
 	       (long long) MAXSINT(long long), (long long) LLONG_MAX);
 
+#ifdef __SIZE_MAX__
+	printf("__SIZE_MAX__         = %20llu\n", (unsigned long long) __SIZE_MAX__);
+#endif
 
 #ifdef __CHAR_WIDTH__
 	printf("char is %u-bit\n", (unsigned int) __CHAR_WIDTH__);
@@ -440,6 +464,9 @@ main()
 #endif
 #ifdef __WCHAR_WIDTH__
 	printf("wchar is %u-bit\n", (unsigned int) __WCHAR_WIDTH__);
+#endif
+#ifdef __BOOL_WIDTH__
+	printf("bool is %u-bit\n", (unsigned int) __BOOL_WIDTH__);
 #endif
 #ifdef __SHRT_WIDTH__
 	printf("short is %u-bit\n", (unsigned int) __SHRT_WIDTH__);
@@ -480,6 +507,9 @@ main()
 #ifdef __INT_LEAST64_WIDTH__
 	printf("int_least64 is %u-bit\n", (unsigned int) __INT_LEAST64_WIDTH__);
 #endif
+#ifdef __INT_LEAST128_WIDTH__
+	printf("int_least128 is %u-bit\n", (unsigned int) __INT_LEAST128_WIDTH__);
+#endif
 #ifdef __WINT_WIDTH__
 	printf("wint is %u-bit\n", (unsigned int) __WINT_WIDTH__);
 #endif
@@ -489,11 +519,23 @@ main()
 #ifdef __LONG_LONG_WIDTH__
 	printf("long long is %u-bit\n", (unsigned int) __LONG_LONG_WIDTH__);
 #endif
+#ifdef __LLONG_WIDTH__
+	printf("llong is %u-bit\n", (unsigned int) __LLONG_WIDTH__);
+#endif
 #ifdef __SIG_ATOMIC_WIDTH__
 	printf("sig_atomic is %u-bit\n", (unsigned int) __SIG_ATOMIC_WIDTH__);
 #endif
+#ifdef __POINTER_WIDTH__
+	printf("pointer is %u-bit\n", (unsigned int) __POINTER_WIDTH__);
+#endif
+#ifdef __PTRDIFF_WIDTH__
+	printf("ptrdiff is %u-bit\n", (unsigned int) __PTRDIFF_WIDTH__);
+#endif
 #ifdef __SIZE_WIDTH__
 	printf("size is %u-bit\n", (unsigned int) __SIZE_WIDTH__);
+#endif
+#ifdef __BITINT_MAXWIDTH__
+	printf("bitint max is %u-bit\n", (unsigned int) __BITINT_MAXWIDTH__);
 #endif
 
 	exit(0);
