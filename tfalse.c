@@ -1,10 +1,9 @@
+#define EXIT_VALUE 1
+#include "ttrue.c"
+
 /*
- * hmmm.... how to avoid pulling in stdio???
- *
- * The following works, for stdio specifically, but is still rather large as it
- * includes the full C runtime startup with locale setup, thread local storage,
- * etc.
+ * Local Variables:
+ * eval: (make-local-variable 'compile-command)
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm -f " fn "; cc -g -Og -static -Wl,-Map=" fn ".map -o " fn " " (buffer-file-name) " && ./" fn))
+ * End:
  */
-void _exit(int);
-void main(void);
-__attribute__((__noreturn__)) void main() { _exit(1); }
