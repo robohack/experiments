@@ -4,22 +4,27 @@
 #
 # (on older Mac OS X, use "bsdmake"; on macOS install "bmake")
 #
-# Use "LDLIBS+=-llibrary" or "LDLIBS+='-L/usr/pkg/lib -llibrary'" to add
-# libraries to the command line (do not use LDFLAGS on the command line, though
-# it can be set in the environment)
+# If using "make progname" then use "LDLIBS+=-llibrary" or, if necessary,
+# "LDLIBS+='-L/usr/pkg/lib -llibrary'" to add libraries to the command line as
+# this uses the ".c:" rule in <sys.mk> (i.e. <bsd.suffixes.mk> on FreeBSD, or
+# <suffixes.mk> in BMake mk-files).  (Do not use LDFLAGS on the command line,
+# though it can be set in the environment.)
 #
-# Use "CPPFLAGS+=-flags" to add CC flags (do not use CFLAGS on the command line,
-# though it can be set in the environment)
+# If using "make PROG=progname" then use "LDADD+=-llibrary" or, if necessary,
+# "LDADD+='-L/usr/pkg/lib -llibrary'" to add libraries to the command line.
 #
-# Use "CPPFLAGS+=-S -o -" with a ".o" target to see assembler
+# Use "CPPFLAGS+=-flags" to add CC flags.  (Do not use CFLAGS on the command
+# line, though it can be set in the environment.)
 #
-# Use "CSTD=c89 CPPFLAGS+='-pedantic'" to set a specific C standard.
+# Use "CPPFLAGS+=-S -o -" with a ".o" target to see assembler.
 #
-# Use "OPTIM=-O0" to set the optimizer level
+# Use "CSTD=c90" to set a specific C standard.  (The default is c89.)
 #
-# Use "DBG=-g3" to set the debugger level for GCC
+# Use "OPTIM=-O0" to set the optimizer level.
 #
-# Use "PEDANTIC=no" to turn off '-pedantic'
+# Use "DBG=-g3" to set the debugger level for GCC.
+#
+# Use "PEDANTIC=yes" to turn on '-pedantic'.
 #
 # See also "Makefile.compiler", e.g. for sanitizer options.
 
