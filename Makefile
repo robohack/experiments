@@ -86,7 +86,7 @@ NOSHARED = YES
 # PROG is never defined -- this Makefile is intended to build a single program
 # specified as the target on its command line.
 #
-MAN =	# empty
+MAN ?=	# empty
 
 .if exists(/usr/share/mk/bsd.prog.mk) || \
     exists(/usr/pkg/share/mk/bsd.prog.mk) || \
