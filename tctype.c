@@ -605,7 +605,7 @@ const short *my_toupper_tab = my_toupper_ascii;
 /*
  * XXX these demonstrate why implementation as functions may not "work" when
  * passed a signed char with a value of -1 (i.e. 0xFF for CHAR_BIT==8) because
- * of course the sign will be extended by "the usual paramter conversions" and
+ * of course the sign will be extended by "the usual parameter conversions" and
  * the resulting value will be seen as EOF internally.
  *
  * Of course this is only really matters if the function internally needs to
@@ -1602,9 +1602,11 @@ main()
 	       (unsigned int)(my_ctype + 1)[(unsigned char)(sc)]);
 	printf("my+1[sc] = 0x%x\n",
 	       (unsigned int)(my_ctype + 1)[(sc)]);
+
 	printf("isalpha(sc) = 0x%x %s\n", isalpha(sc), CORRECTP(isalpha(sc)));
 	printf("isalpha(uc) = 0x%x %s\n", isalpha(uc), CORRECTP(isalpha(uc)));
 	printf("isalpha(i) = 0x%x %s\n", isalpha(i), CORRECTP(isalpha(i)));
+
 	printf("my_isalpha(sc) = 0x%x %s [ERROR EXPECTED]\n", my_isalpha(sc), CORRECTP(my_isalpha(sc))); /* EXPECT: 0x0 [ERROR:WRONG] */
 	printf("my_isalpha(uc) = 0x%x %s\n", my_isalpha(uc), CORRECTP(my_isalpha(uc)));
 	printf("my_isalpha(i) = 0x%x %s\n", my_isalpha(i), CORRECTP(my_isalpha(i)));
@@ -1773,7 +1775,7 @@ main()
 
 
 	printf("islower(): -1=0x%x, 255=0x%x, (unsigned char)-1=0x%x, -1&0xFF=0x%x\n",
-	       islower(-1),		/* negative int implicit convertion to unsigned */
+	       islower(-1),		/* negative int implicit convertion to unsigned, EOF */
 	       islower(255),
 	       islower((unsigned char)-1),
 	       islower(-1 & 0xFF));
@@ -1782,7 +1784,7 @@ main()
 	       isprint(0),
 	       isprint(1),
 	       isprint((int) 'a'),
-	       isprint(-1),		/* negative int implicit convertion to unsigned */
+	       isprint(-1),		/* negative int implicit convertion to unsigned, EOF */
 	       isprint(255),
 	       isprint((unsigned char)-1),
 	       isprint(-1 & 0xFF));
