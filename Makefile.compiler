@@ -48,9 +48,10 @@ __GNUC_PATCHLEVEL__ !=	echo __GNUC_PATCHLEVEL__ | $(CC) -E - | sed '/\#/d;s/__GN
 . endif
 .endif
 
-# Note: for now Clang also defines the __GNUC*__ macros above...
+# Note: for now Clang and pcc also define the __GNUC*__ macros above...
 
-# Note: on all recent Mac OS X (and soon FreeBSD), "cc" is "clang"
+# Note: on all recent Mac OS X (and FreeBSD since 10), "cc" is "clang"
+
 # On Mac OS X 10.8 and newer "gcc" is actually "llvm-gcc" too!
 
 .if !defined(__clang__)
