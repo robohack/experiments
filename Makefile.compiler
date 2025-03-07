@@ -530,6 +530,6 @@ LDFLAGS += ${_CCLINKFLAGS}
 #
 .if defined(MAKE_VERSION) && ${MAKE} != "bsdmake" && (!defined(.FreeBSD) || ${.FreeBSD} != "true")
 CFLAGS += ${CWARNFLAGS}
-# xxx also this....
-CFLAGS += ${LDSTATIC}
+# xxx also this, as the default ".c:" rule, using ${LINK.c}, doesn't include it
+LDFLAGS += ${LDSTATIC}
 .endif
