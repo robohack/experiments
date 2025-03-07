@@ -24,7 +24,7 @@
 #
 # Use "DBG=-g3" to set the debugger level for GCC.
 #
-# Use "PEDANTIC=yes" to turn on '-pedantic'.
+# Use "PEDANTIC=no" to turn off '-pedantic'.
 #
 # See also "Makefile.compiler", e.g. for sanitizer options.
 
