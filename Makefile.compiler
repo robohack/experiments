@@ -6,6 +6,10 @@
 #	This should be included in your project's top-level Makefile.inc after
 #	any include of <bsd.own.mk>
 
+# Copyright (C) 2025 Greg A. Woods - This work is licensed under the Creative
+# Commons Attribution-ShareAlike 4.0 International License.  To view a copy of
+# the license, visit <URL:http://creativecommons.org/licenses/by-sa/4.0/>, or
+
 # You can define USE_UBSAN or USE_ASAN on the command line to enable the
 # Undefined or Address sanitizers with recent enough Clang or GCC.  Note if your
 # system supports these you may of course use its way of enabling them instead
