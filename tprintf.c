@@ -18,7 +18,7 @@ main(argc, argv)
 	int32_t i32val = -1;
 	int64_t i64val = -1;
 
-	printf("%.5s\n", (char []){'h', 'e', 'l', 'l', 'o' });
+	printf("%.5s\n", (char []){'h', 'e', 'l', 'l', 'o' }); /* xxx ISO C90 forbids compound literals (without --std=c99) */
 
 	sprintf(pbuf, "\r\nconsole=%3s%1d[0x%04X] @%06d baud\r\n",
 		"com",
@@ -31,12 +31,13 @@ main(argc, argv)
 
 	putchar('\n');
 
-	printf("this is all escaped: \b\a\c\k\s\l\a\s\h\e\d\.\:\$\@\&\\\-\=\;\.\n");
+	printf("this is all escaped: \b\a\c\k\s\l\a\s\h\e\d\.\:\$\@\&\\\-\=\;\.\n"); /* xxx unknown escape sequence(x16) non-ISO-standard escape sequence, '\e' */
 	putchar('\n');
 
 	/*
 	 * `  aa'    `  bb'    `cc  '
 	 */
+	/* xxx GCC (with -Wformat=2) doesn't like the ' ' flag.... */
 	printf("`%4s'    `% 4s'    `%-4s'\n", "aa", "bb", "cc");
 	printf("`%*s'    `% *s'    `%-*s'\n", 4, "aa", 4, "bb", 4, "cc");
 	printf("`%*s' `% *s' `%-*s'\n", 4, "aaaaXXX", 4, "bbbbXXX", 4, "ccccXXX");
@@ -54,7 +55,7 @@ main(argc, argv)
 	 */
 	printf("  >%4x<   >%4o<   >%4d<\n", 123, 123, 123);
 	printf("  >%4.4x<   >%4.4o<   >%4.4d<\n", 123, 123, 123);
-	printf("  >%04.4x<   >%04.4o<   >%04.4d<\n", 123, 123, 123);
+	printf("  >%04.4x<   >%04.4o<   >%04.4d<\n", 123, 123, 123); /* warning: '0' flag ignored with precision and ‘%x’ gnu_printf format [-Wformat=] */
 	printf("  >%.4x<   >%.4o<   >%.4d<\n", 123, 123, 123);
 	/*
 	 * N.B.:  GCC -Wformat does not like the '#' (alternate form), only has
@@ -115,6 +116,10 @@ main(argc, argv)
 	printf("%" PRIdMAX "\n", (intmax_t) t); /* OK!!! */
 
 	printf("%jd\n", (intmax_t) t); /* OK!!! */
+	printf("%ju\n", (uintmax_t) t); /* OK!!! */
+
+	printf("%jd\n", (int64_t) t);	/* XXX OK on NetBSD/amd64 */
+	printf("%ju\n", (uint64_t) t);	/* XXX OK on NetBSD/amd64 */
 
 	/* POSIX 2008 print with thousand's separator */ {
 		struct lconv *lc;
@@ -169,6 +174,6 @@ main(argc, argv)
 /*
  * Local Variables:
  * eval: (make-local-variable 'compile-command)
- * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm -f " fn "; " (default-value 'compile-command) " " fn " && ./" fn))
+ * compile-command: (let ((fn (file-name-sans-extension (file-name-nondirectory (buffer-file-name))))) (concat "rm -f " fn "; " (default-value 'compile-command) " CSTD=c99 " fn " && ./" fn))
  * End:
  */
