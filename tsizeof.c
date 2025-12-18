@@ -280,6 +280,27 @@ struct struct_d
 
 #define alignof(type)		((int) (sizeof(struct {char d; type x;}) - sizeof(type)))
 
+#include <stddef.h>
+#include <stdio.h>
+
+struct foo { int a; float b; };
+
+static void
+parens(void)
+{
+	int foo = 42;
+
+	size_t blah = sizeof foo;	/* the var, not the struct! */
+	size_t blah2 = sizeof(struct foo);
+#ifdef SHOW_WHY_PARENS_TAKE_TYPE_ID_INSTEAD_OF_EXPR
+	size_t blah3 = sizeof struct foo; /* xxx error: expected expression before ‘struct’ */
+#endif
+
+	printf("sizeof foo: %zu\nsizeof(struct foo): %zu\n", blah, blah2);
+
+	return;
+}
+
 static void
 structs(void)
 {
@@ -607,8 +628,13 @@ main()
 		printf("sizeof(an_arr_of_ch) = %zd\n", /* warning: ISO C90 does not support the 'z' gnu_printf length modifier [-Wformat=] */
 		       sizeof(an_arr_of_ch));
 	}
+	putchar('\n');
+
+	parens();
+	putchar('\n');
 
 	structs();
+	putchar('\n');
 
 	printf("sizeof \"\" = %u.\n", (unsigned int) sizeof(""));
 
