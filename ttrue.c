@@ -18,7 +18,7 @@
  * _libc_init is called twice.  One call comes explicitly from crt0.o
  * (for newer versions) and the other is via global constructor handling.
  */
-void	_libc_init(void) __attribute__((__constructor__, __used__));
+void _libc_init(void) __attribute__((__constructor__, __used__));
 void _libc_init(void) {}
 
 # else
@@ -27,10 +27,20 @@ void _libc_init(void) {}
 #include <sys/types.h>
 #include <errno.h>
 
+# if 0 /* these don't need to be stubbed, only used by something already stubbed */
+/* jemalloc(3) API */
 void *malloc(size_t n) { (void) n; return 0; }
 void *realloc(void *p, size_t n) { (void) p; (void) n; return 0; }
 void *calloc(size_t n, size_t sz) { (void) n; (void) sz; return 0; }
 void free(void *p) { (void) p; }
+int posix_memalign(void **ptr, size_t alignment, size_t size) { (void) ptr; (void) alignment; (void) size; return 0; }
+void *aligned_alloc(size_t alignment, size_t size) { (void) alignment; (void) size; return 0; }
+/* more jemalloc(3) globals */
+const char *_malloc_options = 0;
+void _malloc_prefork(void) {return;}
+void _malloc_postfork(void) {return;}
+void _malloc_postfork_child(void) {return;}
+# endif
 
 /* exit() */
 void abort(void) {}
@@ -90,7 +100,7 @@ int *__errno(void) { return &errno; }
 #endif	/* __NetBSD__ */
 
 /*
- * direct use of _exit() vs. return through main doesn't seem to make any
+ * direct use of _exit() vs. return through main() doesn't seem to make any
  * difference once we avoid atexit(), exit(), et al.
  */
 #ifdef NO_RETURN_MAIN
