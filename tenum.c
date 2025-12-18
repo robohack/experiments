@@ -102,18 +102,24 @@ typedef enum more_flags_e {
  * be stupid).  Of course if you tell the debugger to co-erce the type of the
  * int variable into the appropriate enum type, then it should do the lookup.
  */
-typedef enum __WHENCE_T {
-	__my_SEEK_CUR,
-	__my_SEEK_END,
-	__my_SEEK_SET
-} __whence_t;
+typedef enum MY_WHENCE_T {
+	my_SEEK_CUR,
+	my_SEEK_END,
+	my_SEEK_SET
+} my_whence_t;
 
-#define MY_SEEK_CUR __my_SEEK_CUR
-#define MY_SEEK_END __my_SEEK_END
-#define MY_SEEK_SET __my_SEEK_SET
+#define MY_SEEK_CUR my_SEEK_CUR
+#define MY_SEEK_END my_SEEK_END
+#define MY_SEEK_SET my_SEEK_SET
 
 #include <inttypes.h>
 
+/*
+ * xxx using a typedef instead of just saying "enum error_e" probably doesn't
+ * gain much -- indeed it might even hide meaning from the programmer....
+ *
+ * XXX again, using explicit initialisation is error prone!
+ */
 typedef enum error_e {
 	ERROR_NOERROR = 0,
 	ERROR_BYTE_OVERFLOW = -(1 << 0),
@@ -181,7 +187,7 @@ func(flags_t flag)			/* xxx don't do this! */
 {
 	more_flags_t mf = flag;		/* clang-425.0.27 warns */
 
-	if (mf == BIT_FOUR)
+	if (mf == BIT_FOUR)		/* gcc-9 warns comparison of different types */
 		return BIT_EIGHT;	/* clang-425.0.27 & 1.7 warns */
 
 	return ANOTHER;			/* clang-1.7 warns */
@@ -191,20 +197,46 @@ static void
 appliances(int foo)
 {
 	appliance_t someapp;
+	enum { app_v0, app_v1, app_v2, app_v3, app_v4, app_v5 };
 
 	someapp.type = foo;		/* conversion to 'short unsigned int' from int */
-	someapp.voltage = 4;
+	someapp.voltage = app_v4;
 
 	printf("sizeof(appliance_t) = %lu\n", sizeof(someapp));
+#if 0
 //	printf("sizeof(appliance_t.type) = %lu\n", sizeof(someapp.type));
 //	printf("sizeof(appliance_t.voltage) = %lu\n", sizeof(someapp.voltage));
+#endif
 	printf("sizeof(appliance_t.crc) = %lu\n", sizeof(someapp.crc));
 
+#if 0
 //	printf("offsetof(appliance_t.type) = %lu\n", offsetof(appliance_t, type));
 //	printf("offsetof(appliance_t.voltage) = %lu\n", offsetof(applicance_t, voltage));
+#endif
 	printf("offsetof(appliance_t.crc) = %lu\n", offsetof(appliance_t, crc));
 
+	printf("appliance_t.type = %u\n", (unsigned int) someapp.type);
+	printf("appliance_t.voltage) = %u\n", (unsigned int) someapp.voltage);
+
 	return;
+}
+
+static enum error_e
+proc(states_t sv)
+{
+	switch (sv) {			/* warning: enumeration value 'FOURTH' not handled in switch */
+	case FIRST:
+		return ERROR_BYTE_OVERFLOW;
+	case SECOND:
+		return ERROR_INPUT_OVERFLOW;
+	case 3:				/* xxx no warning! */
+		return 1;
+#if 0
+	case FOURTH:
+		return ERROR_NOT_ENOUGH_INPUT;
+#endif
+	}
+	return ERROR_NOERROR;
 }
 
 int
@@ -214,6 +246,7 @@ main()
 	unsigned int fv = (unsigned int) (BIT_ONE | BIT_TWO | BIT_THREE | BIT_FOUR);
 	flags_t efv = BIT_ONE | BIT_TWO | BIT_THREE | BIT_FOUR;
 	more_flags_t emfv = BIT_ONE | BIT_SIX | BIT_THREE | BIT_EIGHT;
+	error_t ev;
 	int cv = ANOTHER;
 
 	printf("error = %d\n", ERROR_NOT_ENOUGH_INPUT);
@@ -248,10 +281,23 @@ main()
 	efv = func(BIT_ONE);		/* clang-425.0.27 warns */
 	emfv = func(BIT_ONE);		/* clang-425.0.27 warns */
 
-	if (func(BIT_FOUR) == CONSTANT)
+	if (func(BIT_FOUR) == CONSTANT)	/* warning: comparison between different types */
 		printf("really?\n");
-	if (func(BIT_FOUR) == ANOTHER)
+	if (func(BIT_FOUR) == ANOTHER)	/* warning: comparison between different types */
 		printf("fur sure?\n");
+
+	ev = proc(func(BIT_ONE));
+	printf("error = %d\n", ev);
+	ev = proc(func(BIT_TWO));
+	printf("error = %d\n", ev);
+	ev = proc(func(BIT_THREE));
+	printf("error = %d\n", ev);
+	ev = proc(func(BIT_FOUR));
+	printf("error = %d\n", ev);
+	ev = proc(func(42));		/* xxx no warning! */
+	printf("error = %d\n", ev);
+	ev = proc(42);			/* xxx no warning! */
+	printf("error = %d\n", ev);
 
 	switch (func(BIT_ONE)) {	/* all warn about missing states */
 	case BIT_ONE:			/* no warning! */
@@ -280,7 +326,7 @@ main()
 		break;
 	}
 
-	appliances(4);
+	appliances(42);
 
 	exit(0);
 }
