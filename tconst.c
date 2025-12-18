@@ -150,8 +150,18 @@ main(int argc __unused,
 					 */
 	printf("%s\n", fooarray);
 
+	fooarray[0] = 'A';
+
+	printf("%s\n", fooarray);
+
+#ifdef CRASH_ME				/* make CPPFLAGS='-DCRASH_ME' tconst */
+	bork = "def";			/* assignment discards ‘const’ qualifier from pointer target type */
+	bork[0] = 'D';			/* n.b:  crashes with -Wwrite-strings, one of our defaults */
+	printf("BORKED: %s\n", bork);
+#endif
+
 	bork = foo("a literal string constant\n"); /* xxx only with -Wwrite-strings:  discards qualifiers from pointer target type */
-	printf(bork);			/* format is not a string constant */
+	printf(bork);			/* format is not a string constant (-Wformat-security) */
 
 	cbork = foo_1("this is a literal too\n");
 
