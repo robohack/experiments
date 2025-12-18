@@ -122,11 +122,30 @@ typedef enum MY_WHENCE_T {
  */
 typedef enum error_e {
 	ERROR_NOERROR = 0,
-	ERROR_BYTE_OVERFLOW = -(1 << 0),
-	ERROR_INPUT_OVERFLOW = -(1 << 1),
-	ERROR_INVALID_SYMBOL = -(1 << 2),
-	ERROR_NOT_ENOUGH_INPUT = -(1 << 3),
+	ERROR_BYTE_OVERFLOW = -1,
+	ERROR_INPUT_OVERFLOW = -2,
+	ERROR_INVALID_SYMBOL = -3,
+	ERROR_NOT_ENOUGH_INPUT = -4,
 } error_t;
+
+const char *errlist[] = {
+	"(no error)",
+	"Byte overflow (n>256)",
+	"Too many bytes (max=4)",
+	"Invalid separator symbol",
+	"Not enough bytes (4)",
+};
+int	nerr = { sizeof errlist / sizeof errlist[0] };
+
+static const char *
+errorstr(enum error_e err)
+{
+	err = -err;
+	if (err > nerr) {
+		return "Unknown error_e value";
+	}
+	return errlist[err];
+}
 
 typedef enum {
 	kRefrigerator = 600,
@@ -186,6 +205,9 @@ states_t
 func(flags_t flag)			/* xxx don't do this! */
 {
 	more_flags_t mf = flag;		/* clang-425.0.27 warns */
+
+	if (mf == BIT_ONE)		/* gcc-9 warns comparison of different types */
+		return FIRST;
 
 	if (mf == BIT_FOUR)		/* gcc-9 warns comparison of different types */
 		return BIT_EIGHT;	/* clang-425.0.27 & 1.7 warns */
@@ -249,7 +271,8 @@ main()
 	error_t ev;
 	int cv = ANOTHER;
 
-	printf("error = %d\n", ERROR_NOT_ENOUGH_INPUT);
+	ev = ERROR_NOT_ENOUGH_INPUT;
+	printf("error = %d: %s\n", ev, errorstr(ev));
 
 	printf("sizeof(sv) = %zd, sizeof(efv) = %zd\n", sizeof(sv), sizeof(efv));
 	printf("sv = %u, fv = 0x%0*x, efv = 0x%0*x, emfv = 0x%0*x, cf = %d\n",
@@ -287,17 +310,17 @@ main()
 		printf("fur sure?\n");
 
 	ev = proc(func(BIT_ONE));
-	printf("error = %d\n", ev);
+	printf("error = %d: %s\n", ev, errorstr(ev));
 	ev = proc(func(BIT_TWO));
-	printf("error = %d\n", ev);
+	printf("error = %d: %s\n", ev, errorstr(ev));
 	ev = proc(func(BIT_THREE));
-	printf("error = %d\n", ev);
+	printf("error = %d: %s\n", ev, errorstr(ev));
 	ev = proc(func(BIT_FOUR));
-	printf("error = %d\n", ev);
+	printf("error = %d: %s\n", ev, errorstr(ev));
 	ev = proc(func(42));		/* xxx no warning! */
-	printf("error = %d\n", ev);
+	printf("error = %d: %s\n", ev, errorstr(ev));
 	ev = proc(42);			/* xxx no warning! */
-	printf("error = %d\n", ev);
+	printf("error = %d: %s\n", ev, errorstr(ev));
 
 	switch (func(BIT_ONE)) {	/* all warn about missing states */
 	case BIT_ONE:			/* no warning! */
