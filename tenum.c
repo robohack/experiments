@@ -170,7 +170,7 @@ enum {
 /*
  * note GCC allows:   enum __attribute__ ((__packed__)) my_enum {...};
  *
- * This should cause the compiler to choose the smalles possible integer
+ * This should cause the compiler to choose the smallest possible integer
  * representation for the enum values (sort of like an enum-specific version of
  * the -fshort-enum option).
  */
