@@ -142,11 +142,12 @@ const char *argv0 = "progname";
  */
 #if (defined(__NetBSD_Prereq__) && __NetBSD_Prereq__(1, 6, 0)) ||	\
 	(defined(__NetBSD_Version__) && __NetBSD_Version__ > 1060000000) || \
-	defined(__minix) ||	/* xxx when? */				\
-	(defined(__OpenBSD) && (OpenBSD > 201311)) ||			\
-	defined(__FreeBSD__) ||						\
-	defined(__DragonFly__) ||					\
-	defined(__APPLE__)
+	defined(__minix) ||		/* xxx when? */			\
+	(defined(__OpenBSD) && (OpenBSD > 201305)) ||			\
+	(defined(__FreeBSD__) && (__FreeBSD_Version >= 0404000)) ||	\
+	defined(__DragonFly__) ||	/* xxx when? */			\
+	defined(__APPLE__)		/* xxx when? */
+/* defined(__Darwin__) || */
 # define HAVE_GETPROGNAME		/* defined */
 #endif
 
