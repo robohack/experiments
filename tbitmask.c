@@ -244,11 +244,92 @@ ilog10(uintmax_t v)
 	return r - (v < PowersOf10[r]);
 }
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <err.h>
+
+enum {
+	masknet = true,
+	nomasknet = false,
+	matched = true,
+	nomatch = false,
+	matchfailed = -1
+};
+
+static int
+match_ip_net(const char *ipaddr,
+	     const char *netspec,
+	     bool do_mask_net)		/* allow H.O.S.T/CIDR in netspec? */
+{
+	in_addr_t dest;
+	in_addr_t net;
+	in_addr_t mask;
+	int netbits = 0;
+
+	net = 0;			/* net must be pre-initialized */
+	if ((netbits = inet_net_pton(AF_INET, netspec, (void *) &net, sizeof(net))) == -1) {
+		warn("[%s] is invalid", netspec);
+		return -1;
+	}
+	net = ntohl(net);
+
+	if (netbits > 32) {
+		/* note this is normally impossible with a correct inet_net_pton() impl. */
+		warnx("[%s] has invalid number of bits: %d", netspec, netbits);
+		return -1;
+	}
+	if (netbits == 0 && net != 0) {
+		/*
+		 * note some inet_net_pton() implementations still use inet_addr()
+		 * classful parsing syntax internally and as a result "0/0", for
+		 * example, may not work and "0.0.0.0/0" may be needed instead.
+		 */
+		warnx("wildcard [%s] has non-zero bits in network part", netspec);
+		return -1;
+	}
+	if (netbits == 0 && net == 0) {
+		warnx("match_ip_net(): note: [%s] is a wildcard pattern", netspec);
+	}
+
+	/*
+	 * Note: ((u_int32_t) << 32) is undefined according to the ANSI C spec.
+	 * Hence the extra test for bits == 0.
+	 */
+	mask = (in_addr_t) ((netbits == 0) ? 0 : (0xffffffffL << (32 - netbits)));
+
+	if (mask != 0 && (net & mask) == 0) {
+		/* should never match anything valid */
+		warnx("warning: [%s] has all zero bits in net part (0x%x)", netspec, net & mask);
+	}
+	if (mask != 0 && (net & ~mask) != 0) {
+		/* was giving a host address for the netspec intentional? */
+		warnx("warning: [%s] has non-zero bits in host part (0x%x)", netspec, net & ~mask);
+	}
+
+	dest = 0;	/* dest should be pre-initialized, even with the error checks */
+	switch (inet_pton(AF_INET, ipaddr, (void *) &dest)) {
+	case 0:
+		warnx("[%s] is not parsable", ipaddr);
+		return -1;
+	case -1:
+		warn("[%s] is invalid", ipaddr);
+		return -1;
+	}
+	dest = ntohl(dest);
+	/* super noisy! */
+	warnx("dest=0x%x, net=0x%x, bits=%d, mask=0x%x", dest, net, netbits, mask);
+
+	return ((dest & mask) == (do_mask_net ? (net & mask) : net));
+}
+
 int
 main(void)
 {
 	volatile uintmax_t ui;
 	volatile unsigned int bits;
+	const char *ipaddr;
+	const char *netspec;
 
 	printf("(1<<10)-1) = %s\n", binary_fmt((1ULL<<10)-1, false));
 
@@ -364,6 +445,70 @@ main(void)
 		       binary_fmt(just_lsb(ui), true));
 		free(uib);
 	}
+
+	ipaddr = "192.168.64.7";
+	netspec = "192.168.64.7/24";
+	printf("match_ip_net(\"%s\", \"%s\", masknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, masknet));
+	printf("match_ip_net(\"%s\", \"%s\", nomasknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, nomasknet));
+
+	putchar('\n');
+
+	ipaddr = "192.168.64.7";
+	netspec = "192.168.64.0/24";
+	printf("match_ip_net(\"%s\", \"%s\", masknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, masknet));
+	printf("match_ip_net(\"%s\", \"%s\", nomasknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, nomasknet));
+
+	putchar('\n');
+
+	ipaddr = "127.0.0.7";
+	netspec = "192.168.64.7/24";
+	printf("match_ip_net(\"%s\", \"%s\", masknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, masknet));
+	printf("match_ip_net(\"%s\", \"%s\", nomasknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, nomasknet));
+
+	putchar('\n');
+
+	ipaddr = "192.168.33.136";
+	netspec = "192.168.33.136/28";
+	printf("match_ip_net(\"%s\", \"%s\", masknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, masknet));
+	printf("match_ip_net(\"%s\", \"%s\", nomasknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, nomasknet));
+
+	putchar('\n');
+
+	ipaddr = "192.168.33.138";
+	netspec = "192.168.33.136/28";
+	printf("match_ip_net(\"%s\", \"%s\", masknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, masknet));
+	printf("match_ip_net(\"%s\", \"%s\", nomasknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, nomasknet));
+
+	putchar('\n');
+
+	ipaddr = "192.168.33.138";
+	netspec = "192.168.33.128/28";
+	printf("match_ip_net(\"%s\", \"%s\", masknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, masknet));
+	printf("match_ip_net(\"%s\", \"%s\", nomasknet) = %d\n",
+	       ipaddr, netspec,
+	       match_ip_net(ipaddr, netspec, nomasknet));
 
 	exit(0);
 }
