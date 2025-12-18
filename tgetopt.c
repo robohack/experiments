@@ -1,5 +1,6 @@
 #include <sys/param.h>
 
+#include <assert.h>
 #include <err.h>
 #include <errno.h>
 #include <limits.h>
@@ -131,7 +132,7 @@ e_opt_strtoll()
 	return lltmp;
 }
 
-const char *argv0 = "progname";
+const char *argv0 = "progname";		/* __BASE_FILE__ */
 
 /*
  * note:  NetBSD has only had __NetBSD_Prereq__() in the trunk since 3.0, though
@@ -188,6 +189,7 @@ main(argc, argv)
 	int i;
 	int myflg;
 	int ival = 0;			/* default ival */
+	long long int llval = 0;	/* default llval */
 
 	argv0 = (argv0 = strrchr(argv[0], '/')) ? argv0 + 1 : argv[0];
 
@@ -201,6 +203,9 @@ main(argc, argv)
 	 * has had no effect as it is called by the C startup before main() is
 	 * called, and it cannot be overridden by setprogname(), since that
 	 * function does nothing at all.
+	 *
+	 * So, as a result note that setprogname() cannot be used to add, e.g.,
+	 * a sub-command to the name!
 	 */
 	setprogname(argv0);
 #endif
@@ -216,13 +221,28 @@ main(argc, argv)
 	}
 #endif
 
-	optind = 1;			/* start at the beginning */
+	if (optind != 1) {
+		fprintf(stderr, "%s: optind has an unexpected value: %d (not 1)", getprogname(), optind);
+		abort();
+	}
+	if (opterr != 1) {
+		fprintf(stderr, "%s: opterr has an unexpected value: %d (not 1)", getprogname(), opterr);
+		assert(opterr == 1);
+		abort();
+	}
+
+	optind = 1;			/* start at the beginning (the default) */
 #if 1
 	opterr = 0;			/* getopt() will not print errors! (returns '?' with optopt set) */
 #else
-	opterr = 1;			/* getopt() will print errors! (and never return '?') */
+	opterr = 1;			/* the default: getopt() will print errors! (and never return '?') */
 #endif
-	while ((ch = getopt(argc, argv, ":abcp:hl")) != -1) {
+#if 0
+# define MY_OPTSTR	":abcdefp:hlP:"	/* simulate a programming error, see below... */
+#else
+# define MY_OPTSTR	":abcp:hlP:"
+#endif
+	while ((ch = getopt(argc, argv, MY_OPTSTR)) != -1) {
 		switch (ch) {
 		case 'a':
 		case 'b':
@@ -238,13 +258,17 @@ main(argc, argv)
 		case 'p':
 			ival = (int) e_opt_strtol();
 			break;
+		case 'P':
+			llval = (int) e_opt_strtoll();
+			break;
 		case 'l':
+			/* xxx should this just be an assert()? */
 			if (argv[optind] &&
 			    *argv[optind] == '-' &&
 			    strchr(argv[optind], optopt)) {
 				myflg = optind;
 			} else {
-				/* XXX wtf?  I don't remember why I did this! */
+				/* XXX wtf?  I don't remember why I did this! (looking for misbehaviour?) */
 				myflg = optind - 1;
 			}
 			/*
@@ -283,6 +307,9 @@ main(argc, argv)
 
 	if (ival != 0) {
 		printf("%s: -p: %d\n", argv0, ival);
+	}
+	if (llval != 0) {
+		printf("%s: -P: %lld\n", argv0, llval);
 	}
 
 	for (i = 0; i < argc; ++i) {
