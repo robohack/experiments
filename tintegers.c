@@ -5,9 +5,9 @@
 
 /*
  *	If an int can represent all values of the original type, the value is
- *	converted to an int; otherwise, it is converted to an unsigned
- *	int.  These are called the integer promotions. All other types are
- *	unchanged by the integer promotions.
+ *	converted to an int; otherwise, it is converted to an unsigned int.
+ *	These are called the integer promotions.  All other types are unchanged
+ *	by the integer promotions.
  *
  * Thus following code will return 65536 on 32-bit platforms, but 0 on 16-bit
  * platforms.
@@ -19,7 +19,7 @@
 static unsigned int
 sum(void)
 {
-	uint16_t a = 65535;
+	uint16_t a = (1U << 16) - 1;
 	uint16_t b = 1;
 
 	return (unsigned int) (a + b);
@@ -28,7 +28,7 @@ sum(void)
 static uint32_t
 sum32(void)
 {
-	uint16_t a = 65535;
+	uint16_t a = (1U << 16) - 1;
 	uint16_t b = 1;
 
 	return (uint32_t) (a + b);
@@ -43,7 +43,7 @@ sum32(void)
 static uint16_t
 sum16(void)
 {
-	uint16_t a = 65535;
+	uint16_t a = (1U << 16) - 1;
 	uint16_t b = 1;
 
 	return (uint16_t) (a + b);
@@ -55,6 +55,11 @@ main(void);
 int
 main()
 {
+	uint16_t t = (1U << 16) - 1;
+
+	printf("2^16 = %u\n", 1U << 16);
+	printf("t = %" PRIu16 "\n", t);
+
 	printf("sum = %" PRIu32 "\n", sum());
 	printf("sum = %u\n", (unsigned int) sum());
 	printf("sum32 = %" PRIu32 "\n", sum32());
