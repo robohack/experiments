@@ -40,3 +40,8 @@ for i in " /usr/src" "	/usr/xsrc" \
 	 resolvepath pname
 	 printf "pname='%s'\n" "$pname"
 done
+
+# Local Variables:
+# eval: (make-local-variable 'compile-command)
+# compile-command: (concat "sh ./" (file-name-nondirectory (buffer-file-name)))
+# End:
