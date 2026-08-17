@@ -59,7 +59,7 @@ int
 main(int argc		__attribute__((__unused__)),
      char *argv[])
 {
-	int res;
+	int res;			/* XXX unused-but-set from gcc-9.x */
 	const char *msg = "error string: %m";
 	const char *argv0 = "progname";
 
