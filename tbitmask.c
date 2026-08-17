@@ -293,7 +293,7 @@ match_ip_net(const char *ipaddr,
 	}
 
 	/*
-	 * Note: ((u_int32_t) << 32) is undefined according to the ANSI C spec.
+	 * Note: (0(u_int32_t) << 32) is undefined according to the ANSI C spec.
 	 * Hence the extra test for bits == 0.
 	 */
 	mask = (in_addr_t) ((netbits == 0) ? 0 : (0xffffffffL << (32 - netbits)));
@@ -332,6 +332,9 @@ main(void)
 	const char *netspec;
 
 	printf("(1<<10)-1) = %s\n", binary_fmt((1ULL<<10)-1, false));
+	printf("(1<<16)-1) = %s\n", binary_fmt((1ULL<<16)-1, false));
+	printf("(1<<32)-1) = %s\n", binary_fmt((1ULL<<32)-1, false));
+	printf("(1<<64)-1) = %s\n", binary_fmt((1ULL<<64)-1, false));
 
 	for (bits = 0; bits < sizeof(ui) * CHAR_BIT; bits++) {
 		uintmax_t result;
