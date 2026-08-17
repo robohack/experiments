@@ -452,6 +452,10 @@ main()
 	printf("MAXSINT(long long)   = %20lld, LLONG_MAX =  %20lld\n",
 	       (long long) MAXSINT(long long), (long long) LLONG_MAX);
 
+	printf("MAX_INT(u_longlong_t)= %20llu, ULLONG_MAX=  %20llu\n",
+	       (unsigned long long) MAX_INT(unsigned long long ),
+	       (unsigned long long) ULLONG_MAX);
+
 #ifdef __SIZE_MAX__
 	printf("__SIZE_MAX__         = %20llu\n", (unsigned long long) __SIZE_MAX__);
 #endif
